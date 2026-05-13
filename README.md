@@ -15,6 +15,7 @@ npm install
 ```bash
 DATABASE_URL="postgresql://..."
 JWT_SECRET="長いランダム文字列"
+INVITE_CODE="身内に共有する招待コード"
 PORT=4000
 CLIENT_ORIGIN="http://localhost:5173"
 ```

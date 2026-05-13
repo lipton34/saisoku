@@ -21,6 +21,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   tasks        Task[]
+  materialGoals MaterialGoal[]
 }
 
 model Task {
@@ -40,4 +41,32 @@ model Task {
 
   @@index([ownerId, isCompleted])
   @@index([ownerId, repeatType])
+}
+
+model MaterialGoal {
+  id        String         @id @default(cuid())
+  title     String
+  questName String?
+  note      String?
+  ownerId   String
+  owner     User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items     MaterialItem[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([ownerId, updatedAt])
+}
+
+model MaterialItem {
+  id            String       @id @default(cuid())
+  name          String
+  requiredCount Int
+  ownedCount    Int          @default(0)
+  note          String?
+  goalId        String
+  goal          MaterialGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([goalId])
 }

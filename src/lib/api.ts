@@ -21,6 +21,28 @@ export type Task = {
   ownerId: string;
 };
 
+export type MaterialItem = {
+  id: string;
+  name: string;
+  requiredCount: number;
+  ownedCount: number;
+  note: string | null;
+  goalId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MaterialGoal = {
+  id: string;
+  title: string;
+  questName: string | null;
+  note: string | null;
+  ownerId: string;
+  items: MaterialItem[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 type RequestOptions = RequestInit & {
   json?: unknown;
 };
@@ -58,10 +80,10 @@ export const api = {
   me: () => request<{ user: User | null }>("/api/auth/me"),
   login: (username: string, password: string) =>
     request<{ user: User }>("/api/auth/login", { method: "POST", json: { username, password } }),
-  register: (username: string, password: string, displayName: string) =>
+  register: (username: string, password: string, displayName: string, inviteCode: string) =>
     request<{ user: User }>("/api/auth/register", {
       method: "POST",
-      json: { username, password, displayName }
+      json: { username, password, displayName, inviteCode }
     }),
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
   tasks: () => request<{ tasks: Task[] }>("/api/tasks"),
@@ -77,5 +99,28 @@ export const api = {
     request<{ task: Task }>(`/api/tasks/${id}`, { method: "PATCH", json: task }),
   deleteTask: (id: string) => request<void>(`/api/tasks/${id}`, { method: "DELETE" }),
   completeTask: (id: string) => request<{ task: Task }>(`/api/tasks/${id}/complete`, { method: "POST" }),
-  reopenTask: (id: string) => request<{ task: Task }>(`/api/tasks/${id}/reopen`, { method: "POST" })
+  reopenTask: (id: string) => request<{ task: Task }>(`/api/tasks/${id}/reopen`, { method: "POST" }),
+  materialGoals: () => request<{ goals: MaterialGoal[] }>("/api/material-goals"),
+  createMaterialGoal: (goal: {
+    title: string;
+    questName?: string;
+    note?: string;
+    firstItemName?: string;
+    firstRequiredCount?: number;
+    firstOwnedCount?: number;
+  }) => request<{ goal: MaterialGoal }>("/api/material-goals", { method: "POST", json: goal }),
+  updateMaterialGoal: (id: string, goal: Partial<MaterialGoal>) =>
+    request<{ goal: MaterialGoal }>(`/api/material-goals/${id}`, { method: "PATCH", json: goal }),
+  deleteMaterialGoal: (id: string) => request<void>(`/api/material-goals/${id}`, { method: "DELETE" }),
+  createMaterialItem: (
+    goalId: string,
+    item: { name: string; requiredCount: number; ownedCount?: number; note?: string }
+  ) => request<{ item: MaterialItem }>(`/api/material-goals/${goalId}/items`, { method: "POST", json: item }),
+  updateMaterialItem: (goalId: string, itemId: string, item: Partial<MaterialItem>) =>
+    request<{ item: MaterialItem }>(`/api/material-goals/${goalId}/items/${itemId}`, {
+      method: "PATCH",
+      json: item
+    }),
+  deleteMaterialItem: (goalId: string, itemId: string) =>
+    request<void>(`/api/material-goals/${goalId}/items/${itemId}`, { method: "DELETE" })
 };

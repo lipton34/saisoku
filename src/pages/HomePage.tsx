@@ -1,4 +1,4 @@
-import { BookOpen, Boxes, CalendarCheck2, ChevronRight, Flame, ListChecks, Swords } from "lucide-react";
+import { BookOpen, Boxes, CalendarCheck2, ChevronRight, Flame, ListChecks, Map, Swords } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { TaskList } from "../components/TaskList";
@@ -7,10 +7,11 @@ import { getTaskStats } from "../lib/taskUtils";
 
 const toolCards = [
   { title: "日課管理", description: "島HARD、マグナ、砂箱など毎日見る項目", icon: CalendarCheck2, href: "/tasks" },
-  { title: "素材メモ", description: "必要数と所持数を追う拡張予定の枠", icon: Boxes, href: "/tools/materials" },
+  { title: "素材メモ", description: "必要数と所持数を追う素材集めの進捗表", icon: Boxes, href: "/materials" },
   { title: "編成メモ", description: "属性別・用途別の編成リンク置き場", icon: Swords, href: "/tools/party-notes" },
   { title: "イベント進捗", description: "箱数、貢献度、交換残りの確認", icon: Flame, href: "/tools/events" },
-  { title: "マルチ救援メモ", description: "参加条件や自発素材の備忘録", icon: BookOpen, href: "/tools/raids" }
+  { title: "マルチ救援メモ", description: "参加条件や自発素材の備忘録", icon: BookOpen, href: "/tools/raids" },
+  { title: "ロードマップ", description: "これから作る機能と実装順の確認", icon: Map, href: "/roadmap" }
 ];
 
 export function HomePage() {

@@ -31,9 +31,16 @@ router.post("/register", async (req, res, next) => {
     const username = normalizeUsername(req.body.username);
     const password = typeof req.body.password === "string" ? req.body.password : "";
     const displayName = normalizeDisplayName(req.body.displayName);
+    const inviteCode = typeof req.body.inviteCode === "string" ? req.body.inviteCode.trim() : "";
+    const requiredInviteCode = process.env.INVITE_CODE?.trim();
 
     if (username.length < 3 || password.length < 8) {
       res.status(400).json({ message: "ユーザー名は3文字以上、パスワードは8文字以上で入力してください" });
+      return;
+    }
+
+    if (requiredInviteCode && inviteCode !== requiredInviteCode) {
+      res.status(403).json({ message: "招待コードが違います" });
       return;
     }
 

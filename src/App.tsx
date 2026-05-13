@@ -3,6 +3,8 @@ import { AppShell } from "./components/AppShell";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
+import { MaterialsPage } from "./pages/MaterialsPage";
+import { RoadmapPage } from "./pages/RoadmapPage";
 import { TasksPage } from "./pages/TasksPage";
 import { ToolPlaceholderPage } from "./pages/ToolPlaceholderPage";
 
@@ -13,6 +15,8 @@ export function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
+          <Route path="/materials" element={<MaterialsPage />} />
+          <Route path="/roadmap" element={<RoadmapPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/tools/:toolId" element={<ToolPlaceholderPage />} />
         </Route>

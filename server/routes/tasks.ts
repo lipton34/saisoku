@@ -37,8 +37,55 @@ function currentUserId(req: Parameters<Parameters<typeof router.get>[1]>[0]) {
   return req.user?.id ?? "";
 }
 
+function jstCycleStart(date: Date, repeatType: RepeatType, resetHourJst: number) {
+  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const year = jst.getUTCFullYear();
+  const month = jst.getUTCMonth();
+  const day = jst.getUTCDate();
+  let start = new Date(Date.UTC(year, month, day, resetHourJst - 9));
+
+  if (date < start) {
+    start = new Date(start.getTime() - 24 * 60 * 60 * 1000);
+  }
+
+  if (repeatType === RepeatType.weekly) {
+    const startJst = new Date(start.getTime() + 9 * 60 * 60 * 1000);
+    const dayOfWeek = startJst.getUTCDay();
+    const daysSinceMonday = (dayOfWeek + 6) % 7;
+    start = new Date(start.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000);
+  }
+
+  return start;
+}
+
+async function resetExpiredRepeatingTasks(ownerId: string) {
+  const now = new Date();
+  const tasks = await prisma.task.findMany({
+    where: {
+      ownerId,
+      isCompleted: true,
+      repeatType: { in: [RepeatType.daily, RepeatType.weekly] },
+      completedAt: { not: null }
+    },
+    select: { id: true, completedAt: true, repeatType: true, resetHourJst: true }
+  });
+  const expiredIds = tasks
+    .filter((task) => task.completedAt && task.completedAt < jstCycleStart(now, task.repeatType, task.resetHourJst))
+    .map((task) => task.id);
+
+  if (expiredIds.length === 0) {
+    return;
+  }
+
+  await prisma.task.updateMany({
+    where: { ownerId, id: { in: expiredIds } },
+    data: { isCompleted: false, completedAt: null }
+  });
+}
+
 router.get("/", async (req, res, next) => {
   try {
+    await resetExpiredRepeatingTasks(currentUserId(req));
     const tasks = await prisma.task.findMany({
       where: { ownerId: currentUserId(req) },
       orderBy: [{ isCompleted: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }]

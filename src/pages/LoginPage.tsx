@@ -8,6 +8,7 @@ export function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,7 +26,7 @@ export function LoginPage() {
       if (mode === "login") {
         await login(username, password);
       } else {
-        await register(username, password, displayName);
+        await register(username, password, displayName, inviteCode);
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "ログイン処理に失敗しました");
@@ -66,10 +67,16 @@ export function LoginPage() {
           </label>
 
           {mode === "register" && (
-            <label>
-              表示名
-              <input onChange={(event) => setDisplayName(event.target.value)} value={displayName} />
-            </label>
+            <>
+              <label>
+                表示名
+                <input onChange={(event) => setDisplayName(event.target.value)} value={displayName} />
+              </label>
+              <label>
+                招待コード
+                <input autoComplete="off" onChange={(event) => setInviteCode(event.target.value)} value={inviteCode} />
+              </label>
+            </>
           )}
 
           <label>
