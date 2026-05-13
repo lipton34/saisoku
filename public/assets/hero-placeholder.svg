@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-label="abstract tactical map">
+  <rect width="1200" height="800" fill="#173044"/>
+  <path d="M0 640 C180 560 330 610 510 520 C720 415 885 460 1200 330 L1200 800 L0 800 Z" fill="#24546a"/>
+  <path d="M0 390 C190 300 370 350 550 260 C760 155 910 190 1200 80 L1200 800 L0 800 Z" fill="#1f4358" opacity=".72"/>
+  <g fill="none" stroke="#8ed4df" stroke-width="2" opacity=".28">
+    <path d="M80 170 H420 V450 H80 Z"/>
+    <path d="M560 120 H1040 V390 H560 Z"/>
+    <path d="M280 520 H970 V690 H280 Z"/>
+    <path d="M420 170 L560 260 L420 450"/>
+    <path d="M760 390 L760 520"/>
+  </g>
+  <g fill="#f5c45f" opacity=".78">
+    <circle cx="420" cy="170" r="8"/>
+    <circle cx="760" cy="390" r="8"/>
+    <circle cx="970" cy="520" r="8"/>
+    <circle cx="280" cy="690" r="8"/>
+  </g>
+</svg>

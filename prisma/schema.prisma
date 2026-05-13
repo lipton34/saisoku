@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RepeatType {
+  daily
+  weekly
+  once
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  displayName  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tasks        Task[]
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  category     String     @default("日課")
+  repeatType   RepeatType @default(daily)
+  dueDate      DateTime?
+  resetHourJst Int        @default(5)
+  isCompleted  Boolean    @default(false)
+  completedAt  DateTime?
+  ownerId      String
+  owner        User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([ownerId, isCompleted])
+  @@index([ownerId, repeatType])
+}
