@@ -465,11 +465,16 @@ router.get("/presets", (req, res) => {
 router.get("/", async (req, res, next) => {
   try {
     const posts = await prisma.buildPost.findMany({
-      where: { ownerId: currentUserId(req) },
+      include: { owner: { select: { displayName: true, username: true } } },
       orderBy: { updatedAt: "desc" }
     });
 
-    res.json({ posts });
+    res.json({
+      posts: posts.map(({ owner, ...post }) => ({
+        ...post,
+        authorName: owner.displayName ?? owner.username
+      }))
+    });
   } catch (error) {
     next(error);
   }
@@ -478,10 +483,43 @@ router.get("/", async (req, res, next) => {
 router.post("/", async (req, res, next) => {
   try {
     const post = await prisma.buildPost.create({
-      data: buildPostData(req.body as Record<string, unknown>, currentUserId(req))
+      data: buildPostData(req.body as Record<string, unknown>, currentUserId(req)),
+      include: { owner: { select: { displayName: true, username: true } } }
     });
 
-    res.status(201).json({ post });
+    const { owner, ...rest } = post;
+    res.status(201).json({ post: { ...rest, authorName: owner.displayName ?? owner.username } });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("入力してください")) {
+      res.status(400).json({ message: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+router.patch("/:id", async (req, res, next) => {
+  try {
+    const current = await prisma.buildPost.findFirst({
+      where: { id: req.params.id, ownerId: currentUserId(req) },
+      select: { id: true }
+    });
+
+    if (!current) {
+      res.status(404).json({ message: "編成メモが見つかりません" });
+      return;
+    }
+
+    const { owner, ...data } = buildPostData(req.body as Record<string, unknown>, currentUserId(req));
+    const post = await prisma.buildPost.update({
+      where: { id: req.params.id },
+      data,
+      include: { owner: { select: { displayName: true, username: true } } }
+    });
+
+    const { owner: postOwner, ...rest } = post;
+    res.json({ post: { ...rest, authorName: postOwner.displayName ?? postOwner.username } });
   } catch (error) {
     if (error instanceof Error && error.message.includes("入力してください")) {
       res.status(400).json({ message: error.message });

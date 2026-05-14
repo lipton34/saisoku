@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="summon thumbnail">
+  <rect width="48" height="48" rx="10" fill="#f1efe8"/>
+  <path d="M24 7 38 18v18L24 43 10 36V18Z" fill="#f7c65f"/>
+  <path d="M24 12 33 20v12l-9 5-9-5V20Z" fill="#7a6334"/>
+  <circle cx="24" cy="24" r="5" fill="#fff2bf"/>
+</svg>

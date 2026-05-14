@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="weapon thumbnail">
+  <rect width="48" height="48" rx="10" fill="#fdebe8"/>
+  <path d="M32.5 7 41 15.5 20 36.5 11.5 28Z" fill="#d64532"/>
+  <path d="M15 32.5 10 37.5 7.5 35 12.5 30Z" fill="#17212b"/>
+  <path d="M27 12.5 35.5 21" fill="none" stroke="#fff2bf" stroke-width="3" stroke-linecap="round"/>
+</svg>

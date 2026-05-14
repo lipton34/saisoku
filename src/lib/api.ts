@@ -143,6 +143,7 @@ export type BuildPost = Omit<BuildPreset, "id" | "name" | "presetStatus" | "orig
   sourcePresetId: string | null;
   sourcePresetName: string | null;
   changeMemo: string | null;
+  authorName?: string;
   ownerId: string;
   createdAt: string;
   updatedAt: string;
@@ -255,6 +256,11 @@ export const api = {
   createBuildPost: (post: BuildPostInput) =>
     request<{ post: BuildPost }>("/api/builds", {
       method: "POST",
+      json: post
+    }),
+  updateBuildPost: (id: string, post: BuildPostInput) =>
+    request<{ post: BuildPost }>(`/api/builds/${id}`, {
+      method: "PATCH",
       json: post
     }),
   deleteBuildPost: (id: string) => request<void>(`/api/builds/${id}`, { method: "DELETE" })

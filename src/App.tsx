@@ -17,6 +17,7 @@ export function App() {
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
           <Route path="/builds" element={<BuildsPage />} />
+          <Route path="/builds/:sourceType/:buildId" element={<BuildsPage />} />
           <Route path="/materials" element={<MaterialsPage />} />
           <Route path="/roadmap" element={<RoadmapPage />} />
           <Route path="/tasks" element={<TasksPage />} />
