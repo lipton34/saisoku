@@ -44,15 +44,15 @@
 
 ## Product requirements and planning docs
 
-Before starting feature work, agents must read the relevant requirement documents under `docs/requirements/`.
+Before starting feature work, agents must read the relevant requirement documents under `docs/`.
 
 Always read the overall policy first:
 
-- `docs/requirements/01_overall_policy.md`
+- `docs/01_overall_policy.md`
 
 For feature-specific work, also read the corresponding requirement document, for example:
 
-- `docs/requirements/02_preset_feature.md`
+- `docs/02_preset_feature.md`
 
 The overall policy document is the source of truth for:
 
@@ -64,7 +64,7 @@ The overall policy document is the source of truth for:
 - Supabase Free constraints
 - high-difficulty build sharing requirements
 
-Do not implement features that conflict with `docs/requirements/01_overall_policy.md`.
+Do not implement features that conflict with `docs/01_overall_policy.md`.
 
 If a requested implementation seems to conflict with the requirements, stop and summarize the conflict before making changes.
 
@@ -72,7 +72,7 @@ If a requested implementation seems to conflict with the requirements, stop and 
 
 - When the requested task is within the scope of the referenced requirement document, agents should make the necessary code changes without asking for additional confirmation.
 - Do not stop to ask whether code changes are allowed if the changes are clearly required by the task.
-- If the requested change conflicts with `docs/requirements/01_overall_policy.md`, stop and summarize the conflict before making changes.
+- If the requested change conflicts with `docs/01_overall_policy.md`, stop and summarize the conflict before making changes.
 - If the change is destructive, affects authentication/security, removes existing functionality, or requires changing environment variables, summarize the risk before proceeding.
 - After making changes, run the relevant validation command such as `npm run typecheck` or `npm run build` when applicable, and summarize the result.
 
