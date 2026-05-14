@@ -43,6 +43,86 @@ export type MaterialGoal = {
   updatedAt: string;
 };
 
+export type MaterialPresetItem = {
+  id: string;
+  name: string;
+  requiredCount: number;
+  note: string | null;
+  presetId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MaterialPreset = {
+  id: string;
+  name: string;
+  questName: string | null;
+  note: string | null;
+  ownerId: string;
+  items: MaterialPresetItem[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BuildReferenceUrl = {
+  type: string;
+  title: string;
+  url: string;
+  memo: string;
+};
+
+export type BuildPreset = {
+  id: string;
+  name: string;
+  category: string;
+  questName: string;
+  element: string;
+  purpose: string;
+  operationType: string;
+  verificationStatus: string;
+  overview: string;
+  presetStatus: string;
+  origins: string[];
+  protagonistJob: string;
+  characters: string[];
+  summons: string[];
+  weapons: string[];
+  requiredParts: string[];
+  recommendedParts: string[];
+  substitutableParts: string[];
+  freeSlots: string[];
+  substituteNotes: string;
+  cautions: string;
+  role?: string;
+  omenNotes?: string;
+  actionNotes?: string;
+  failurePoints?: string;
+  farmingGoal?: string;
+  raidRole?: string;
+  blueChest?: string;
+  clearTime?: string;
+  stability?: string;
+  prerequisites?: string;
+  weaponTarget?: string;
+  rescueTiming?: string;
+  farmingCautions?: string;
+  referenceUrls: BuildReferenceUrl[];
+  updatedAt: string;
+};
+
+export type BuildPost = Omit<BuildPreset, "id" | "name" | "presetStatus" | "origins" | "updatedAt"> & {
+  id: string;
+  title: string;
+  sourcePresetId: string | null;
+  sourcePresetName: string | null;
+  changeMemo: string | null;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BuildPostInput = Omit<BuildPost, "id" | "ownerId" | "createdAt" | "updatedAt">;
+
 type RequestOptions = RequestInit & {
   json?: unknown;
 };
@@ -122,5 +202,33 @@ export const api = {
       json: item
     }),
   deleteMaterialItem: (goalId: string, itemId: string) =>
-    request<void>(`/api/material-goals/${goalId}/items/${itemId}`, { method: "DELETE" })
+    request<void>(`/api/material-goals/${goalId}/items/${itemId}`, { method: "DELETE" }),
+  materialPresets: () => request<{ presets: MaterialPreset[] }>("/api/material-goals/presets"),
+  createMaterialPresetFromGoal: (goalId: string, name?: string) =>
+    request<{ preset: MaterialPreset }>(`/api/material-goals/presets/from-goal/${goalId}`, {
+      method: "POST",
+      json: { name }
+    }),
+  applyMaterialPreset: (presetId: string, goal: { title: string; questName?: string; note?: string }) =>
+    request<{ goal: MaterialGoal }>(`/api/material-goals/presets/${presetId}/apply`, {
+      method: "POST",
+      json: goal
+    }),
+  deleteMaterialPreset: (presetId: string) =>
+    request<void>(`/api/material-goals/presets/${presetId}`, { method: "DELETE" }),
+  buildPresets: (filters?: { category?: string; questName?: string; element?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.category) params.set("category", filters.category);
+    if (filters?.questName) params.set("questName", filters.questName);
+    if (filters?.element) params.set("element", filters.element);
+    const query = params.toString();
+    return request<{ presets: BuildPreset[] }>(`/api/builds/presets${query ? `?${query}` : ""}`);
+  },
+  buildPosts: () => request<{ posts: BuildPost[] }>("/api/builds"),
+  createBuildPost: (post: BuildPostInput) =>
+    request<{ post: BuildPost }>("/api/builds", {
+      method: "POST",
+      json: post
+    }),
+  deleteBuildPost: (id: string) => request<void>(`/api/builds/${id}`, { method: "DELETE" })
 };

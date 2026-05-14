@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { attachUser } from "./middleware/requireAuth.js";
 import { authRouter } from "./routes/auth.js";
+import { buildsRouter } from "./routes/builds.js";
 import { materialGoalsRouter } from "./routes/materialGoals.js";
 import { tasksRouter } from "./routes/tasks.js";
 
@@ -33,6 +34,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/builds", buildsRouter);
 app.use("/api/material-goals", materialGoalsRouter);
 app.use("/api/tasks", tasksRouter);
 

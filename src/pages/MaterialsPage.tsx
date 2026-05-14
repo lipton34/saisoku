@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Boxes, Plus, Trash2 } from "lucide-react";
-import { api, type MaterialGoal, type MaterialItem } from "../lib/api";
+import { Boxes, CopyPlus, Plus, Save, Trash2 } from "lucide-react";
+import { api, type MaterialGoal, type MaterialItem, type MaterialPreset } from "../lib/api";
 
 function goalProgress(goal: MaterialGoal) {
   const required = goal.items.reduce((sum, item) => sum + item.requiredCount, 0);
@@ -11,12 +11,14 @@ function goalProgress(goal: MaterialGoal) {
 
 export function MaterialsPage() {
   const [goals, setGoals] = useState<MaterialGoal[]>([]);
+  const [presets, setPresets] = useState<MaterialPreset[]>([]);
   const [title, setTitle] = useState("");
   const [questName, setQuestName] = useState("");
   const [note, setNote] = useState("");
   const [firstItemName, setFirstItemName] = useState("");
   const [firstRequiredCount, setFirstRequiredCount] = useState(1);
   const [firstOwnedCount, setFirstOwnedCount] = useState(0);
+  const [selectedPresetId, setSelectedPresetId] = useState("");
   const [newItems, setNewItems] = useState<Record<string, { name: string; requiredCount: number; ownedCount: number }>>({});
   const [error, setError] = useState("");
 
@@ -29,8 +31,19 @@ export function MaterialsPage() {
     }
   }
 
+  async function loadPresets() {
+    try {
+      const data = await api.materialPresets();
+      setPresets(data.presets);
+      setSelectedPresetId((current) => current || data.presets[0]?.id || "");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "プリセットの取得に失敗しました");
+    }
+  }
+
   useEffect(() => {
     void loadGoals();
+    void loadPresets();
   }, []);
 
   const summary = useMemo(() => {
@@ -75,6 +88,41 @@ export function MaterialsPage() {
   async function deleteGoal(goal: MaterialGoal) {
     await api.deleteMaterialGoal(goal.id);
     setGoals((current) => current.filter((item) => item.id !== goal.id));
+  }
+
+  async function applyPreset() {
+    setError("");
+
+    try {
+      const data = await api.applyMaterialPreset(selectedPresetId, { title, questName, note });
+      setGoals((current) => [data.goal, ...current]);
+      setTitle("");
+      setQuestName("");
+      setNote("");
+      setFirstItemName("");
+      setFirstRequiredCount(1);
+      setFirstOwnedCount(0);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "プリセットの適用に失敗しました");
+    }
+  }
+
+  async function savePreset(goal: MaterialGoal) {
+    setError("");
+
+    try {
+      const data = await api.createMaterialPresetFromGoal(goal.id);
+      setPresets((current) => [data.preset, ...current]);
+      setSelectedPresetId(data.preset.id);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "プリセットの保存に失敗しました");
+    }
+  }
+
+  async function deletePreset(preset: MaterialPreset) {
+    await api.deleteMaterialPreset(preset.id);
+    setPresets((current) => current.filter((item) => item.id !== preset.id));
+    setSelectedPresetId((current) => (current === preset.id ? "" : current));
   }
 
   async function addItem(goal: MaterialGoal) {
@@ -161,6 +209,27 @@ export function MaterialsPage() {
             <input onChange={(event) => setTitle(event.target.value)} required value={title} />
           </label>
 
+          <div className="preset-panel">
+            <div>
+              <p className="eyebrow">Preset</p>
+              <h3>プリセットから作成</h3>
+            </div>
+            <div className="preset-apply-row">
+              <select onChange={(event) => setSelectedPresetId(event.target.value)} value={selectedPresetId}>
+                <option value="">プリセットを選択</option>
+                {presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+              <button className="primary-button" disabled={!selectedPresetId} onClick={applyPreset} type="button">
+                <CopyPlus size={16} />
+                作成
+              </button>
+            </div>
+          </div>
+
           <label>
             素材名
             <input onChange={(event) => setFirstItemName(event.target.value)} required value={firstItemName} />
@@ -212,6 +281,32 @@ export function MaterialsPage() {
             </div>
           </div>
 
+          <div className="preset-list">
+            <div className="section-heading compact-heading">
+              <div>
+                <p className="eyebrow">Presets</p>
+                <h3>素材集めプリセット</h3>
+              </div>
+            </div>
+            {presets.length === 0 ? (
+              <div className="empty-state">保存済みプリセットはまだありません。</div>
+            ) : (
+              <div className="preset-chip-list">
+                {presets.map((preset) => (
+                  <div className="preset-chip" key={preset.id}>
+                    <button onClick={() => setSelectedPresetId(preset.id)} type="button">
+                      <strong>{preset.name}</strong>
+                      <span>{preset.items.length}素材</span>
+                    </button>
+                    <button aria-label="プリセットを削除" className="icon-button danger" onClick={() => deletePreset(preset)} type="button">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="material-goal-list">
             {goals.length === 0 ? (
               <div className="empty-state">素材メモはまだありません。</div>
@@ -236,9 +331,14 @@ export function MaterialsPage() {
                           <span>残り {Math.max(progress.required - progress.owned, 0)}</span>
                         </div>
                       </div>
-                      <button aria-label="素材メモを削除" className="icon-button danger" onClick={() => deleteGoal(goal)} type="button">
-                        <Trash2 size={17} />
-                      </button>
+                      <div className="task-actions">
+                        <button aria-label="プリセットとして保存" className="icon-button" onClick={() => savePreset(goal)} type="button">
+                          <Save size={16} />
+                        </button>
+                        <button aria-label="素材メモを削除" className="icon-button danger" onClick={() => deleteGoal(goal)} type="button">
+                          <Trash2 size={17} />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="progress-bar" aria-label={`進捗 ${progress.percent}%`}>

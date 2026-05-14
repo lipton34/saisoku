@@ -22,6 +22,8 @@ model User {
   updatedAt    DateTime @updatedAt
   tasks        Task[]
   materialGoals MaterialGoal[]
+  materialPresets MaterialPreset[]
+  buildPosts   BuildPost[]
 }
 
 model Task {
@@ -69,4 +71,77 @@ model MaterialItem {
   updatedAt     DateTime     @updatedAt
 
   @@index([goalId])
+}
+
+model MaterialPreset {
+  id        String               @id @default(cuid())
+  name      String
+  questName String?
+  note      String?
+  ownerId   String
+  owner     User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items     MaterialPresetItem[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([ownerId, updatedAt])
+}
+
+model MaterialPresetItem {
+  id            String         @id @default(cuid())
+  name          String
+  requiredCount Int
+  note          String?
+  presetId      String
+  preset        MaterialPreset @relation(fields: [presetId], references: [id], onDelete: Cascade)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([presetId])
+}
+
+model BuildPost {
+  id                  String   @id @default(cuid())
+  title               String
+  category            String
+  questName           String
+  element             String
+  purpose             String
+  operationType       String
+  verificationStatus  String
+  overview            String?
+  protagonistJob      String?
+  characters          String[] @default([])
+  summons             String[] @default([])
+  weapons             String[] @default([])
+  requiredParts       String[] @default([])
+  recommendedParts    String[] @default([])
+  substitutableParts  String[] @default([])
+  freeSlots           String[] @default([])
+  substituteNotes     String?
+  cautions            String?
+  role                String?
+  omenNotes           String?
+  actionNotes         String?
+  failurePoints       String?
+  farmingGoal         String?
+  raidRole            String?
+  blueChest           String?
+  clearTime           String?
+  stability           String?
+  prerequisites       String?
+  weaponTarget        String?
+  rescueTiming        String?
+  farmingCautions     String?
+  referenceUrls       Json     @default("[]")
+  sourcePresetId      String?
+  sourcePresetName    String?
+  changeMemo          String?
+  ownerId             String
+  owner               User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([ownerId, updatedAt])
+  @@index([ownerId, category, questName, element])
 }

@@ -34,6 +34,13 @@ async function findOwnedGoal(goalId: string, ownerId: string) {
   });
 }
 
+async function findOwnedPreset(presetId: string, ownerId: string) {
+  return prisma.materialPreset.findFirst({
+    where: { id: presetId, ownerId },
+    include: { items: { orderBy: { createdAt: "asc" } } }
+  });
+}
+
 router.get("/", async (req, res, next) => {
   try {
     const goals = await prisma.materialGoal.findMany({
@@ -43,6 +50,115 @@ router.get("/", async (req, res, next) => {
     });
 
     res.json({ goals });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/presets", async (req, res, next) => {
+  try {
+    const presets = await prisma.materialPreset.findMany({
+      where: { ownerId: currentUserId(req) },
+      include: { items: { orderBy: { createdAt: "asc" } } },
+      orderBy: { updatedAt: "desc" }
+    });
+
+    res.json({ presets });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/presets/from-goal/:goalId", async (req, res, next) => {
+  try {
+    const goal = await prisma.materialGoal.findFirst({
+      where: { id: req.params.goalId, ownerId: currentUserId(req) },
+      include: { items: { orderBy: { createdAt: "asc" } } }
+    });
+
+    if (!goal) {
+      res.status(404).json({ message: "素材メモが見つかりません" });
+      return;
+    }
+
+    if (goal.items.length === 0) {
+      res.status(400).json({ message: "素材がないメモはプリセットにできません" });
+      return;
+    }
+
+    const preset = await prisma.materialPreset.create({
+      data: {
+        name: parseOptionalText(req.body.name) ?? goal.title,
+        questName: goal.questName,
+        note: goal.note,
+        ownerId: currentUserId(req),
+        items: {
+          create: goal.items.map((item) => ({
+            name: item.name,
+            requiredCount: item.requiredCount,
+            note: item.note
+          }))
+        }
+      },
+      include: { items: { orderBy: { createdAt: "asc" } } }
+    });
+
+    res.status(201).json({ preset });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/presets/:presetId/apply", async (req, res, next) => {
+  try {
+    const preset = await findOwnedPreset(req.params.presetId, currentUserId(req));
+    if (!preset) {
+      res.status(404).json({ message: "プリセットが見つかりません" });
+      return;
+    }
+
+    const title = parseText(req.body.title);
+    if (!title) {
+      res.status(400).json({ message: "目的名を入力してください" });
+      return;
+    }
+
+    const goal = await prisma.materialGoal.create({
+      data: {
+        title,
+        questName: parseOptionalText(req.body.questName) ?? preset.questName,
+        note: parseOptionalText(req.body.note) ?? preset.note,
+        ownerId: currentUserId(req),
+        items: {
+          create: preset.items.map((item) => ({
+            name: item.name,
+            requiredCount: item.requiredCount,
+            ownedCount: 0,
+            note: item.note
+          }))
+        }
+      },
+      include: { items: { orderBy: { createdAt: "asc" } } }
+    });
+
+    res.status(201).json({ goal });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/presets/:presetId", async (req, res, next) => {
+  try {
+    const deleted = await prisma.materialPreset.deleteMany({
+      where: { id: req.params.presetId, ownerId: currentUserId(req) }
+    });
+
+    if (deleted.count === 0) {
+      res.status(404).json({ message: "プリセットが見つかりません" });
+      return;
+    }
+
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

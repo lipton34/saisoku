@@ -51,6 +51,10 @@ export function AppShell() {
             <Boxes size={18} />
             <span className="sidebar-label">素材メモ</span>
           </NavLink>
+          <NavLink to="/builds">
+            <Swords size={18} />
+            <span className="sidebar-label">編成メモ</span>
+          </NavLink>
           <NavLink to="/roadmap">
             <Map size={18} />
             <span className="sidebar-label">ロードマップ</span>
