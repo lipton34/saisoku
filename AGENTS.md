@@ -68,6 +68,14 @@ Do not implement features that conflict with `docs/requirements/01_overall_polic
 
 If a requested implementation seems to conflict with the requirements, stop and summarize the conflict before making changes.
 
+## Code change policy
+
+- When the requested task is within the scope of the referenced requirement document, agents should make the necessary code changes without asking for additional confirmation.
+- Do not stop to ask whether code changes are allowed if the changes are clearly required by the task.
+- If the requested change conflicts with `docs/requirements/01_overall_policy.md`, stop and summarize the conflict before making changes.
+- If the change is destructive, affects authentication/security, removes existing functionality, or requires changing environment variables, summarize the risk before proceeding.
+- After making changes, run the relevant validation command such as `npm run typecheck` or `npm run build` when applicable, and summarize the result.
+
 ## Notes for AI agents
 
 - The app is built with npm and TypeScript; `typecheck` runs both client and server TS projects.
