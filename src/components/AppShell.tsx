@@ -6,7 +6,7 @@ import { useAuth } from "./AuthContext";
 export function AppShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   async function handleLogout() {
     await logout();

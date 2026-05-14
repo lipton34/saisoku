@@ -71,12 +71,15 @@ const characterPositionOptions = ["フロント", "サブ", "任意"];
 const summonPositionOptions = ["メイン", "フレンド", "サブ", "任意"];
 const blueChestOptions = ["あり", "なし", "未指定"];
 const stabilityOptions = ["安定", "たまに失敗", "要手動確認", "未指定"];
-const prerequisiteOptions = ["マグナ", "神石", "どちらでも", "未指定"];
+const prerequisiteOptions = ["マグナ", "神石", "片面"];
 const referenceTypeOptions = ["攻略記事", "YouTube", "X", "note / ブログ", "その他"];
-const listCategoryOptions = ["すべて", ...categoryOptions];
+const listCategoryOptions = categoryOptions;
 const sourceTypeOptions = ["すべて", "投稿編成", "プリセット"];
 const allPurposeOptions = Array.from(new Set([...highDifficultyPurposeOptions, ...farmingPurposeOptions]));
 const raidRoleOptions = ["自発", "救援", "どちらでも"];
+const buildTabOptions = ["search", "form"] as const;
+
+type BuildTab = (typeof buildTabOptions)[number];
 
 type ListCategory = (typeof listCategoryOptions)[number];
 type SourceType = (typeof sourceTypeOptions)[number];
@@ -144,7 +147,7 @@ type BuildListItem = {
 };
 
 const emptyListFilters: BuildListFilters = {
-  category: "すべて",
+  category: "高難度攻略用",
   questName: "",
   element: "",
   purpose: "",
@@ -301,6 +304,10 @@ function textOrDash(value: string | null | undefined) {
 
 function uniqueValues(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
+}
+
+function categoryLabel(category: string) {
+  return category === "高難度攻略用" ? "高難易度" : "その他";
 }
 
 function referenceSummary(referenceUrls: BuildReferenceUrl[]) {
@@ -544,7 +551,7 @@ function BuildListCard({
         <div>
           <div className="tag-row">
             <span className={item.sourceType === "プリセット" ? "pill" : "pill muted"}>{item.sourceType}</span>
-            <span className="pill muted">{item.category}</span>
+            <span className="pill muted">{categoryLabel(item.category)}</span>
           </div>
           <h3>{item.title}</h3>
           <div className="task-meta">
@@ -874,6 +881,7 @@ export function BuildsPage() {
   const [presets, setPresets] = useState<BuildPreset[]>([]);
   const [posts, setPosts] = useState<BuildPost[]>([]);
   const [form, setForm] = useState<BuildPostInput>(emptyForm);
+  const [activeBuildTab, setActiveBuildTab] = useState<BuildTab>("search");
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [listFilters, setListFilters] = useState<BuildListFilters>(emptyListFilters);
   const [error, setError] = useState("");
@@ -909,7 +917,7 @@ export function BuildsPage() {
       const matchesKeyword = !keyword || searchableText(item).includes(keyword);
 
       return (
-        (listFilters.category === "すべて" || item.category === listFilters.category) &&
+        item.category === listFilters.category &&
         (!listFilters.questName || item.questName === listFilters.questName) &&
         (!listFilters.element || item.element === listFilters.element) &&
         (!listFilters.purpose || item.purpose === listFilters.purpose) &&
@@ -1046,12 +1054,14 @@ export function BuildsPage() {
     const next = presetToForm(preset);
     setForm(next);
     setEditingPostId(null);
+    setActiveBuildTab("form");
     setError("");
   }
 
   function resetForm() {
     setForm(emptyForm);
     setEditingPostId(null);
+    setActiveBuildTab("form");
     setError("");
   }
 
@@ -1089,12 +1099,14 @@ export function BuildsPage() {
     const next = postToForm(post);
     setForm(next);
     setEditingPostId(null);
+    setActiveBuildTab("form");
     setError("");
   }
 
   function editPost(post: BuildPost) {
     setForm(postToEditForm(post));
     setEditingPostId(post.id);
+    setActiveBuildTab("form");
     setError("");
   }
 
@@ -1104,7 +1116,7 @@ export function BuildsPage() {
         <div>
           <p className="eyebrow">Build Presets</p>
           <h2>編成プリセット</h2>
-          <p>プリセットを初期値として反映し、手持ちや団内運用に合わせて変更してから投稿します。</p>
+          <p>編成を探す画面と、投稿する画面を切り替えて使えます。</p>
         </div>
         <button className="primary-button" onClick={resetForm} type="button">
           <FilePlus2 size={18} />
@@ -1160,6 +1172,16 @@ export function BuildsPage() {
         />
       )}
 
+      <div className="segmented build-main-tabs" role="tablist" aria-label="編成メモの表示切り替え">
+        <button className={activeBuildTab === "search" ? "active" : ""} onClick={() => setActiveBuildTab("search")} type="button">
+          編成一覧・検索
+        </button>
+        <button className={activeBuildTab === "form" ? "active" : ""} onClick={() => setActiveBuildTab("form")} type="button">
+          投稿フォーム
+        </button>
+      </div>
+
+      {activeBuildTab === "search" && (
       <section className="panel build-search-panel">
         <div className="section-heading">
           <div>
@@ -1180,31 +1202,12 @@ export function BuildsPage() {
               onClick={() => updateListFilter("category", option)}
               type="button"
             >
-              {option}
+              {categoryLabel(option)}
             </button>
           ))}
         </div>
 
         <div className="build-filter-grid">
-          <label className="keyword-field">
-            キーワード
-            <span className="input-with-icon">
-              <Search size={16} />
-              <input
-                onChange={(event) => updateListFilter("keyword", event.target.value)}
-                placeholder="タイトル、キャラ名、召喚石名、武器名、メモ"
-                value={listFilters.keyword}
-              />
-            </span>
-          </label>
-          <label>
-            投稿種別
-            <select onChange={(event) => updateListFilter("sourceType", event.target.value)} value={listFilters.sourceType}>
-              {sourceTypeOptions.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </label>
           <label>
             クエスト名
             <select onChange={(event) => updateListFilter("questName", event.target.value)} value={listFilters.questName}>
@@ -1224,104 +1227,129 @@ export function BuildsPage() {
             </select>
           </label>
           <label>
-            目的
-            <select onChange={(event) => updateListFilter("purpose", event.target.value)} value={listFilters.purpose}>
+            加護石
+            <select onChange={(event) => updateListFilter("prerequisites", event.target.value)} value={listFilters.prerequisites}>
               <option value="">すべて</option>
-              {visiblePurposeOptions.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            操作タイプ
-            <select onChange={(event) => updateListFilter("operationType", event.target.value)} value={listFilters.operationType}>
-              <option value="">すべて</option>
-              {operationOptions.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            検証状態
-            <select onChange={(event) => updateListFilter("verificationStatus", event.target.value)} value={listFilters.verificationStatus}>
-              <option value="">すべて</option>
-              {verificationOptions.map((option) => (
+              {prerequisiteOptions.map((option) => (
                 <option key={option}>{option}</option>
               ))}
             </select>
           </label>
 
-          {listFilters.category !== "周回・武器集め用" && (
-            <>
+          <details className="advanced-search">
+            <summary>詳細検索</summary>
+            <div className="advanced-filter-grid">
+              <label className="keyword-field">
+                キーワード
+                <span className="input-with-icon">
+                  <Search size={16} />
+                  <input
+                    onChange={(event) => updateListFilter("keyword", event.target.value)}
+                    placeholder="タイトル、キャラ名、召喚石名、武器名、メモ"
+                    value={listFilters.keyword}
+                  />
+                </span>
+              </label>
               <label>
-                役割
-                <select onChange={(event) => updateListFilter("role", event.target.value)} value={listFilters.role}>
-                  <option value="">すべて</option>
-                  {roleOptions.map((option) => (
+                投稿種別
+                <select onChange={(event) => updateListFilter("sourceType", event.target.value)} value={listFilters.sourceType}>
+                  {sourceTypeOptions.map((option) => (
                     <option key={option}>{option}</option>
                   ))}
                 </select>
               </label>
+              <label>
+                目的
+                <select onChange={(event) => updateListFilter("purpose", event.target.value)} value={listFilters.purpose}>
+                  <option value="">すべて</option>
+                  {visiblePurposeOptions.map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                操作タイプ
+                <select onChange={(event) => updateListFilter("operationType", event.target.value)} value={listFilters.operationType}>
+                  <option value="">すべて</option>
+                  {operationOptions.map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                検証状態
+                <select onChange={(event) => updateListFilter("verificationStatus", event.target.value)} value={listFilters.verificationStatus}>
+                  <option value="">すべて</option>
+                  {verificationOptions.map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+
+              {listFilters.category !== "周回・武器集め用" && (
+                <>
+                  <label>
+                    役割
+                    <select onChange={(event) => updateListFilter("role", event.target.value)} value={listFilters.role}>
+                      <option value="">すべて</option>
+                      {roleOptions.map((option) => (
+                        <option key={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="checkbox-field">
+                    <input
+                      checked={listFilters.hasActionNotes}
+                      onChange={(event) => updateListFilter("hasActionNotes", event.target.checked)}
+                      type="checkbox"
+                    />
+                    行動メモあり
+                  </label>
+                </>
+              )}
+
+              {listFilters.category !== "高難度攻略用" && (
+                <>
+                  <label>
+                    自発 / 救援
+                    <select onChange={(event) => updateListFilter("raidRole", event.target.value)} value={listFilters.raidRole}>
+                      <option value="">すべて</option>
+                      {raidRoleOptions.map((option) => (
+                        <option key={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    青箱狙い
+                    <select onChange={(event) => updateListFilter("blueChest", event.target.value)} value={listFilters.blueChest}>
+                      <option value="">すべて</option>
+                      {blueChestOptions.map((option) => (
+                        <option key={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    安定度
+                    <select onChange={(event) => updateListFilter("stability", event.target.value)} value={listFilters.stability}>
+                      <option value="">すべて</option>
+                      {stabilityOptions.map((option) => (
+                        <option key={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
+
               <label className="checkbox-field">
                 <input
-                  checked={listFilters.hasActionNotes}
-                  onChange={(event) => updateListFilter("hasActionNotes", event.target.checked)}
+                  checked={listFilters.hasReferenceUrls}
+                  onChange={(event) => updateListFilter("hasReferenceUrls", event.target.checked)}
                   type="checkbox"
                 />
-                行動メモあり
+                参考URLあり
               </label>
-            </>
-          )}
-
-          {listFilters.category !== "高難度攻略用" && (
-            <>
-              <label>
-                自発 / 救援
-                <select onChange={(event) => updateListFilter("raidRole", event.target.value)} value={listFilters.raidRole}>
-                  <option value="">すべて</option>
-                  {raidRoleOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                青箱狙い
-                <select onChange={(event) => updateListFilter("blueChest", event.target.value)} value={listFilters.blueChest}>
-                  <option value="">すべて</option>
-                  {blueChestOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                安定度
-                <select onChange={(event) => updateListFilter("stability", event.target.value)} value={listFilters.stability}>
-                  <option value="">すべて</option>
-                  {stabilityOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                編成前提
-                <select onChange={(event) => updateListFilter("prerequisites", event.target.value)} value={listFilters.prerequisites}>
-                  <option value="">すべて</option>
-                  {prerequisiteOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-            </>
-          )}
-
-          <label className="checkbox-field">
-            <input
-              checked={listFilters.hasReferenceUrls}
-              onChange={(event) => updateListFilter("hasReferenceUrls", event.target.checked)}
-              type="checkbox"
-            />
-            参考URLあり
-          </label>
+            </div>
+          </details>
         </div>
 
         <div className="build-search-summary">
@@ -1344,7 +1372,9 @@ export function BuildsPage() {
           {filteredListItems.length === 0 && <div className="empty-state">条件に合う編成はまだありません。</div>}
         </div>
       </section>
+      )}
 
+      {activeBuildTab === "form" && (
       <section className="content-grid build-page-grid">
         <form className="panel task-form build-form" onSubmit={submit}>
           <div className="section-heading">
@@ -1374,7 +1404,7 @@ export function BuildsPage() {
                 value={form.category}
               >
                 {categoryOptions.map((option) => (
-                  <option key={option}>{option}</option>
+                  <option key={option} value={option}>{categoryLabel(option)}</option>
                 ))}
               </select>
             </label>
@@ -1715,7 +1745,7 @@ export function BuildsPage() {
                   </select>
                 </label>
                 <label>
-                  編成前提
+                  加護石
                   <select onChange={(event) => update("prerequisites", event.target.value)} value={form.prerequisites ?? ""}>
                     <option value="">未指定</option>
                     {prerequisiteOptions.map((option) => (
@@ -1823,6 +1853,7 @@ export function BuildsPage() {
           </div>
         </aside>
       </section>
+      )}
     </div>
   );
 }
