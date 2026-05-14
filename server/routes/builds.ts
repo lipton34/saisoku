@@ -14,6 +14,30 @@ type ReferenceUrl = {
   memo: string;
 };
 
+type CharacterDetail = {
+  position: string;
+  name: string;
+  importance: string;
+  roleMemo: string;
+  substituteMemo: string;
+};
+
+type SummonDetail = {
+  position: string;
+  name: string;
+  importance: string;
+  usageMemo: string;
+  substituteMemo: string;
+};
+
+type WeaponDetail = {
+  name: string;
+  importance: string;
+  count: string;
+  usageMemo: string;
+  substituteMemo: string;
+};
+
 type BuildPreset = {
   id: string;
   name: string;
@@ -27,6 +51,9 @@ type BuildPreset = {
   presetStatus: string;
   origins: string[];
   protagonistJob: string;
+  characterDetails: CharacterDetail[];
+  summonDetails: SummonDetail[];
+  weaponDetails: WeaponDetail[];
   characters: string[];
   summons: string[];
   weapons: string[];
@@ -67,6 +94,21 @@ const buildPresets: BuildPreset[] = [
     presetStatus: "投稿者確認済",
     origins: ["YouTube参考", "団内実績"],
     protagonistJob: "剣豪",
+    characterDetails: [
+      { position: "フロント", name: "ハーゼリーラ", importance: "必須", roleMemo: "奥義回転と耐久補助", substituteMemo: "" },
+      { position: "フロント", name: "ガブリエル", importance: "推奨", roleMemo: "火力と弱体補助", substituteMemo: "手持ちに合わせて弱体枠へ変更" },
+      { position: "任意", name: "ワムデュス", importance: "代用可", roleMemo: "耐久補助", substituteMemo: "防御寄せキャラ" }
+    ],
+    summonDetails: [
+      { position: "メイン", name: "ヴァルナ", importance: "推奨", usageMemo: "神石編成の前提", substituteMemo: "マグナ寄せの場合は要調整" },
+      { position: "サブ", name: "ベルゼバブ", importance: "推奨", usageMemo: "火力・弱体補助", substituteMemo: "" },
+      { position: "サブ", name: "ヤチマ", importance: "代用可", usageMemo: "召喚短縮", substituteMemo: "奥義支援召喚石" }
+    ],
+    weaponDetails: [
+      { name: "終末武器", importance: "必須", count: "1本", usageMemo: "耐久と火力の軸", substituteMemo: "" },
+      { name: "オメガ刀", importance: "推奨", count: "1本", usageMemo: "奥義寄せ", substituteMemo: "オメガ武器の得意武器違い" },
+      { name: "水属性の奥義寄せ武器", importance: "自由枠", count: "数本", usageMemo: "手持ちに合わせて調整", substituteMemo: "" }
+    ],
     characters: ["ハーゼリーラ", "ガブリエル", "ワムデュス"],
     summons: ["ヴァルナ", "ベルゼバブ", "ヤチマ"],
     weapons: ["終末武器", "オメガ刀", "水属性の奥義寄せ武器"],
@@ -99,6 +141,21 @@ const buildPresets: BuildPreset[] = [
     presetStatus: "未検証",
     origins: ["攻略サイト参考", "投稿者作成"],
     protagonistJob: "パラディン",
+    characterDetails: [
+      { position: "フロント", name: "サテュロス", importance: "推奨", roleMemo: "耐久と回復", substituteMemo: "防御寄せキャラ" },
+      { position: "フロント", name: "オクトー", importance: "代用可", roleMemo: "奥義解除補助", substituteMemo: "奥義回転役" },
+      { position: "サブ", name: "カイム", importance: "推奨", roleMemo: "サブ加護", substituteMemo: "" }
+    ],
+    summonDetails: [
+      { position: "メイン", name: "ティターン", importance: "推奨", usageMemo: "神石編成の前提", substituteMemo: "マグナは要調整" },
+      { position: "サブ", name: "ルシフェル", importance: "推奨", usageMemo: "回復・耐久", substituteMemo: "" },
+      { position: "サブ", name: "ゴッドガード・ブローディア", importance: "代用可", usageMemo: "防御手段", substituteMemo: "ダメージ軽減石" }
+    ],
+    weaponDetails: [
+      { name: "終末武器", importance: "必須", count: "1本", usageMemo: "耐久と火力の軸", substituteMemo: "" },
+      { name: "オメガ武器", importance: "推奨", count: "1本", usageMemo: "予兆解除支援", substituteMemo: "" },
+      { name: "HPを確保できる武器", importance: "自由枠", count: "複数", usageMemo: "耐久調整", substituteMemo: "" }
+    ],
     characters: ["サテュロス", "オクトー", "カイム"],
     summons: ["ティターン", "ルシフェル", "ゴッドガード・ブローディア"],
     weapons: ["終末武器", "オメガ武器", "HPを確保できる武器"],
@@ -128,6 +185,21 @@ const buildPresets: BuildPreset[] = [
     presetStatus: "団内利用中",
     origins: ["団内実績"],
     protagonistJob: "レスラー",
+    characterDetails: [
+      { position: "フロント", name: "パーシヴァル", importance: "必須", roleMemo: "火力軸", substituteMemo: "" },
+      { position: "フロント", name: "ミカエル", importance: "推奨", roleMemo: "火力・上限補助", substituteMemo: "火力支援キャラ" },
+      { position: "フロント", name: "ウィルナス", importance: "代用可", roleMemo: "火力枠", substituteMemo: "手持ちの火力枠" }
+    ],
+    summonDetails: [
+      { position: "メイン", name: "アグニス", importance: "推奨", usageMemo: "神石編成の前提", substituteMemo: "マグナの場合は火力確認" },
+      { position: "サブ", name: "ベルゼバブ", importance: "推奨", usageMemo: "時短", substituteMemo: "" },
+      { position: "サブ", name: "サン", importance: "推奨", usageMemo: "与ダメ補助", substituteMemo: "" }
+    ],
+    weaponDetails: [
+      { name: "火リミ武器", importance: "推奨", count: "複数", usageMemo: "火力確保", substituteMemo: "火力が足りる範囲で調整" },
+      { name: "終末武器", importance: "必須", count: "1本", usageMemo: "上限・火力", substituteMemo: "" },
+      { name: "極星器", importance: "代用可", count: "1本", usageMemo: "火力補助", substituteMemo: "" }
+    ],
     characters: ["パーシヴァル", "ミカエル", "ウィルナス"],
     summons: ["アグニス", "ベルゼバブ", "サン"],
     weapons: ["火リミ武器", "終末武器", "極星器"],
@@ -172,6 +244,90 @@ function parseStringArray(value: unknown) {
   return value.map((item) => parseText(item)).filter(Boolean);
 }
 
+function parseCharacterDetails(value: unknown): CharacterDetail[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const candidate = item as Record<string, unknown>;
+      const name = parseText(candidate.name);
+      if (!name) {
+        return null;
+      }
+
+      return {
+        position: parseOptionalText(candidate.position) ?? "任意",
+        name,
+        importance: parseOptionalText(candidate.importance) ?? "自由枠",
+        roleMemo: parseOptionalText(candidate.roleMemo) ?? "",
+        substituteMemo: parseOptionalText(candidate.substituteMemo) ?? ""
+      };
+    })
+    .filter((item): item is CharacterDetail => item !== null);
+}
+
+function parseSummonDetails(value: unknown): SummonDetail[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const candidate = item as Record<string, unknown>;
+      const name = parseText(candidate.name);
+      if (!name) {
+        return null;
+      }
+
+      return {
+        position: parseOptionalText(candidate.position) ?? "任意",
+        name,
+        importance: parseOptionalText(candidate.importance) ?? "自由枠",
+        usageMemo: parseOptionalText(candidate.usageMemo) ?? "",
+        substituteMemo: parseOptionalText(candidate.substituteMemo) ?? ""
+      };
+    })
+    .filter((item): item is SummonDetail => item !== null);
+}
+
+function parseWeaponDetails(value: unknown): WeaponDetail[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const candidate = item as Record<string, unknown>;
+      const name = parseText(candidate.name);
+      if (!name) {
+        return null;
+      }
+
+      return {
+        name,
+        importance: parseOptionalText(candidate.importance) ?? "自由枠",
+        count: parseOptionalText(candidate.count) ?? "",
+        usageMemo: parseOptionalText(candidate.usageMemo) ?? "",
+        substituteMemo: parseOptionalText(candidate.substituteMemo) ?? ""
+      };
+    })
+    .filter((item): item is WeaponDetail => item !== null);
+}
+
 function parseReferenceUrls(value: unknown): ReferenceUrl[] {
   if (!Array.isArray(value)) {
     return [];
@@ -211,6 +367,30 @@ function buildPostData(body: Record<string, unknown>, ownerId: string): Prisma.B
   const category = parseText(body.category) || parseText(source.category);
   const questName = parseText(body.questName) || parseText(source.questName);
   const element = parseText(body.element) || parseText(source.element);
+  const characterDetails = parseCharacterDetails(body.characterDetails).length
+    ? parseCharacterDetails(body.characterDetails)
+    : parseCharacterDetails(source.characterDetails);
+  const summonDetails = parseSummonDetails(body.summonDetails).length
+    ? parseSummonDetails(body.summonDetails)
+    : parseSummonDetails(source.summonDetails);
+  const weaponDetails = parseWeaponDetails(body.weaponDetails).length
+    ? parseWeaponDetails(body.weaponDetails)
+    : parseWeaponDetails(source.weaponDetails);
+  const characters = parseStringArray(body.characters).length
+    ? parseStringArray(body.characters)
+    : characterDetails.map((item) => item.name).filter(Boolean).length
+      ? characterDetails.map((item) => item.name)
+      : parseStringArray(source.characters);
+  const summons = parseStringArray(body.summons).length
+    ? parseStringArray(body.summons)
+    : summonDetails.map((item) => item.name).filter(Boolean).length
+      ? summonDetails.map((item) => item.name)
+      : parseStringArray(source.summons);
+  const weapons = parseStringArray(body.weapons).length
+    ? parseStringArray(body.weapons)
+    : weaponDetails.map((item) => item.name).filter(Boolean).length
+      ? weaponDetails.map((item) => item.name)
+      : parseStringArray(source.weapons);
 
   if (!title || !category || !questName || !element) {
     throw new Error("編成タイトル、クエスト分類、クエスト名、属性を入力してください");
@@ -226,9 +406,12 @@ function buildPostData(body: Record<string, unknown>, ownerId: string): Prisma.B
     verificationStatus: parseText(body.verificationStatus) || parseText(source.verificationStatus) || "未検証",
     overview: parseOptionalText(body.overview) ?? parseOptionalText(source.overview),
     protagonistJob: parseOptionalText(body.protagonistJob) ?? parseOptionalText(source.protagonistJob),
-    characters: parseStringArray(body.characters).length ? parseStringArray(body.characters) : parseStringArray(source.characters),
-    summons: parseStringArray(body.summons).length ? parseStringArray(body.summons) : parseStringArray(source.summons),
-    weapons: parseStringArray(body.weapons).length ? parseStringArray(body.weapons) : parseStringArray(source.weapons),
+    characterDetails: characterDetails as unknown as Prisma.InputJsonValue,
+    summonDetails: summonDetails as unknown as Prisma.InputJsonValue,
+    weaponDetails: weaponDetails as unknown as Prisma.InputJsonValue,
+    characters,
+    summons,
+    weapons,
     requiredParts: parseStringArray(body.requiredParts).length
       ? parseStringArray(body.requiredParts)
       : parseStringArray(source.requiredParts),

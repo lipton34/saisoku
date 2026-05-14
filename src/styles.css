@@ -153,7 +153,8 @@ a {
 .nav-list a,
 .icon-text-button,
 .text-link,
-.primary-button {
+.primary-button,
+.secondary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -185,6 +186,7 @@ a {
 .icon-text-button,
 .icon-button,
 .primary-button,
+.secondary-button,
 .segmented button {
   cursor: pointer;
   border: 0;
@@ -244,6 +246,15 @@ a {
 .primary-button:disabled {
   cursor: progress;
   opacity: 0.7;
+}
+
+.secondary-button {
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #edf2f6;
+  color: #405366;
+  font-weight: 800;
 }
 
 .hero-action {
@@ -727,6 +738,46 @@ textarea {
   font-size: 1rem;
 }
 
+.inline-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.build-detail-list {
+  display: grid;
+  gap: 8px;
+}
+
+.build-detail-row {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+}
+
+.build-detail-row input,
+.build-detail-row select {
+  min-width: 0;
+}
+
+.character-row,
+.summon-row {
+  grid-template-columns: 110px minmax(140px, 1fr) 100px minmax(140px, 1fr) minmax(140px, 1fr) auto;
+}
+
+.weapon-row {
+  grid-template-columns: minmax(150px, 1fr) 100px 90px minmax(140px, 1fr) minmax(140px, 1fr) auto;
+}
+
+.reference-row {
+  grid-template-columns: 120px minmax(130px, 0.8fr) minmax(180px, 1fr) minmax(140px, 1fr) auto;
+}
+
+.empty-state.compact {
+  padding: 12px;
+}
+
 .template-grid {
   display: grid;
   gap: 8px;
@@ -1010,7 +1061,11 @@ textarea {
 
   .material-item,
   .material-add-row,
-  .preset-apply-row {
+  .preset-apply-row,
+  .character-row,
+  .summon-row,
+  .weapon-row,
+  .reference-row {
     grid-template-columns: 1fr;
   }
 

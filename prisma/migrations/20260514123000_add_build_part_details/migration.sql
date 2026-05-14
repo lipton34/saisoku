@@ -1,0 +1,4 @@
+ALTER TABLE "BuildPost"
+ADD COLUMN "characterDetails" JSONB NOT NULL DEFAULT '[]',
+ADD COLUMN "summonDetails" JSONB NOT NULL DEFAULT '[]',
+ADD COLUMN "weaponDetails" JSONB NOT NULL DEFAULT '[]';

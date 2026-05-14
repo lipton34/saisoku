@@ -111,6 +111,9 @@ model BuildPost {
   verificationStatus  String
   overview            String?
   protagonistJob      String?
+  characterDetails    Json     @default("[]")
+  summonDetails       Json     @default("[]")
+  weaponDetails       Json     @default("[]")
   characters          String[] @default([])
   summons             String[] @default([])
   weapons             String[] @default([])

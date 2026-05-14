@@ -71,6 +71,30 @@ export type BuildReferenceUrl = {
   memo: string;
 };
 
+export type BuildCharacterDetail = {
+  position: string;
+  name: string;
+  importance: string;
+  roleMemo: string;
+  substituteMemo: string;
+};
+
+export type BuildSummonDetail = {
+  position: string;
+  name: string;
+  importance: string;
+  usageMemo: string;
+  substituteMemo: string;
+};
+
+export type BuildWeaponDetail = {
+  name: string;
+  importance: string;
+  count: string;
+  usageMemo: string;
+  substituteMemo: string;
+};
+
 export type BuildPreset = {
   id: string;
   name: string;
@@ -84,6 +108,9 @@ export type BuildPreset = {
   presetStatus: string;
   origins: string[];
   protagonistJob: string;
+  characterDetails: BuildCharacterDetail[];
+  summonDetails: BuildSummonDetail[];
+  weaponDetails: BuildWeaponDetail[];
   characters: string[];
   summons: string[];
   weapons: string[];
