@@ -720,14 +720,26 @@ export function BuildFormSteps({
     index: number,
     value: Partial<BuildCharacterDetail>,
   ) {
-    const characterDetails = form.characterDetails.map((item, itemIndex) =>
+    const baseCharacterDetails = hasFixedCharacterSlotShape(
+      form.characterDetails,
+      subCharacterSlotCount,
+    )
+      ? form.characterDetails
+      : normalizeCharacters(form.characterDetails, subCharacterSlotCount);
+    const characterDetails = baseCharacterDetails.map((item, itemIndex) =>
       itemIndex === index ? { ...item, ...value } : item,
     );
     onFormChange({ ...form, characterDetails });
   }
 
   function removeCharacter(index: number) {
-    const characterDetails = form.characterDetails.map((item, itemIndex) =>
+    const baseCharacterDetails = hasFixedCharacterSlotShape(
+      form.characterDetails,
+      subCharacterSlotCount,
+    )
+      ? form.characterDetails
+      : normalizeCharacters(form.characterDetails, subCharacterSlotCount);
+    const characterDetails = baseCharacterDetails.map((item, itemIndex) =>
       itemIndex === index
         ? { ...emptyCharacterDetail, position: item.position }
         : item,
@@ -837,9 +849,15 @@ export function BuildFormSteps({
     await onSubmit(form);
   }
 
+  const displayCharacterDetails = hasFixedCharacterSlotShape(
+    form.characterDetails,
+    subCharacterSlotCount,
+  )
+    ? form.characterDetails
+    : normalizeCharacters(form.characterDetails, subCharacterSlotCount);
   const safeCharacterIndex =
-    form.characterDetails.length > 0
-      ? Math.min(activeCharacterIndex, form.characterDetails.length - 1)
+    displayCharacterDetails.length > 0
+      ? Math.min(activeCharacterIndex, displayCharacterDetails.length - 1)
       : 0;
   const safeWeaponIndex =
     form.weaponDetails.length > 0
@@ -849,13 +867,13 @@ export function BuildFormSteps({
     form.summonDetails.length > 0
       ? Math.min(activeSummonIndex, form.summonDetails.length - 1)
       : 0;
-  const activeCharacter = form.characterDetails[safeCharacterIndex];
+  const activeCharacter = displayCharacterDetails[safeCharacterIndex];
   const activeWeapon = form.weaponDetails[safeWeaponIndex];
   const activeSummon = form.summonDetails[safeSummonIndex];
-  const frontCharacters = form.characterDetails
+  const frontCharacters = displayCharacterDetails
     .slice(0, frontCharacterSlots)
     .map((character, index) => ({ character, index }));
-  const subCharacters = form.characterDetails
+  const subCharacters = displayCharacterDetails
     .slice(frontCharacterSlots, frontCharacterSlots + subCharacterSlotCount)
     .map((character, index) => ({
       character,
@@ -881,9 +899,15 @@ export function BuildFormSteps({
   const selectCharacterCandidate = useCallback(
     (name: string) => {
       const currentForm = latestFormRef.current;
+      const currentCharacterDetails = hasFixedCharacterSlotShape(
+        currentForm.characterDetails,
+        subCharacterSlotCount,
+      )
+        ? currentForm.characterDetails
+        : normalizeCharacters(currentForm.characterDetails, subCharacterSlotCount);
       const characterDetails =
-        currentForm.characterDetails.length > 0
-          ? currentForm.characterDetails.map((item, itemIndex) =>
+        currentCharacterDetails.length > 0
+          ? currentCharacterDetails.map((item, itemIndex) =>
               itemIndex === safeCharacterIndex ? { ...item, name } : item,
             )
           : [
@@ -894,11 +918,11 @@ export function BuildFormSteps({
               },
             ];
       onFormChange({ ...currentForm, characterDetails });
-      if (currentForm.characterDetails.length === 0) {
+      if (currentCharacterDetails.length === 0) {
         setActiveCharacterIndex(0);
       }
     },
-    [onFormChange, safeCharacterIndex],
+    [onFormChange, safeCharacterIndex, subCharacterSlotCount],
   );
   const selectWeaponCandidate = useCallback(
     (name: string) => {
@@ -1125,6 +1149,22 @@ export function BuildFormSteps({
                   <p className="eyebrow">Step 2</p>
                   <h2>{steps[1].title}</h2>
                 </div>
+                <div className="segmented-control" aria-label="サブキャラ枠数">
+                  <button
+                    className={subCharacterSlotCount === 2 ? "active" : ""}
+                    onClick={() => normalizeCharacterSlots(2)}
+                    type="button"
+                  >
+                    サブ2枠
+                  </button>
+                  <button
+                    className={subCharacterSlotCount === 5 ? "active" : ""}
+                    onClick={() => normalizeCharacterSlots(5)}
+                    type="button"
+                  >
+                    サブ5枠
+                  </button>
+                </div>
               </div>
 
               <div
@@ -1193,22 +1233,6 @@ export function BuildFormSteps({
                     <div className="formation-section-title">
                       <span>サブメンバー</span>
                       <strong>Sub Member</strong>
-                      <div className="segmented-control" aria-label="サブキャラ枠数">
-                        <button
-                          className={subCharacterSlotCount === 2 ? "active" : ""}
-                          onClick={() => normalizeCharacterSlots(2)}
-                          type="button"
-                        >
-                          サブ2枠
-                        </button>
-                        <button
-                          className={subCharacterSlotCount === 5 ? "active" : ""}
-                          onClick={() => normalizeCharacterSlots(5)}
-                          type="button"
-                        >
-                          サブ5枠
-                        </button>
-                      </div>
                     </div>
                     <div className="formation-board-scroll">
                     <div className="formation-slot-grid character-slots character-slots--sub">
