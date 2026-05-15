@@ -157,7 +157,6 @@ const emptyWeaponDetail: BuildWeaponDetail = {
 
 interface BuildFormStepsProps {
   form: BuildPostInput;
-  onFormChange: (form: BuildPostInput) => void;
   onSubmit: (form: BuildPostInput) => Promise<void>;
   onCancel: () => void;
   onApplyPreset: (preset: BuildPreset) => void;
@@ -651,8 +650,7 @@ function PartCandidateBrowser({
 }
 
 export function BuildFormSteps({
-  form,
-  onFormChange,
+  form: initialForm,
   onSubmit,
   onCancel,
   onApplyPreset,
@@ -661,8 +659,10 @@ export function BuildFormSteps({
   presets = [],
   editMode = false,
 }: BuildFormStepsProps) {
-  const latestFormRef = useRef(form);
-  latestFormRef.current = form;
+  const [draftForm, setDraftForm] = useState(initialForm);
+  const latestFormRef = useRef(draftForm);
+  latestFormRef.current = draftForm;
+  const form = draftForm;
   const [currentStep, setCurrentStep] = useState<FormStep>(1);
   const [showPresetModal, setShowPresetModal] = useState(false);
   const [activeCharacterIndex, setActiveCharacterIndex] = useState(0);
@@ -687,10 +687,34 @@ export function BuildFormSteps({
         : defaultSubCharacterSlots,
   );
   const [weaponSlotCount, setWeaponSlotCount] = useState<10 | 13>(() =>
-    form.weaponDetails.length > defaultWeaponSlots
+    initialForm.weaponDetails.length > defaultWeaponSlots
       ? expandedWeaponSlots
       : defaultWeaponSlots,
   );
+
+  function applyDraft(next: BuildPostInput) {
+    latestFormRef.current = next;
+    setDraftForm(next);
+  }
+
+  useEffect(() => {
+    latestFormRef.current = initialForm;
+    setDraftForm(initialForm);
+    setSubCharacterSlotCount(
+      initialForm.characterDetails.filter((item) => item.position === "サブ")
+        .length > defaultSubCharacterSlots
+        ? expandedSubCharacterSlots
+        : defaultSubCharacterSlots,
+    );
+    setWeaponSlotCount(
+      initialForm.weaponDetails.length > defaultWeaponSlots
+        ? expandedWeaponSlots
+        : defaultWeaponSlots,
+    );
+    setActiveCharacterIndex(0);
+    setActiveWeaponIndex(0);
+    setActiveSummonIndex(0);
+  }, [initialForm]);
 
   const purposeOptions =
     form.category === "周回・武器集め用"
@@ -753,11 +777,11 @@ export function BuildFormSteps({
       return;
     }
 
-    onFormChange({
+    applyDraft({
       ...latestFormRef.current,
       characterDetails,
     });
-  }, [form.characterDetails, onFormChange, subCharacterSlotCount]);
+  }, [form.characterDetails, subCharacterSlotCount]);
 
   useEffect(() => {
     const incomingWeaponSlotCount =
@@ -781,11 +805,11 @@ export function BuildFormSteps({
       return;
     }
 
-    onFormChange({
+    applyDraft({
       ...latestFormRef.current,
       weaponDetails,
     });
-  }, [form.weaponDetails, onFormChange, weaponSlotCount]);
+  }, [form.weaponDetails, weaponSlotCount]);
 
   useEffect(() => {
     if (hasFixedSummonSlotShape(form.summonDetails)) {
@@ -797,17 +821,17 @@ export function BuildFormSteps({
       return;
     }
 
-    onFormChange({
+    applyDraft({
       ...latestFormRef.current,
       summonDetails,
     });
-  }, [form.summonDetails, onFormChange]);
+  }, [form.summonDetails]);
 
   function updateField<K extends keyof BuildPostInput>(
     key: K,
     value: BuildPostInput[K],
   ) {
-    onFormChange({ ...form, [key]: value });
+    applyDraft({ ...form, [key]: value });
   }
 
   function updateCharacter(
@@ -823,7 +847,7 @@ export function BuildFormSteps({
     const characterDetails = baseCharacterDetails.map((item, itemIndex) =>
       itemIndex === index ? { ...item, ...value } : item,
     );
-    onFormChange({ ...form, characterDetails });
+    applyDraft({ ...form, characterDetails });
   }
 
   function removeCharacter(index: number) {
@@ -838,12 +862,12 @@ export function BuildFormSteps({
         ? { ...emptyCharacterDetail, position: item.position }
         : item,
     );
-    onFormChange({ ...form, characterDetails });
+    applyDraft({ ...form, characterDetails });
   }
 
   function normalizeCharacterSlots(size: 2 | 5) {
     setSubCharacterSlotCount(size);
-    onFormChange({
+    applyDraft({
       ...form,
       characterDetails: normalizeCharacters(form.characterDetails, size),
     });
@@ -856,12 +880,12 @@ export function BuildFormSteps({
     const weaponDetails = form.weaponDetails.map((item, itemIndex) =>
       itemIndex === index ? { ...item, ...value } : item,
     );
-    onFormChange({ ...form, weaponDetails });
+    applyDraft({ ...form, weaponDetails });
   }
 
   function normalizeWeaponSlots(size: 10 | 13) {
     setWeaponSlotCount(size);
-    onFormChange({
+    applyDraft({
       ...form,
       weaponDetails: normalizeWeapons(form.weaponDetails, size),
     });
@@ -872,32 +896,32 @@ export function BuildFormSteps({
     const weaponDetails = form.weaponDetails.map((item, itemIndex) =>
       itemIndex === index ? { ...emptyWeaponDetail } : item,
     );
-    onFormChange({ ...form, weaponDetails });
+    applyDraft({ ...form, weaponDetails });
   }
 
   function updateSummon(index: number, value: Partial<BuildSummonDetail>) {
     const summonDetails = form.summonDetails.map((item, itemIndex) =>
       itemIndex === index ? { ...item, ...value } : item,
     );
-    onFormChange({ ...form, summonDetails });
+    applyDraft({ ...form, summonDetails });
   }
 
   function removeSummon(index: number) {
     const summonDetails = form.summonDetails.map((item, itemIndex) =>
       itemIndex === index ? { ...emptySummonDetail, position: item.position } : item,
     );
-    onFormChange({ ...form, summonDetails });
+    applyDraft({ ...form, summonDetails });
   }
 
   function updateReference(index: number, value: Partial<BuildReferenceUrl>) {
     const referenceUrls = form.referenceUrls.map((item, itemIndex) =>
       itemIndex === index ? { ...item, ...value } : item,
     );
-    onFormChange({ ...form, referenceUrls });
+    applyDraft({ ...form, referenceUrls });
   }
 
   function addReference() {
-    onFormChange({
+    applyDraft({
       ...form,
       referenceUrls: [
         ...form.referenceUrls,
@@ -907,7 +931,7 @@ export function BuildFormSteps({
   }
 
   function removeReference(index: number) {
-    onFormChange({
+    applyDraft({
       ...form,
       referenceUrls: form.referenceUrls.filter(
         (_, itemIndex) => itemIndex !== index,
@@ -1011,12 +1035,12 @@ export function BuildFormSteps({
                 name,
               },
             ];
-      onFormChange({ ...currentForm, characterDetails });
+      applyDraft({ ...currentForm, characterDetails });
       if (currentCharacterDetails.length === 0) {
         setActiveCharacterIndex(0);
       }
     },
-    [onFormChange, safeCharacterIndex, subCharacterSlotCount],
+    [safeCharacterIndex, subCharacterSlotCount],
   );
   const selectWeaponCandidate = useCallback(
     (name: string) => {
@@ -1027,12 +1051,12 @@ export function BuildFormSteps({
               itemIndex === safeWeaponIndex ? { ...item, name } : item,
             )
           : [{ ...emptyWeaponDetail, name }];
-      onFormChange({ ...currentForm, weaponDetails });
+      applyDraft({ ...currentForm, weaponDetails });
       if (currentForm.weaponDetails.length === 0) {
         setActiveWeaponIndex(0);
       }
     },
-    [onFormChange, safeWeaponIndex],
+    [safeWeaponIndex],
   );
   const selectSummonCandidate = useCallback(
     (name: string) => {
@@ -1049,12 +1073,12 @@ export function BuildFormSteps({
                 name,
               },
             ];
-      onFormChange({ ...currentForm, summonDetails });
+      applyDraft({ ...currentForm, summonDetails });
       if (currentForm.summonDetails.length === 0) {
         setActiveSummonIndex(0);
       }
     },
-    [onFormChange, safeSummonIndex],
+    [safeSummonIndex],
   );
 
   return (

@@ -1187,6 +1187,7 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
   const [posts, setPosts] = useState<BuildPost[]>([]);
   const [form, setForm] = useState<BuildPostInput>(emptyForm);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [isBuildsLoading, setIsBuildsLoading] = useState(true);
   const [listFilters, setListFilters] =
     useState<BuildListFilters>(emptyListFilters);
   const [error, setError] = useState("");
@@ -1275,6 +1276,7 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
   }, [buildId, listItems, sourceType]);
 
   async function load() {
+    setIsBuildsLoading(true);
     try {
       const [presetData, postData] = await Promise.all([
         api.buildPresets(),
@@ -1288,6 +1290,8 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
           ? caught.message
           : "編成メモの取得に失敗しました",
       );
+    } finally {
+      setIsBuildsLoading(false);
     }
   }
 
@@ -1839,7 +1843,12 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
           </div>
 
           <div className="build-search-list">
-            {filteredListItems.map((item) => (
+            {isBuildsLoading && (
+              <div className="empty-state">
+                編成メモを読み込んでいます...
+              </div>
+            )}
+            {!isBuildsLoading && filteredListItems.map((item) => (
               <BuildListCard
                 canDelete={item.post?.ownerId === user?.id}
                 item={item}
@@ -1850,7 +1859,7 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
                 onDeletePost={deletePost}
               />
             ))}
-            {filteredListItems.length === 0 && (
+            {!isBuildsLoading && filteredListItems.length === 0 && (
               <div className="empty-state">
                 条件に合う編成はまだありません。
               </div>
@@ -1873,7 +1882,6 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
               setError("");
               navigate("/builds/search");
             }}
-            onFormChange={setForm}
             onSubmit={submit}
             presets={presets}
           />
