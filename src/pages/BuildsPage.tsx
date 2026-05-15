@@ -24,6 +24,7 @@ import {
 import { useAuth } from "../components/AuthContext";
 import {
   findBuildMaster,
+  resolveBuildMasterThumbnailUrl,
   type BuildMasterKind,
   type BuildMasterItem,
 } from "../lib/buildMasters";
@@ -508,15 +509,24 @@ function PartThumbnail({
   name: string;
 }) {
   const master = findBuildMaster(kind, name);
+  const thumbnailUrl = master ? resolveBuildMasterThumbnailUrl(master) : "";
+  const [hasImageError, setHasImageError] = useState(false);
   const label = name.trim().slice(0, 2) || "?";
 
-  if (master?.thumbnailUrl) {
+  useEffect(() => {
+    setHasImageError(false);
+  }, [thumbnailUrl]);
+
+  if (thumbnailUrl && !hasImageError) {
     return (
       <img
-        alt=""
+        alt={name}
         className="part-thumbnail"
+        height={42}
         loading="lazy"
-        src={master.thumbnailUrl}
+        onError={() => setHasImageError(true)}
+        src={thumbnailUrl}
+        width={42}
       />
     );
   }

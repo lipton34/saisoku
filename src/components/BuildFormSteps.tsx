@@ -19,6 +19,7 @@ import {
 import {
   buildMasterOptions,
   findBuildMaster,
+  resolveBuildMasterThumbnailUrl,
   type BuildMasterKind,
   type BuildMasterItem,
 } from "../lib/buildMasters";
@@ -177,6 +178,17 @@ function masterMeta(master: BuildMasterItem | undefined) {
     master.weaponType,
     master.series,
     ...(master.tags ?? []),
+  ]
+    .filter(Boolean)
+    .join(" / ");
+}
+
+function candidateMeta(item: BuildMasterItem) {
+  return [
+    item.element || "属性未設定",
+    item.category || classifyCandidate(item),
+    item.weaponType,
+    item.series,
   ]
     .filter(Boolean)
     .join(" / ");
@@ -399,16 +411,23 @@ const PartThumbnail = memo(function PartThumbnail({
   name: string;
 }) {
   const master = findBuildMaster(kind, name);
+  const thumbnailUrl = master ? resolveBuildMasterThumbnailUrl(master) : "";
+  const [hasImageError, setHasImageError] = useState(false);
   const label = name.trim().slice(0, 2) || "?";
 
-  if (master?.thumbnailUrl) {
+  useEffect(() => {
+    setHasImageError(false);
+  }, [thumbnailUrl]);
+
+  if (thumbnailUrl && !hasImageError) {
     return (
       <img
         alt={name}
         className="part-thumbnail"
         height={48}
         loading="lazy"
-        src={master.thumbnailUrl}
+        onError={() => setHasImageError(true)}
+        src={thumbnailUrl}
         title={name}
         width={48}
       />
@@ -501,7 +520,7 @@ const PartCandidateCard = memo(function PartCandidateCard({
       <PartThumbnail kind={kind} name={item.name} />
       <span>
         <strong>{item.name}</strong>
-        <small>{masterMeta(item)}</small>
+        <small>{candidateMeta(item)}</small>
       </span>
       {selected && <Check size={16} />}
     </button>
