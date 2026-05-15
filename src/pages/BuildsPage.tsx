@@ -23,7 +23,6 @@ import {
 } from "../lib/api";
 import { useAuth } from "../components/AuthContext";
 import {
-  buildMasterOptions,
   findBuildMaster,
   type BuildMasterKind,
   type BuildMasterItem,
@@ -107,23 +106,9 @@ const questOptions = [
   "コスモスHL",
   "アガスティアHL",
 ];
-const jobOptions = buildMasterOptions.jobs.map((item) => item.name);
-const characterOptions = buildMasterOptions.characters.map((item) => item.name);
-const summonOptions = buildMasterOptions.summons.map((item) => item.name);
-const weaponOptions = buildMasterOptions.weapons.map((item) => item.name);
-const importanceOptions = ["必須", "推奨", "代用可", "自由枠"];
-const characterPositionOptions = ["フロント", "サブ", "任意"];
-const summonPositionOptions = ["メイン", "フレンド", "サブ", "任意"];
 const blueChestOptions = ["あり", "なし", "未指定"];
 const stabilityOptions = ["安定", "たまに失敗", "要手動確認", "未指定"];
 const prerequisiteOptions = ["マグナ", "神石", "片面"];
-const referenceTypeOptions = [
-  "攻略記事",
-  "YouTube",
-  "X",
-  "note / ブログ",
-  "その他",
-];
 const listCategoryOptions = categoryOptions;
 const sourceTypeOptions = ["すべて", "投稿編成", "プリセット"];
 const allPurposeOptions = Array.from(
@@ -195,6 +180,7 @@ type BuildListItem = {
   referenceUrls: BuildReferenceUrl[];
   authorName: string;
   updatedAt: string;
+  searchText?: string;
   preset?: BuildPreset;
   post?: BuildPost;
 };
@@ -217,37 +203,6 @@ const emptyListFilters: BuildListFilters = {
   prerequisites: "",
 };
 
-const emptyCharacterDetail: BuildCharacterDetail = {
-  position: "任意",
-  name: "",
-  importance: "自由枠",
-  roleMemo: "",
-  substituteMemo: "",
-};
-
-const emptySummonDetail: BuildSummonDetail = {
-  position: "任意",
-  name: "",
-  importance: "自由枠",
-  usageMemo: "",
-  substituteMemo: "",
-};
-
-const emptyWeaponDetail: BuildWeaponDetail = {
-  name: "",
-  importance: "自由枠",
-  count: "",
-  usageMemo: "",
-  substituteMemo: "",
-};
-
-const emptyReferenceUrl: BuildReferenceUrl = {
-  type: "その他",
-  title: "",
-  url: "",
-  memo: "",
-};
-
 function namesFromCharacters(items: BuildCharacterDetail[]) {
   return items.map((item) => item.name.trim()).filter(Boolean);
 }
@@ -258,17 +213,6 @@ function namesFromSummons(items: BuildSummonDetail[]) {
 
 function namesFromWeapons(items: BuildWeaponDetail[]) {
   return items.map((item) => item.name.trim()).filter(Boolean);
-}
-
-function toLines(items: string[]) {
-  return items.join("\n");
-}
-
-function fromLines(value: string) {
-  return value
-    .split("\n")
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 function presetToForm(preset: BuildPreset): BuildPostInput {
@@ -334,17 +278,19 @@ function postToEditForm(post: BuildPost): BuildPostInput {
   };
 }
 
+const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
+  return dateFormatter.format(date);
 }
 
 function hasText(value: string | null | undefined) {
@@ -449,7 +395,7 @@ function notesToBlocks(value: string | null | undefined) {
 }
 
 function normalizePreset(preset: BuildPreset): BuildListItem {
-  return {
+  const item = {
     ...preset,
     title: preset.name,
     sourceType: "プリセット",
@@ -472,10 +418,11 @@ function normalizePreset(preset: BuildPreset): BuildListItem {
     authorName: "団内テンプレート",
     preset,
   };
+  return { ...item, searchText: searchableText(item) };
 }
 
 function normalizePost(post: BuildPost): BuildListItem {
-  return {
+  const item = {
     ...post,
     sourceType: "投稿編成",
     overview: post.overview ?? null,
@@ -498,6 +445,7 @@ function normalizePost(post: BuildPost): BuildListItem {
     authorName: post.authorName ?? "自分",
     post,
   };
+  return { ...item, searchText: searchableText(item) };
 }
 
 function searchableText(item: BuildListItem) {
@@ -1193,10 +1141,6 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
   const [error, setError] = useState("");
   const activeBuildTab: BuildTab = buildId ? "search" : mode;
 
-  const purposeOptions =
-    form.category === "周回・武器集め用"
-      ? farmingPurposeOptions
-      : highDifficultyPurposeOptions;
   const visiblePurposeOptions =
     listFilters.category === "高難度攻略用"
       ? highDifficultyPurposeOptions
@@ -1225,7 +1169,7 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
     const keyword = listFilters.keyword.trim().toLowerCase();
 
     return listItems.filter((item) => {
-      const matchesKeyword = !keyword || searchableText(item).includes(keyword);
+      const matchesKeyword = !keyword || (item.searchText ?? "").includes(keyword);
 
       return (
         item.category === listFilters.category &&
@@ -1299,13 +1243,6 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
     void load();
   }, []);
 
-  function update<K extends keyof BuildPostInput>(
-    key: K,
-    value: BuildPostInput[K],
-  ) {
-    setForm((current) => ({ ...current, [key]: value }));
-  }
-
   function updateListFilter<K extends keyof BuildListFilters>(
     key: K,
     value: BuildListFilters[K],
@@ -1324,138 +1261,6 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
             prerequisites: "",
           }
         : {}),
-    }));
-  }
-
-  function updateLines(key: keyof BuildPostInput, value: string) {
-    setForm((current) => ({ ...current, [key]: fromLines(value) }));
-  }
-
-  function updateCharacter(
-    index: number,
-    value: Partial<BuildCharacterDetail>,
-  ) {
-    setForm((current) => {
-      const characterDetails = current.characterDetails.map(
-        (item, itemIndex) =>
-          itemIndex === index ? { ...item, ...value } : item,
-      );
-      return {
-        ...current,
-        characterDetails,
-        characters: namesFromCharacters(characterDetails),
-      };
-    });
-  }
-
-  function updateSummon(index: number, value: Partial<BuildSummonDetail>) {
-    setForm((current) => {
-      const summonDetails = current.summonDetails.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, ...value } : item,
-      );
-      return {
-        ...current,
-        summonDetails,
-        summons: namesFromSummons(summonDetails),
-      };
-    });
-  }
-
-  function updateWeapon(index: number, value: Partial<BuildWeaponDetail>) {
-    setForm((current) => {
-      const weaponDetails = current.weaponDetails.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, ...value } : item,
-      );
-      return {
-        ...current,
-        weaponDetails,
-        weapons: namesFromWeapons(weaponDetails),
-      };
-    });
-  }
-
-  function updateReference(index: number, value: Partial<BuildReferenceUrl>) {
-    setForm((current) => ({
-      ...current,
-      referenceUrls: current.referenceUrls.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, ...value } : item,
-      ),
-    }));
-  }
-
-  function addCharacter() {
-    setForm((current) => ({
-      ...current,
-      characterDetails: [...current.characterDetails, emptyCharacterDetail],
-    }));
-  }
-
-  function addSummon() {
-    setForm((current) => ({
-      ...current,
-      summonDetails: [...current.summonDetails, emptySummonDetail],
-    }));
-  }
-
-  function addWeapon() {
-    setForm((current) => ({
-      ...current,
-      weaponDetails: [...current.weaponDetails, emptyWeaponDetail],
-    }));
-  }
-
-  function addReference() {
-    setForm((current) => ({
-      ...current,
-      referenceUrls: [...current.referenceUrls, emptyReferenceUrl],
-    }));
-  }
-
-  function removeCharacter(index: number) {
-    setForm((current) => {
-      const characterDetails = current.characterDetails.filter(
-        (_, itemIndex) => itemIndex !== index,
-      );
-      return {
-        ...current,
-        characterDetails,
-        characters: namesFromCharacters(characterDetails),
-      };
-    });
-  }
-
-  function removeSummon(index: number) {
-    setForm((current) => {
-      const summonDetails = current.summonDetails.filter(
-        (_, itemIndex) => itemIndex !== index,
-      );
-      return {
-        ...current,
-        summonDetails,
-        summons: namesFromSummons(summonDetails),
-      };
-    });
-  }
-
-  function removeWeapon(index: number) {
-    setForm((current) => {
-      const weaponDetails = current.weaponDetails.filter(
-        (_, itemIndex) => itemIndex !== index,
-      );
-      return {
-        ...current,
-        weaponDetails,
-        weapons: namesFromWeapons(weaponDetails),
-      };
-    });
-  }
-
-  function removeReference(index: number) {
-    setForm((current) => ({
-      ...current,
-      referenceUrls: current.referenceUrls.filter(
-        (_, itemIndex) => itemIndex !== index,
-      ),
     }));
   }
 
@@ -1560,27 +1365,6 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
           <option key={option} value={option} />
         ))}
       </datalist>
-      <datalist id="build-job-options">
-        {jobOptions.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
-      <datalist id="build-character-options">
-        {characterOptions.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
-      <datalist id="build-summon-options">
-        {summonOptions.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
-      <datalist id="build-weapon-options">
-        {weaponOptions.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
-
       {selectedItem && (
         <BuildDetailView
           canEdit={selectedItem.post?.ownerId === user?.id}

@@ -61,7 +61,11 @@ export const buildMasterOptions = {
   jobs: buildMasterItems.filter((item) => item.kind === "job")
 };
 
+const buildMasterIndex = new Map(
+  buildMasterItems.map((item) => [`${item.kind}:${item.name}`, item])
+);
+
 export function findBuildMaster(kind: BuildMasterKind, name: string) {
   const normalized = name.trim();
-  return buildMasterItems.find((item) => item.kind === kind && item.name === normalized);
+  return buildMasterIndex.get(`${kind}:${normalized}`);
 }

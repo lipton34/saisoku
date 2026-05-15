@@ -223,6 +223,8 @@ const buildPresets: BuildPreset[] = [
   }
 ];
 
+const buildPresetIndex = new Map(buildPresets.map((preset) => [preset.id, preset]));
+
 function currentUserId(req: Parameters<Parameters<typeof router.get>[1]>[0]) {
   return req.user?.id ?? "";
 }
@@ -357,7 +359,7 @@ function parseReferenceUrls(value: unknown): ReferenceUrl[] {
 
 function findPreset(presetId: unknown) {
   const id = parseText(presetId);
-  return buildPresets.find((preset) => preset.id === id);
+  return buildPresetIndex.get(id);
 }
 
 function buildPostData(body: Record<string, unknown>, ownerId: string): Prisma.BuildPostCreateInput {
@@ -367,30 +369,26 @@ function buildPostData(body: Record<string, unknown>, ownerId: string): Prisma.B
   const category = parseText(body.category) || parseText(source.category);
   const questName = parseText(body.questName) || parseText(source.questName);
   const element = parseText(body.element) || parseText(source.element);
-  const characterDetails = parseCharacterDetails(body.characterDetails).length
-    ? parseCharacterDetails(body.characterDetails)
-    : parseCharacterDetails(source.characterDetails);
-  const summonDetails = parseSummonDetails(body.summonDetails).length
-    ? parseSummonDetails(body.summonDetails)
-    : parseSummonDetails(source.summonDetails);
-  const weaponDetails = parseWeaponDetails(body.weaponDetails).length
-    ? parseWeaponDetails(body.weaponDetails)
-    : parseWeaponDetails(source.weaponDetails);
-  const characters = parseStringArray(body.characters).length
-    ? parseStringArray(body.characters)
-    : characterDetails.map((item) => item.name).filter(Boolean).length
-      ? characterDetails.map((item) => item.name)
-      : parseStringArray(source.characters);
-  const summons = parseStringArray(body.summons).length
-    ? parseStringArray(body.summons)
-    : summonDetails.map((item) => item.name).filter(Boolean).length
-      ? summonDetails.map((item) => item.name)
-      : parseStringArray(source.summons);
-  const weapons = parseStringArray(body.weapons).length
-    ? parseStringArray(body.weapons)
-    : weaponDetails.map((item) => item.name).filter(Boolean).length
-      ? weaponDetails.map((item) => item.name)
-      : parseStringArray(source.weapons);
+  const bodyCharacterDetails = parseCharacterDetails(body.characterDetails);
+  const bodySummonDetails = parseSummonDetails(body.summonDetails);
+  const bodyWeaponDetails = parseWeaponDetails(body.weaponDetails);
+  const characterDetails = bodyCharacterDetails.length ? bodyCharacterDetails : parseCharacterDetails(source.characterDetails);
+  const summonDetails = bodySummonDetails.length ? bodySummonDetails : parseSummonDetails(source.summonDetails);
+  const weaponDetails = bodyWeaponDetails.length ? bodyWeaponDetails : parseWeaponDetails(source.weaponDetails);
+  const bodyCharacters = parseStringArray(body.characters);
+  const bodySummons = parseStringArray(body.summons);
+  const bodyWeapons = parseStringArray(body.weapons);
+  const characterNames = characterDetails.map((item) => item.name).filter(Boolean);
+  const summonNames = summonDetails.map((item) => item.name).filter(Boolean);
+  const weaponNames = weaponDetails.map((item) => item.name).filter(Boolean);
+  const requiredParts = parseStringArray(body.requiredParts);
+  const recommendedParts = parseStringArray(body.recommendedParts);
+  const substitutableParts = parseStringArray(body.substitutableParts);
+  const freeSlots = parseStringArray(body.freeSlots);
+  const referenceUrls = parseReferenceUrls(body.referenceUrls);
+  const characters = bodyCharacters.length ? bodyCharacters : characterNames.length ? characterNames : parseStringArray(source.characters);
+  const summons = bodySummons.length ? bodySummons : summonNames.length ? summonNames : parseStringArray(source.summons);
+  const weapons = bodyWeapons.length ? bodyWeapons : weaponNames.length ? weaponNames : parseStringArray(source.weapons);
 
   if (!title || !category || !questName || !element) {
     throw new Error("編成タイトル、クエスト分類、クエスト名、属性を入力してください");
@@ -412,16 +410,10 @@ function buildPostData(body: Record<string, unknown>, ownerId: string): Prisma.B
     characters,
     summons,
     weapons,
-    requiredParts: parseStringArray(body.requiredParts).length
-      ? parseStringArray(body.requiredParts)
-      : parseStringArray(source.requiredParts),
-    recommendedParts: parseStringArray(body.recommendedParts).length
-      ? parseStringArray(body.recommendedParts)
-      : parseStringArray(source.recommendedParts),
-    substitutableParts: parseStringArray(body.substitutableParts).length
-      ? parseStringArray(body.substitutableParts)
-      : parseStringArray(source.substitutableParts),
-    freeSlots: parseStringArray(body.freeSlots).length ? parseStringArray(body.freeSlots) : parseStringArray(source.freeSlots),
+    requiredParts: requiredParts.length ? requiredParts : parseStringArray(source.requiredParts),
+    recommendedParts: recommendedParts.length ? recommendedParts : parseStringArray(source.recommendedParts),
+    substitutableParts: substitutableParts.length ? substitutableParts : parseStringArray(source.substitutableParts),
+    freeSlots: freeSlots.length ? freeSlots : parseStringArray(source.freeSlots),
     substituteNotes: parseOptionalText(body.substituteNotes) ?? parseOptionalText(source.substituteNotes),
     cautions: parseOptionalText(body.cautions) ?? parseOptionalText(source.cautions),
     role: parseOptionalText(body.role) ?? parseOptionalText(source.role),
@@ -437,9 +429,7 @@ function buildPostData(body: Record<string, unknown>, ownerId: string): Prisma.B
     weaponTarget: parseOptionalText(body.weaponTarget) ?? parseOptionalText(source.weaponTarget),
     rescueTiming: parseOptionalText(body.rescueTiming) ?? parseOptionalText(source.rescueTiming),
     farmingCautions: parseOptionalText(body.farmingCautions) ?? parseOptionalText(source.farmingCautions),
-    referenceUrls: parseReferenceUrls(body.referenceUrls).length
-      ? parseReferenceUrls(body.referenceUrls)
-      : parseReferenceUrls(source.referenceUrls),
+    referenceUrls: referenceUrls.length ? referenceUrls : parseReferenceUrls(source.referenceUrls),
     sourcePresetId: preset?.id ?? parseOptionalText(body.sourcePresetId),
     sourcePresetName: preset?.name ?? parseOptionalText(body.sourcePresetName),
     changeMemo: parseOptionalText(body.changeMemo),

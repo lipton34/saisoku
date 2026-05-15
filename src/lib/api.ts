@@ -156,14 +156,15 @@ type RequestOptions = RequestInit & {
 };
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const hasJson = Object.prototype.hasOwnProperty.call(options, "json");
   const response = await fetch(path, {
     ...options,
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(hasJson ? { "Content-Type": "application/json" } : {}),
       ...options.headers
     },
-    body: options.json ? JSON.stringify(options.json) : options.body
+    body: hasJson ? JSON.stringify(options.json) : options.body
   });
 
   if (!response.ok) {

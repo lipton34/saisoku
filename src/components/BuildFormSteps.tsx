@@ -272,8 +272,19 @@ function browserKindForStep(step: FormStep): PartBrowserKind | null {
   return null;
 }
 
-function sameJson<T>(first: T, second: T) {
-  return JSON.stringify(first) === JSON.stringify(second);
+function sameItems<T extends Record<string, unknown>>(first: T[], second: T[]) {
+  if (first.length !== second.length) {
+    return false;
+  }
+
+  return first.every((item, index) => {
+    const other = second[index];
+    const keys = Object.keys(item);
+    return (
+      keys.length === Object.keys(other).length &&
+      keys.every((key) => item[key] === other[key])
+    );
+  });
 }
 
 function hasFixedCharacterSlotShape(
@@ -773,7 +784,7 @@ export function BuildFormSteps({
       form.characterDetails,
       subCharacterSlotCount,
     );
-    if (sameJson(characterDetails, form.characterDetails)) {
+    if (sameItems(characterDetails, form.characterDetails)) {
       return;
     }
 
@@ -801,7 +812,7 @@ export function BuildFormSteps({
     }
 
     const weaponDetails = normalizeWeapons(form.weaponDetails, weaponSlotCount);
-    if (sameJson(weaponDetails, form.weaponDetails)) {
+    if (sameItems(weaponDetails, form.weaponDetails)) {
       return;
     }
 
@@ -817,7 +828,7 @@ export function BuildFormSteps({
     }
 
     const summonDetails = normalizeSummons(form.summonDetails);
-    if (sameJson(summonDetails, form.summonDetails)) {
+    if (sameItems(summonDetails, form.summonDetails)) {
       return;
     }
 
