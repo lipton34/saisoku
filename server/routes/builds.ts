@@ -17,6 +17,7 @@ type ReferenceUrl = {
 type CharacterDetail = {
   position: string;
   name: string;
+  masterId?: string | null;
   importance: string;
   roleMemo: string;
   substituteMemo: string;
@@ -25,6 +26,7 @@ type CharacterDetail = {
 type SummonDetail = {
   position: string;
   name: string;
+  masterId?: string | null;
   importance: string;
   usageMemo: string;
   substituteMemo: string;
@@ -32,6 +34,7 @@ type SummonDetail = {
 
 type WeaponDetail = {
   name: string;
+  masterId?: string | null;
   importance: string;
   count: string;
   usageMemo: string;
@@ -238,6 +241,10 @@ function parseOptionalText(value: unknown) {
   return text.length > 0 ? text : null;
 }
 
+function parseOptionalMasterId(value: unknown) {
+  return parseOptionalText(value);
+}
+
 function parseStringArray(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
@@ -252,7 +259,7 @@ function parseCharacterDetails(value: unknown): CharacterDetail[] {
   }
 
   return value
-    .map((item) => {
+    .map((item): CharacterDetail | null => {
       if (!item || typeof item !== "object") {
         return null;
       }
@@ -266,6 +273,7 @@ function parseCharacterDetails(value: unknown): CharacterDetail[] {
       return {
         position: parseOptionalText(candidate.position) ?? "任意",
         name,
+        masterId: parseOptionalMasterId(candidate.masterId),
         importance: parseOptionalText(candidate.importance) ?? "自由枠",
         roleMemo: parseOptionalText(candidate.roleMemo) ?? "",
         substituteMemo: parseOptionalText(candidate.substituteMemo) ?? ""
@@ -280,7 +288,7 @@ function parseSummonDetails(value: unknown): SummonDetail[] {
   }
 
   return value
-    .map((item) => {
+    .map((item): SummonDetail | null => {
       if (!item || typeof item !== "object") {
         return null;
       }
@@ -294,6 +302,7 @@ function parseSummonDetails(value: unknown): SummonDetail[] {
       return {
         position: parseOptionalText(candidate.position) ?? "任意",
         name,
+        masterId: parseOptionalMasterId(candidate.masterId),
         importance: parseOptionalText(candidate.importance) ?? "自由枠",
         usageMemo: parseOptionalText(candidate.usageMemo) ?? "",
         substituteMemo: parseOptionalText(candidate.substituteMemo) ?? ""
@@ -308,7 +317,7 @@ function parseWeaponDetails(value: unknown): WeaponDetail[] {
   }
 
   return value
-    .map((item) => {
+    .map((item): WeaponDetail | null => {
       if (!item || typeof item !== "object") {
         return null;
       }
@@ -321,6 +330,7 @@ function parseWeaponDetails(value: unknown): WeaponDetail[] {
 
       return {
         name,
+        masterId: parseOptionalMasterId(candidate.masterId),
         importance: parseOptionalText(candidate.importance) ?? "自由枠",
         count: parseOptionalText(candidate.count) ?? "",
         usageMemo: parseOptionalText(candidate.usageMemo) ?? "",

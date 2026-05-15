@@ -23,12 +23,17 @@ import {
 } from "../lib/api";
 import { useAuth } from "../components/AuthContext";
 import {
-  findBuildMaster,
+  findBuildMasterInCatalog,
   resolveBuildMasterThumbnailUrl,
   type BuildMasterKind,
   type BuildMasterItem,
 } from "../lib/buildMasters";
 import { BuildFormSteps } from "../components/BuildFormSteps";
+import {
+  BuildMasterCatalogProvider,
+  useBuildMasterLookup,
+} from "../lib/BuildMasterCatalogContext";
+import { useBuildMasterCatalog } from "../lib/useBuildMasterCatalog";
 
 const emptyForm: BuildPostInput = {
   title: "",
@@ -503,12 +508,15 @@ function CompactList({ items }: { items: string[] }) {
 
 function PartThumbnail({
   kind,
+  masterId,
   name,
 }: {
   kind: BuildMasterKind;
+  masterId?: string | null;
   name: string;
 }) {
-  const master = findBuildMaster(kind, name);
+  const masterCatalog = useBuildMasterLookup();
+  const master = findBuildMasterInCatalog(masterCatalog, kind, name, masterId);
   const thumbnailUrl = master ? resolveBuildMasterThumbnailUrl(master) : "";
   const [hasImageError, setHasImageError] = useState(false);
   const label = name.trim().slice(0, 2) || "?";
@@ -536,6 +544,7 @@ function PartThumbnail({
 
 function PartDetailRow({
   kind,
+  masterId,
   name,
   meta,
   importance,
@@ -543,18 +552,22 @@ function PartDetailRow({
   substitute,
 }: {
   kind: BuildMasterKind;
+  masterId?: string | null;
   name: string;
   meta?: string;
   importance?: string;
   note?: string;
   substitute?: string;
 }) {
+  const masterCatalog = useBuildMasterLookup();
   const master =
-    kind === "job" ? findBuildMaster("job", name) : findBuildMaster(kind, name);
+    kind === "job"
+      ? findBuildMasterInCatalog(masterCatalog, "job", name, masterId)
+      : findBuildMasterInCatalog(masterCatalog, kind, name, masterId);
 
   return (
     <div className="part-detail-row">
-      <PartThumbnail kind={kind} name={name} />
+      <PartThumbnail kind={kind} masterId={masterId} name={name} />
       <div>
         <strong>{name}</strong>
         <span>{meta || masterMeta(master)}</span>
@@ -880,6 +893,7 @@ function BuildDetailView({
             <PartDetailRow
               key={`req-char-${detail.name}`}
               kind="character"
+              masterId={detail.masterId}
               name={detail.name}
               importance={detail.importance}
               note={detail.roleMemo}
@@ -890,6 +904,7 @@ function BuildDetailView({
             <PartDetailRow
               key={`req-summon-${detail.name}`}
               kind="summon"
+              masterId={detail.masterId}
               name={detail.name}
               importance={detail.importance}
               note={detail.usageMemo}
@@ -900,6 +915,7 @@ function BuildDetailView({
             <PartDetailRow
               key={`req-weapon-${detail.name}`}
               kind="weapon"
+              masterId={detail.masterId}
               name={detail.name}
               importance={detail.importance}
               note={detail.usageMemo}
@@ -973,6 +989,7 @@ function BuildDetailView({
                 <PartDetailRow
                   key={`char-${detail.name}-${detail.position}`}
                   kind="character"
+                  masterId={detail.masterId}
                   name={detail.name}
                   meta={detail.position}
                   importance={detail.importance}
@@ -992,6 +1009,7 @@ function BuildDetailView({
                 <PartDetailRow
                   key={`summon-${detail.name}-${detail.position}`}
                   kind="summon"
+                  masterId={detail.masterId}
                   name={detail.name}
                   meta={detail.position}
                   importance={detail.importance}
@@ -1011,6 +1029,7 @@ function BuildDetailView({
                 <PartDetailRow
                   key={`weapon-${detail.name}-${detail.count}`}
                   kind="weapon"
+                  masterId={detail.masterId}
                   name={detail.name}
                   meta={detail.count || undefined}
                   importance={detail.importance}
@@ -1141,6 +1160,7 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { sourceType, buildId } = useParams();
+  const { catalog: buildMasterCatalog } = useBuildMasterCatalog();
   const [presets, setPresets] = useState<BuildPreset[]>([]);
   const [posts, setPosts] = useState<BuildPost[]>([]);
   const [form, setForm] = useState<BuildPostInput>(emptyForm);
@@ -1344,6 +1364,7 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
   }
 
   return (
+    <BuildMasterCatalogProvider catalog={buildMasterCatalog}>
     <div className={`page-stack ${activeBuildTab === "form" ? "build-form-page-stack" : ""}`}>
       <section className="page-heading">
         <div>
@@ -1682,5 +1703,6 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
         </section>
       )}
     </div>
+    </BuildMasterCatalogProvider>
   );
 }

@@ -74,6 +74,7 @@ export type BuildReferenceUrl = {
 export type BuildCharacterDetail = {
   position: string;
   name: string;
+  masterId?: string | null;
   importance: string;
   roleMemo: string;
   substituteMemo: string;
@@ -82,6 +83,7 @@ export type BuildCharacterDetail = {
 export type BuildSummonDetail = {
   position: string;
   name: string;
+  masterId?: string | null;
   importance: string;
   usageMemo: string;
   substituteMemo: string;
@@ -89,6 +91,7 @@ export type BuildSummonDetail = {
 
 export type BuildWeaponDetail = {
   name: string;
+  masterId?: string | null;
   importance: string;
   count: string;
   usageMemo: string;
@@ -150,6 +153,39 @@ export type BuildPost = Omit<BuildPreset, "id" | "name" | "presetStatus" | "orig
 };
 
 export type BuildPostInput = Omit<BuildPost, "id" | "ownerId" | "createdAt" | "updatedAt">;
+
+export type GbfMasterKind = "character" | "weapon" | "summon" | "job" | "material" | "quest";
+
+export type GbfMasterItem = {
+  id: string;
+  kind: GbfMasterKind;
+  name: string;
+  displayName: string | null;
+  element: string | null;
+  rarity: string | null;
+  category: string | null;
+  thumbnailPath: string | null;
+  thumbnailUrl: string | null;
+  description: string | null;
+  note: string | null;
+  tags: string[];
+  metadata: Record<string, unknown>;
+  sortOrder: number;
+  isActive: boolean;
+  updatedAt: string;
+};
+
+export type GbfMasterAlias = {
+  id: string;
+  masterItemId: string;
+  alias: string;
+  normalizedAlias: string;
+};
+
+export type BuildMastersResponse = {
+  items: GbfMasterItem[];
+  aliases: GbfMasterAlias[];
+};
 
 type RequestOptions = RequestInit & {
   json?: unknown;
@@ -253,6 +289,7 @@ export const api = {
     const query = params.toString();
     return request<{ presets: BuildPreset[] }>(`/api/builds/presets${query ? `?${query}` : ""}`);
   },
+  getBuildMasters: () => request<BuildMastersResponse>("/api/build-masters"),
   buildPosts: () => request<{ posts: BuildPost[] }>("/api/builds"),
   createBuildPost: (post: BuildPostInput) =>
     request<{ post: BuildPost }>("/api/builds", {

@@ -1,20 +1,46 @@
+import type { GbfMasterAlias, GbfMasterItem as ApiGbfMasterItem } from "./api";
+
 export type BuildMasterKind = "character" | "summon" | "weapon" | "job";
+export type GbfMasterKind = BuildMasterKind | "material" | "quest";
 
 export type BuildMasterItem = {
   id: string;
   kind: BuildMasterKind;
   name: string;
+  displayName?: string;
   element?: string;
   category?: string;
   rarity?: string;
   weaponType?: string;
   series?: string;
   tags?: string[];
+  aliases?: string[];
+  metadata?: Record<string, unknown>;
+  sortOrder?: number;
+  isActive?: boolean;
   thumbnailUrl?: string;
   thumbnailPath?: string;
   thumbnail_url?: string;
   thumbnail_path?: string;
+  description?: string;
   note?: string;
+};
+
+export type BuildMasterOptions = {
+  characters: BuildMasterItem[];
+  summons: BuildMasterItem[];
+  weapons: BuildMasterItem[];
+  jobs: BuildMasterItem[];
+};
+
+export type BuildMasterCatalog = {
+  items: BuildMasterItem[];
+  options: BuildMasterOptions;
+  byId: Map<string, BuildMasterItem>;
+  byKindAndName: Map<string, BuildMasterItem>;
+  byKindAndAlias: Map<string, BuildMasterItem>;
+  byKind: Map<BuildMasterKind, BuildMasterItem[]>;
+  find: (kind: BuildMasterKind, name: string) => BuildMasterItem | undefined;
 };
 
 const supabaseStoragePublicBaseUrl =
@@ -90,11 +116,177 @@ export const buildMasterOptions = {
   jobs: buildMasterItems.filter((item) => item.kind === "job")
 };
 
-const buildMasterIndex = new Map(
-  buildMasterItems.map((item) => [`${item.kind}:${item.name}`, item])
-);
+function isBuildMasterKind(kind: GbfMasterKind): kind is BuildMasterKind {
+  return kind === "character" || kind === "summon" || kind === "weapon" || kind === "job";
+}
+
+function optionalText(value: string | null | undefined) {
+  const text = value?.trim();
+  return text || undefined;
+}
+
+function metadataText(metadata: Record<string, unknown> | undefined, key: string) {
+  const value = metadata?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function kindAndValueKey(kind: BuildMasterKind, value: string) {
+  return `${kind}:${value.trim()}`;
+}
+
+function aliasMap(aliases: GbfMasterAlias[] | undefined) {
+  const byMasterId = new Map<string, string[]>();
+
+  for (const alias of aliases ?? []) {
+    const text = alias.alias.trim();
+    if (!text) {
+      continue;
+    }
+
+    byMasterId.set(alias.masterItemId, [...(byMasterId.get(alias.masterItemId) ?? []), text]);
+  }
+
+  return byMasterId;
+}
+
+function normalizeDbMasterItem(item: ApiGbfMasterItem, aliases: string[]): BuildMasterItem | null {
+  if (!item.isActive || !isBuildMasterKind(item.kind)) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    kind: item.kind,
+    name: item.name,
+    displayName: optionalText(item.displayName),
+    element: optionalText(item.element),
+    category: optionalText(item.category),
+    rarity: optionalText(item.rarity),
+    weaponType: metadataText(item.metadata, "weaponType"),
+    series: metadataText(item.metadata, "series"),
+    tags: item.tags,
+    aliases,
+    metadata: item.metadata,
+    sortOrder: item.sortOrder,
+    isActive: item.isActive,
+    thumbnailUrl: optionalText(item.thumbnailUrl),
+    thumbnailPath: optionalText(item.thumbnailPath),
+    description: optionalText(item.description),
+    note: optionalText(item.note)
+  };
+}
+
+function sortMasterItems(items: BuildMasterItem[]) {
+  return [...items].sort((first, second) => {
+    const firstOrder = first.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    const secondOrder = second.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    if (firstOrder !== secondOrder) {
+      return firstOrder - secondOrder;
+    }
+    return first.name.localeCompare(second.name, "ja-JP");
+  });
+}
+
+function toBuildMasterOptions(items: BuildMasterItem[]): BuildMasterOptions {
+  return {
+    characters: sortMasterItems(items.filter((item) => item.kind === "character")),
+    summons: sortMasterItems(items.filter((item) => item.kind === "summon")),
+    weapons: sortMasterItems(items.filter((item) => item.kind === "weapon")),
+    jobs: sortMasterItems(items.filter((item) => item.kind === "job"))
+  };
+}
+
+function buildCatalogIndexes(items: BuildMasterItem[]) {
+  const byId = new Map<string, BuildMasterItem>();
+  const byKindAndName = new Map<string, BuildMasterItem>();
+  const byKindAndAlias = new Map<string, BuildMasterItem>();
+  const byKind = new Map<BuildMasterKind, BuildMasterItem[]>([
+    ["character", []],
+    ["summon", []],
+    ["weapon", []],
+    ["job", []]
+  ]);
+
+  for (const item of items) {
+    byId.set(item.id, item);
+    byKindAndName.set(kindAndValueKey(item.kind, item.name), item);
+    byKind.get(item.kind)?.push(item);
+
+    for (const alias of item.aliases ?? []) {
+      byKindAndAlias.set(kindAndValueKey(item.kind, alias), item);
+    }
+  }
+
+  for (const [kind, values] of byKind) {
+    byKind.set(kind, sortMasterItems(values));
+  }
+
+  return { byId, byKindAndName, byKindAndAlias, byKind };
+}
+
+export function createBuildMasterCatalog(
+  dbItems?: ApiGbfMasterItem[],
+  dbAliases?: GbfMasterAlias[],
+): BuildMasterCatalog {
+  const mergedById = new Map<string, BuildMasterItem>();
+
+  for (const item of buildMasterItems) {
+    mergedById.set(item.id, item);
+  }
+
+  const aliasesByMasterId = aliasMap(dbAliases);
+  for (const item of dbItems ?? []) {
+    const normalized = normalizeDbMasterItem(item, aliasesByMasterId.get(item.id) ?? []);
+    if (!normalized) {
+      continue;
+    }
+    mergedById.set(normalized.id, normalized);
+  }
+
+  const items = sortMasterItems([...mergedById.values()]);
+  const indexes = buildCatalogIndexes(items);
+  const options = toBuildMasterOptions(items);
+
+  return {
+    items,
+    options,
+    ...indexes,
+    find: (kind, name) => {
+      const normalized = name.trim();
+      if (!normalized) {
+        return undefined;
+      }
+
+      return (
+        indexes.byKindAndName.get(kindAndValueKey(kind, normalized)) ??
+        indexes.byKindAndAlias.get(kindAndValueKey(kind, normalized))
+      );
+    }
+  };
+}
+
+export const fallbackBuildMasterCatalog = createBuildMasterCatalog();
+
+const buildMasterIndex = fallbackBuildMasterCatalog.byKindAndName;
 
 export function findBuildMaster(kind: BuildMasterKind, name: string) {
   const normalized = name.trim();
   return buildMasterIndex.get(`${kind}:${normalized}`);
+}
+
+export function findBuildMasterInCatalog(
+  catalog: BuildMasterCatalog,
+  kind: BuildMasterKind,
+  name: string,
+  masterId?: string | null,
+) {
+  const id = masterId?.trim();
+  if (id) {
+    const byId = catalog.byId.get(id) ?? fallbackBuildMasterCatalog.byId.get(id);
+    if (byId?.kind === kind) {
+      return byId;
+    }
+  }
+
+  return catalog.find(kind, name) ?? findBuildMaster(kind, name);
 }

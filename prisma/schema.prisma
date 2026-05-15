@@ -13,6 +13,15 @@ enum RepeatType {
   once
 }
 
+enum GbfMasterKind {
+  character
+  weapon
+  summon
+  job
+  material
+  quest
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -147,4 +156,42 @@ model BuildPost {
 
   @@index([ownerId, updatedAt])
   @@index([ownerId, category, questName, element])
+}
+
+model GbfMasterItem {
+  id            String           @id
+  kind          GbfMasterKind
+  name          String
+  displayName   String?
+  element       String?
+  rarity        String?
+  category      String?
+  thumbnailPath String?
+  thumbnailUrl  String?
+  description   String?
+  note          String?
+  tags          String[]         @default([])
+  metadata      Json             @default("{}")
+  sortOrder     Int              @default(0)
+  isActive      Boolean          @default(true)
+  aliases       GbfMasterAlias[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([kind, isActive, sortOrder])
+  @@index([kind, name])
+  @@map("gbf_master_items")
+}
+
+model GbfMasterAlias {
+  id              String        @id @default(cuid())
+  masterItemId    String
+  masterItem      GbfMasterItem @relation(fields: [masterItemId], references: [id], onDelete: Cascade)
+  alias           String
+  normalizedAlias String
+  createdAt       DateTime      @default(now())
+
+  @@unique([masterItemId, normalizedAlias])
+  @@index([normalizedAlias])
+  @@map("gbf_master_aliases")
 }

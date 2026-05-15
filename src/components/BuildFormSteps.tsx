@@ -17,12 +17,13 @@ import {
   type BuildWeaponDetail,
 } from "../lib/api";
 import {
-  buildMasterOptions,
-  findBuildMaster,
+  findBuildMasterInCatalog,
   resolveBuildMasterThumbnailUrl,
+  type BuildMasterCatalog,
   type BuildMasterKind,
   type BuildMasterItem,
 } from "../lib/buildMasters";
+import { useBuildMasterLookup } from "../lib/BuildMasterCatalogContext";
 
 type FormStep = 1 | 2 | 3 | 4 | 5;
 type PartBrowserKind = Exclude<BuildMasterKind, "job">;
@@ -80,7 +81,6 @@ const questOptions = [
   "コスモスHL",
   "アガスティアHL",
 ];
-const jobOptions = buildMasterOptions.jobs.map((item) => item.name);
 const importanceOptions = ["必須", "推奨", "代用可", "自由枠"];
 const blueChestOptions = ["あり", "なし", "未指定"];
 const stabilityOptions = ["安定", "たまに失敗", "要手動確認", "未指定"];
@@ -135,6 +135,7 @@ const summonSlots = {
 const emptyCharacterDetail: BuildCharacterDetail = {
   position: "任意",
   name: "",
+  masterId: null,
   importance: "自由枠",
   roleMemo: "",
   substituteMemo: "",
@@ -143,6 +144,7 @@ const emptyCharacterDetail: BuildCharacterDetail = {
 const emptySummonDetail: BuildSummonDetail = {
   position: "任意",
   name: "",
+  masterId: null,
   importance: "自由枠",
   usageMemo: "",
   substituteMemo: "",
@@ -150,6 +152,7 @@ const emptySummonDetail: BuildSummonDetail = {
 
 const emptyWeaponDetail: BuildWeaponDetail = {
   name: "",
+  masterId: null,
   importance: "自由枠",
   count: "",
   usageMemo: "",
@@ -194,14 +197,17 @@ function candidateMeta(item: BuildMasterItem) {
     .join(" / ");
 }
 
-function partOptions(kind: Exclude<BuildMasterKind, "job">) {
+function partOptions(
+  kind: Exclude<BuildMasterKind, "job">,
+  catalog: BuildMasterCatalog,
+) {
   if (kind === "character") {
-    return buildMasterOptions.characters;
+    return catalog.options.characters;
   }
   if (kind === "summon") {
-    return buildMasterOptions.summons;
+    return catalog.options.summons;
   }
-  return buildMasterOptions.weapons;
+  return catalog.options.weapons;
 }
 
 function partKindLabel(kind: Exclude<BuildMasterKind, "job">) {
@@ -405,12 +411,15 @@ function normalizeSummons(items: BuildSummonDetail[]) {
 
 const PartThumbnail = memo(function PartThumbnail({
   kind,
+  masterId,
   name,
 }: {
   kind: BuildMasterKind;
+  masterId?: string | null;
   name: string;
 }) {
-  const master = findBuildMaster(kind, name);
+  const masterCatalog = useBuildMasterLookup();
+  const master = findBuildMasterInCatalog(masterCatalog, kind, name, masterId);
   const thumbnailUrl = master ? resolveBuildMasterThumbnailUrl(master) : "";
   const [hasImageError, setHasImageError] = useState(false);
   const label = name.trim().slice(0, 2) || "?";
@@ -440,6 +449,7 @@ const PartThumbnail = memo(function PartThumbnail({
 type PartSlotProps = {
   kind: BuildMasterKind;
   label: string;
+  masterId?: string | null;
   name: string;
   meta?: string;
   active: boolean;
@@ -450,13 +460,15 @@ type PartSlotProps = {
 const PartSlot = memo(function PartSlot({
   kind,
   label,
+  masterId,
   name,
   meta,
   active,
   onClick,
   onClear,
 }: PartSlotProps) {
-  const master = findBuildMaster(kind, name);
+  const masterCatalog = useBuildMasterLookup();
+  const master = findBuildMasterInCatalog(masterCatalog, kind, name, masterId);
 
   return (
     <button
@@ -464,7 +476,7 @@ const PartSlot = memo(function PartSlot({
       onClick={onClick}
       type="button"
     >
-      <PartThumbnail kind={kind} name={name} />
+      <PartThumbnail kind={kind} masterId={masterId} name={name} />
       <span className="formation-slot-body">
         <small>{label}</small>
         <strong>{name || "未選択"}</strong>
@@ -490,6 +502,7 @@ const PartSlot = memo(function PartSlot({
   return (
     previous.kind === next.kind &&
     previous.label === next.label &&
+    previous.masterId === next.masterId &&
     previous.name === next.name &&
     previous.meta === next.meta &&
     previous.active === next.active
@@ -505,11 +518,11 @@ const PartCandidateCard = memo(function PartCandidateCard({
   kind: Exclude<BuildMasterKind, "job">;
   item: BuildMasterItem;
   selected: boolean;
-  onSelect: (name: string) => void;
+  onSelect: (item: BuildMasterItem) => void;
 }) {
   const handleClick = useCallback(() => {
-    onSelect(item.name);
-  }, [item.name, onSelect]);
+    onSelect(item);
+  }, [item, onSelect]);
 
   return (
     <button
@@ -517,7 +530,7 @@ const PartCandidateCard = memo(function PartCandidateCard({
       onClick={handleClick}
       type="button"
     >
-      <PartThumbnail kind={kind} name={item.name} />
+      <PartThumbnail kind={kind} masterId={item.id} name={item.name} />
       <span>
         <strong>{item.name}</strong>
         <small>{candidateMeta(item)}</small>
@@ -540,10 +553,11 @@ function PartCandidateBrowser({
   filters: CandidateFilters;
   onFilterChange: (filters: CandidateFilters) => void;
   onClose?: () => void;
-  onSelect: (name: string) => void;
+  onSelect: (item: BuildMasterItem) => void;
 }) {
   const [page, setPage] = useState(1);
-  const options = partOptions(kind);
+  const masterCatalog = useBuildMasterLookup();
+  const options = partOptions(kind, masterCatalog);
   const elementFilter = filters.element;
   const categoryFilter = filters.category;
   const hasFilters = Boolean(elementFilter || categoryFilter);
@@ -689,6 +703,11 @@ export function BuildFormSteps({
   presets = [],
   editMode = false,
 }: BuildFormStepsProps) {
+  const masterCatalog = useBuildMasterLookup();
+  const jobOptions = useMemo(
+    () => masterCatalog.options.jobs.map((item) => item.name),
+    [masterCatalog.options.jobs],
+  );
   const [draftForm, setDraftForm] = useState(initialForm);
   const latestFormRef = useRef(draftForm);
   latestFormRef.current = draftForm;
@@ -1045,7 +1064,7 @@ export function BuildFormSteps({
     index: index + 2,
   }));
   const selectCharacterCandidate = useCallback(
-    (name: string) => {
+    (master: BuildMasterItem) => {
       const currentForm = latestFormRef.current;
       const currentCharacterDetails = hasFixedCharacterSlotShape(
         currentForm.characterDetails,
@@ -1056,13 +1075,16 @@ export function BuildFormSteps({
       const characterDetails =
         currentCharacterDetails.length > 0
           ? currentCharacterDetails.map((item, itemIndex) =>
-              itemIndex === safeCharacterIndex ? { ...item, name } : item,
+              itemIndex === safeCharacterIndex
+                ? { ...item, name: master.name, masterId: master.id }
+                : item,
             )
           : [
               {
                 ...emptyCharacterDetail,
                 position: "フロント",
-                name,
+                name: master.name,
+                masterId: master.id,
               },
             ];
       applyDraft({ ...currentForm, characterDetails });
@@ -1073,14 +1095,16 @@ export function BuildFormSteps({
     [safeCharacterIndex, subCharacterSlotCount],
   );
   const selectWeaponCandidate = useCallback(
-    (name: string) => {
+    (master: BuildMasterItem) => {
       const currentForm = latestFormRef.current;
       const weaponDetails =
         currentForm.weaponDetails.length > 0
           ? currentForm.weaponDetails.map((item, itemIndex) =>
-              itemIndex === safeWeaponIndex ? { ...item, name } : item,
+              itemIndex === safeWeaponIndex
+                ? { ...item, name: master.name, masterId: master.id }
+                : item,
             )
-          : [{ ...emptyWeaponDetail, name }];
+          : [{ ...emptyWeaponDetail, name: master.name, masterId: master.id }];
       applyDraft({ ...currentForm, weaponDetails });
       if (currentForm.weaponDetails.length === 0) {
         setActiveWeaponIndex(0);
@@ -1089,18 +1113,21 @@ export function BuildFormSteps({
     [safeWeaponIndex],
   );
   const selectSummonCandidate = useCallback(
-    (name: string) => {
+    (master: BuildMasterItem) => {
       const currentForm = latestFormRef.current;
       const summonDetails =
         currentForm.summonDetails.length > 0
           ? currentForm.summonDetails.map((item, itemIndex) =>
-              itemIndex === safeSummonIndex ? { ...item, name } : item,
+              itemIndex === safeSummonIndex
+                ? { ...item, name: master.name, masterId: master.id }
+                : item,
             )
           : [
               {
                 ...emptySummonDetail,
                 position: "サブ",
-                name,
+                name: master.name,
+                masterId: master.id,
               },
             ];
       applyDraft({ ...currentForm, summonDetails });
@@ -1344,7 +1371,7 @@ export function BuildFormSteps({
                           <PartThumbnail kind="job" name={form.protagonistJob} />
                           <div>
                             <strong>{form.protagonistJob || "主人公ジョブ未選択"}</strong>
-                            <span>{masterMeta(findBuildMaster("job", form.protagonistJob))}</span>
+                            <span>{masterMeta(masterCatalog.find("job", form.protagonistJob))}</span>
                           </div>
                         </div>
                       </div>
@@ -1364,9 +1391,10 @@ export function BuildFormSteps({
                           kind="character"
                           key={index}
                           label={`フロント ${frontCharacters.findIndex((item) => item.index === index) + 1}`}
+                          masterId={character.masterId}
                           meta={character.importance || character.roleMemo}
                           name={character.name}
-                          onClear={() => updateCharacter(index, { name: "" })}
+                          onClear={() => updateCharacter(index, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveCharacterIndex(index);
                             setOpenPartBrowser("character");
@@ -1390,9 +1418,10 @@ export function BuildFormSteps({
                           kind="character"
                           key={index}
                           label={`サブ ${subCharacters.findIndex((item) => item.index === index) + 1}`}
+                          masterId={character.masterId}
                           meta={character.importance || character.roleMemo}
                           name={character.name}
-                          onClear={() => updateCharacter(index, { name: "" })}
+                          onClear={() => updateCharacter(index, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveCharacterIndex(index);
                             setOpenPartBrowser("character");
@@ -1411,6 +1440,7 @@ export function BuildFormSteps({
                           onChange={(event) =>
                             updateCharacter(safeCharacterIndex, {
                               name: event.target.value,
+                              masterId: null,
                             })
                           }
                           placeholder="候補にないキャラ名"
@@ -1527,9 +1557,10 @@ export function BuildFormSteps({
                           active={safeWeaponIndex === 0}
                           kind="weapon"
                           label="メイン武器"
+                          masterId={mainWeapon.masterId}
                           meta={mainWeapon.count ? `${mainWeapon.count}本 / ${mainWeapon.importance}` : mainWeapon.importance}
                           name={mainWeapon.name}
-                          onClear={() => updateWeapon(0, { name: "" })}
+                          onClear={() => updateWeapon(0, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveWeaponIndex(0);
                             setOpenPartBrowser("weapon");
@@ -1552,9 +1583,10 @@ export function BuildFormSteps({
                           kind="weapon"
                           key={index}
                           label={`武器 ${index + 1}`}
+                          masterId={weapon.masterId}
                           meta={weapon.count ? `${weapon.count}本 / ${weapon.importance}` : weapon.importance}
                           name={weapon.name}
-                          onClear={() => updateWeapon(index, { name: "" })}
+                          onClear={() => updateWeapon(index, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveWeaponIndex(index);
                             setOpenPartBrowser("weapon");
@@ -1579,6 +1611,7 @@ export function BuildFormSteps({
                           onChange={(event) =>
                             updateWeapon(safeWeaponIndex, {
                               name: event.target.value,
+                              masterId: null,
                             })
                           }
                           placeholder="候補にない武器名"
@@ -1692,9 +1725,10 @@ export function BuildFormSteps({
                           active={safeSummonIndex === 0}
                           kind="summon"
                           label="メイン"
+                          masterId={mainSummon.masterId}
                           meta={mainSummon.importance}
                           name={mainSummon.name}
-                          onClear={() => updateSummon(0, { name: "" })}
+                          onClear={() => updateSummon(0, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveSummonIndex(0);
                             setOpenPartBrowser("summon");
@@ -1715,9 +1749,10 @@ export function BuildFormSteps({
                           active={safeSummonIndex === 1}
                           kind="summon"
                           label="フレンド"
+                          masterId={friendSummon.masterId}
                           meta={friendSummon.importance}
                           name={friendSummon.name}
-                          onClear={() => updateSummon(1, { name: "" })}
+                          onClear={() => updateSummon(1, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveSummonIndex(1);
                             setOpenPartBrowser("summon");
@@ -1741,9 +1776,10 @@ export function BuildFormSteps({
                           kind="summon"
                           key={index}
                           label={`サブ ${subSummons.findIndex((item) => item.index === index) + 1}`}
+                          masterId={summon.masterId}
                           meta={summon.importance}
                           name={summon.name}
-                          onClear={() => updateSummon(index, { name: "" })}
+                          onClear={() => updateSummon(index, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveSummonIndex(index);
                             setOpenPartBrowser("summon");
@@ -1767,6 +1803,7 @@ export function BuildFormSteps({
                           onChange={(event) =>
                             updateSummon(safeSummonIndex, {
                               name: event.target.value,
+                              masterId: null,
                             })
                           }
                           placeholder="候補にない召喚石名"
