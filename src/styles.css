@@ -1532,7 +1532,10 @@ textarea {
   color: #657688;
   font-weight: 800;
   cursor: pointer;
-  transition: all 180ms ease;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 .step-badge.active {
@@ -1814,7 +1817,10 @@ textarea {
   background: #fbfcfd;
   text-align: left;
   cursor: pointer;
-  transition: all 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .preset-modal-card:hover {
@@ -2030,7 +2036,7 @@ textarea {
 
 .formation-slot.active {
   border-color: #2f8e66;
-  box-shadow: 0 0 0 3px rgba(47, 142, 102, 0.14);
+  box-shadow: 0 0 0 2px rgba(47, 142, 102, 0.14);
 }
 
 .formation-slot small {
@@ -2386,7 +2392,7 @@ textarea {
 .formation-slot.active {
   border-color: #2f8e66;
   background: linear-gradient(180deg, #f8fffb 0%, #e6f4ee 100%);
-  box-shadow: 0 0 0 3px rgba(47, 142, 102, 0.18), 0 8px 18px rgba(20, 33, 43, 0.07);
+  box-shadow: 0 0 0 2px rgba(47, 142, 102, 0.16), 0 4px 12px rgba(20, 33, 43, 0.06);
 }
 
 .formation-slot--empty {
@@ -2424,6 +2430,10 @@ textarea {
   grid-template-columns: 48px minmax(0, 1fr) 18px;
   min-height: 68px;
   padding: 10px;
+  contain: layout paint;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 .part-candidate-card .part-thumbnail {
@@ -2596,6 +2606,7 @@ html,
 
 .formation-board-scroll {
   max-width: 100%;
+  contain: layout paint;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-inline: contain;

@@ -192,12 +192,9 @@ function sameJson<T>(first: T, second: T) {
   return JSON.stringify(first) === JSON.stringify(second);
 }
 
-function hasFixedSlotShape(
+function hasFixedCharacterSlotShape(
   characterDetails: BuildCharacterDetail[],
-  weaponDetails: BuildWeaponDetail[],
-  summonDetails: BuildSummonDetail[],
   subSlotCount: 2 | 5,
-  weaponSlotCount: 10 | 13,
 ) {
   return (
     characterDetails.length === frontCharacterSlots + subSlotCount &&
@@ -206,8 +203,19 @@ function hasFixedSlotShape(
       .every((item) => item.position === "フロント") &&
     characterDetails
       .slice(frontCharacterSlots)
-      .every((item) => item.position === "サブ") &&
-    weaponDetails.length === weaponSlotCount &&
+      .every((item) => item.position === "サブ")
+  );
+}
+
+function hasFixedWeaponSlotShape(
+  weaponDetails: BuildWeaponDetail[],
+  weaponSlotCount: 10 | 13,
+) {
+  return weaponDetails.length === weaponSlotCount;
+}
+
+function hasFixedSummonSlotShape(summonDetails: BuildSummonDetail[]) {
+  return (
     summonDetails.length === summonSlots.main + summonSlots.friend + summonSlots.sub &&
     summonDetails[0]?.position === "メイン" &&
     summonDetails[1]?.position === "フレンド" &&
@@ -315,6 +323,16 @@ const PartThumbnail = memo(function PartThumbnail({
   return <span className={`part-thumbnail fallback ${kind}`}>{label}</span>;
 });
 
+type PartSlotProps = {
+  kind: BuildMasterKind;
+  label: string;
+  name: string;
+  meta?: string;
+  active: boolean;
+  onClick: () => void;
+  onClear: () => void;
+};
+
 const PartSlot = memo(function PartSlot({
   kind,
   label,
@@ -323,15 +341,7 @@ const PartSlot = memo(function PartSlot({
   active,
   onClick,
   onClear,
-}: {
-  kind: BuildMasterKind;
-  label: string;
-  name: string;
-  meta?: string;
-  active: boolean;
-  onClick: () => void;
-  onClear: () => void;
-}) {
+}: PartSlotProps) {
   const master = findBuildMaster(kind, name);
 
   return (
@@ -361,6 +371,14 @@ const PartSlot = memo(function PartSlot({
         </span>
       )}
     </button>
+  );
+}, function partSlotPropsEqual(previous, next) {
+  return (
+    previous.kind === next.kind &&
+    previous.label === next.label &&
+    previous.name === next.name &&
+    previous.meta === next.meta &&
+    previous.active === next.active
   );
 });
 
@@ -557,8 +575,13 @@ export function BuildFormSteps({
       ? farmingPurposeOptions
       : highDifficultyPurposeOptions;
   const selectedParts = useMemo(
-    () => uniqueParts(form),
-    [form.characterDetails, form.weaponDetails, form.summonDetails],
+    () => (currentStep === 5 ? uniqueParts(form) : []),
+    [
+      currentStep,
+      form.characterDetails,
+      form.weaponDetails,
+      form.summonDetails,
+    ],
   );
   const filteredPresets = useMemo(
     () =>
@@ -573,38 +596,21 @@ export function BuildFormSteps({
   const visiblePresets = filteredPresets.length > 0 ? filteredPresets : presets;
 
   useEffect(() => {
-    if (
-      hasFixedSlotShape(
-        form.characterDetails,
-        form.weaponDetails,
-        form.summonDetails,
-        subCharacterSlotCount,
-        weaponSlotCount,
-      )
-    ) {
-      return;
-    }
-
     const incomingSubSlotCount =
       form.characterDetails.filter((item) => item.position === "サブ").length >
       defaultSubCharacterSlots
         ? expandedSubCharacterSlots
         : defaultSubCharacterSlots;
-    const incomingWeaponSlotCount =
-      form.weaponDetails.length > defaultWeaponSlots
-        ? expandedWeaponSlots
-        : defaultWeaponSlots;
-
-    if (
-      incomingSubSlotCount > subCharacterSlotCount ||
-      incomingWeaponSlotCount > weaponSlotCount
-    ) {
+    if (incomingSubSlotCount > subCharacterSlotCount) {
       setSubCharacterSlotCount((value) =>
         incomingSubSlotCount > value ? incomingSubSlotCount : value,
       );
-      setWeaponSlotCount((value) =>
-        incomingWeaponSlotCount > value ? incomingWeaponSlotCount : value,
-      );
+      return;
+    }
+
+    if (
+      hasFixedCharacterSlotShape(form.characterDetails, subCharacterSlotCount)
+    ) {
       return;
     }
 
@@ -612,29 +618,59 @@ export function BuildFormSteps({
       form.characterDetails,
       subCharacterSlotCount,
     );
-    const weaponDetails = normalizeWeapons(form.weaponDetails, weaponSlotCount);
-    const summonDetails = normalizeSummons(form.summonDetails);
-
-    if (
-      sameJson(characterDetails, form.characterDetails) &&
-      sameJson(weaponDetails, form.weaponDetails) &&
-      sameJson(summonDetails, form.summonDetails)
-    ) {
+    if (sameJson(characterDetails, form.characterDetails)) {
       return;
     }
 
     onFormChange({
-      ...form,
+      ...latestFormRef.current,
       characterDetails,
+    });
+  }, [form.characterDetails, onFormChange, subCharacterSlotCount]);
+
+  useEffect(() => {
+    const incomingWeaponSlotCount =
+      form.weaponDetails.length > defaultWeaponSlots
+        ? expandedWeaponSlots
+        : defaultWeaponSlots;
+
+    if (incomingWeaponSlotCount > weaponSlotCount) {
+      setWeaponSlotCount((value) =>
+        incomingWeaponSlotCount > value ? incomingWeaponSlotCount : value,
+      );
+      return;
+    }
+
+    if (hasFixedWeaponSlotShape(form.weaponDetails, weaponSlotCount)) {
+      return;
+    }
+
+    const weaponDetails = normalizeWeapons(form.weaponDetails, weaponSlotCount);
+    if (sameJson(weaponDetails, form.weaponDetails)) {
+      return;
+    }
+
+    onFormChange({
+      ...latestFormRef.current,
       weaponDetails,
+    });
+  }, [form.weaponDetails, onFormChange, weaponSlotCount]);
+
+  useEffect(() => {
+    if (hasFixedSummonSlotShape(form.summonDetails)) {
+      return;
+    }
+
+    const summonDetails = normalizeSummons(form.summonDetails);
+    if (sameJson(summonDetails, form.summonDetails)) {
+      return;
+    }
+
+    onFormChange({
+      ...latestFormRef.current,
       summonDetails,
     });
-  }, [
-    form,
-    onFormChange,
-    subCharacterSlotCount,
-    weaponSlotCount,
-  ]);
+  }, [form.summonDetails, onFormChange]);
 
   function updateField<K extends keyof BuildPostInput>(
     key: K,
