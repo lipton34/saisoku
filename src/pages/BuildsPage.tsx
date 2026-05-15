@@ -1175,18 +1175,22 @@ function BuildDetailView({
   );
 }
 
-export function BuildsPage() {
+interface BuildsPageProps {
+  mode?: BuildTab;
+}
+
+export function BuildsPage({ mode = "search" }: BuildsPageProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { sourceType, buildId } = useParams();
   const [presets, setPresets] = useState<BuildPreset[]>([]);
   const [posts, setPosts] = useState<BuildPost[]>([]);
   const [form, setForm] = useState<BuildPostInput>(emptyForm);
-  const [activeBuildTab, setActiveBuildTab] = useState<BuildTab>("search");
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [listFilters, setListFilters] =
     useState<BuildListFilters>(emptyListFilters);
   const [error, setError] = useState("");
+  const activeBuildTab: BuildTab = buildId ? "search" : mode;
 
   const purposeOptions =
     form.category === "周回・武器集め用"
@@ -1455,15 +1459,15 @@ export function BuildsPage() {
     const next = presetToForm(preset);
     setForm(next);
     setEditingPostId(null);
-    setActiveBuildTab("form");
     setError("");
+    navigate("/builds/post");
   }
 
   function resetForm() {
     setForm(emptyForm);
     setEditingPostId(null);
-    setActiveBuildTab("form");
     setError("");
+    navigate("/builds/post");
   }
 
   async function submit(formData: BuildPostInput) {
@@ -1488,8 +1492,9 @@ export function BuildsPage() {
           post.id === data.post.id ? data.post : post,
         );
       });
-      resetForm();
-      setActiveBuildTab("search");
+      setForm(emptyForm);
+      setEditingPostId(null);
+      navigate("/builds/search");
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -1508,15 +1513,15 @@ export function BuildsPage() {
     const next = postToForm(post);
     setForm(next);
     setEditingPostId(null);
-    setActiveBuildTab("form");
     setError("");
+    navigate("/builds/post");
   }
 
   function editPost(post: BuildPost) {
     setForm(postToEditForm(post));
     setEditingPostId(post.id);
-    setActiveBuildTab("form");
     setError("");
+    navigate("/builds/post");
   }
 
   return (
@@ -1524,13 +1529,24 @@ export function BuildsPage() {
       <section className="page-heading">
         <div>
           <p className="eyebrow">Build Presets</p>
-          <h2>編成プリセット</h2>
-          <p>編成を探す画面と、投稿する画面を切り替えて使えます。</p>
+          <h2>{activeBuildTab === "form" ? "編成投稿" : "編成一覧・検索"}</h2>
+          <p>
+            {activeBuildTab === "form"
+              ? "高難度・周回向けの編成メモを投稿します。"
+              : "団内で共有された編成メモを探します。"}
+          </p>
         </div>
-        <button className="primary-button" onClick={resetForm} type="button">
-          <FilePlus2 size={18} />
-          空フォーム
-        </button>
+        {activeBuildTab === "search" ? (
+          <button className="primary-button" onClick={resetForm} type="button">
+            <FilePlus2 size={18} />
+            投稿する
+          </button>
+        ) : (
+          <button className="secondary-button" onClick={resetForm} type="button">
+            <FilePlus2 size={18} />
+            空フォーム
+          </button>
+        )}
       </section>
 
       {error && <p className="form-error">{error}</p>}
@@ -1567,40 +1583,16 @@ export function BuildsPage() {
           item={selectedItem}
           onApplyPreset={(preset) => {
             applyPreset(preset);
-            navigate("/builds");
           }}
-          onBack={() => navigate("/builds")}
+          onBack={() => navigate("/builds/search")}
           onCopyPost={(post) => {
             copyPost(post);
-            navigate("/builds");
           }}
           onEditPost={(post) => {
             editPost(post);
-            navigate("/builds");
           }}
         />
       )}
-
-      <div
-        className="segmented build-main-tabs"
-        role="tablist"
-        aria-label="編成メモの表示切り替え"
-      >
-        <button
-          className={activeBuildTab === "search" ? "active" : ""}
-          onClick={() => setActiveBuildTab("search")}
-          type="button"
-        >
-          編成一覧・検索
-        </button>
-        <button
-          className={activeBuildTab === "form" ? "active" : ""}
-          onClick={() => setActiveBuildTab("form")}
-          type="button"
-        >
-          投稿フォーム
-        </button>
-      </div>
 
       {activeBuildTab === "search" && (
         <section className="panel build-search-panel">
@@ -1876,8 +1868,10 @@ export function BuildsPage() {
             isSubmitting={false}
             onApplyPreset={applyPreset}
             onCancel={() => {
-              resetForm();
-              setActiveBuildTab("search");
+              setForm(emptyForm);
+              setEditingPostId(null);
+              setError("");
+              navigate("/builds/search");
             }}
             onFormChange={setForm}
             onSubmit={submit}

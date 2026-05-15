@@ -1,4 +1,4 @@
-import { Boxes, LogOut, Map, PanelLeftClose, PanelLeftOpen, ScrollText, Sparkles, Swords } from "lucide-react";
+import { Boxes, FilePlus2, LogOut, Map, PanelLeftClose, PanelLeftOpen, ScrollText, Sparkles, Swords } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
@@ -51,9 +51,13 @@ export function AppShell() {
             <Boxes size={18} />
             <span className="sidebar-label">素材メモ</span>
           </NavLink>
-          <NavLink to="/builds">
+          <NavLink to="/builds/search">
             <Swords size={18} />
-            <span className="sidebar-label">編成メモ</span>
+            <span className="sidebar-label">編成一覧・検索</span>
+          </NavLink>
+          <NavLink to="/builds/post">
+            <FilePlus2 size={18} />
+            <span className="sidebar-label">編成投稿</span>
           </NavLink>
           <NavLink to="/roadmap">
             <Map size={18} />

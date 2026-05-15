@@ -25,6 +25,10 @@ import {
 
 type FormStep = 1 | 2 | 3 | 4 | 5;
 type PartBrowserKind = Exclude<BuildMasterKind, "job">;
+type CandidateFilters = {
+  element: string;
+  category: string;
+};
 type PartBucket =
   | "requiredParts"
   | "recommendedParts"
@@ -89,6 +93,33 @@ const referenceTypeOptions = [
 ];
 const raidRoleOptions = ["自発", "救援", "どちらでも"];
 const candidatePageSize = 10;
+const emptyCandidateFilters: CandidateFilters = {
+  element: "",
+  category: "",
+};
+const weaponCandidateCategories = [
+  "終末武器",
+  "オメガ武器",
+  "バハ武器",
+  "マグナ武器",
+  "リミテッド武器",
+  "そのほか",
+];
+const characterCandidateCategories = [
+  "リミテッド",
+  "十天衆",
+  "十賢者",
+  "高難度",
+  "周回",
+  "そのほか",
+];
+const summonCandidateCategories = [
+  "神石",
+  "アーカルム",
+  "高難度",
+  "周回",
+  "そのほか",
+];
 const frontCharacterSlots = 3;
 const defaultSubCharacterSlots = 2;
 const expandedSubCharacterSlots = 5;
@@ -168,6 +199,46 @@ function partKindLabel(kind: Exclude<BuildMasterKind, "job">) {
     : kind === "summon"
       ? "召喚石"
       : "武器";
+}
+
+function candidateCategoryOptions(kind: PartBrowserKind) {
+  if (kind === "weapon") {
+    return weaponCandidateCategories;
+  }
+  if (kind === "summon") {
+    return summonCandidateCategories;
+  }
+  return characterCandidateCategories;
+}
+
+function classifyCandidate(item: BuildMasterItem) {
+  const joined = [item.name, item.series, item.weaponType, ...(item.tags ?? [])]
+    .filter(Boolean)
+    .join(" ");
+
+  if (item.kind === "weapon") {
+    if (joined.includes("終末")) return "終末武器";
+    if (joined.includes("オメガ")) return "オメガ武器";
+    if (joined.includes("バハ")) return "バハ武器";
+    if (joined.includes("マグナ")) return "マグナ武器";
+    if (joined.includes("リミ")) return "リミテッド武器";
+    return "そのほか";
+  }
+
+  if (item.kind === "character") {
+    if (joined.includes("リミ")) return "リミテッド";
+    if (joined.includes("十天衆")) return "十天衆";
+    if (joined.includes("十賢者")) return "十賢者";
+    if (joined.includes("高難度")) return "高難度";
+    if (joined.includes("周回")) return "周回";
+    return "そのほか";
+  }
+
+  if (joined.includes("神石")) return "神石";
+  if (joined.includes("アーカルム")) return "アーカルム";
+  if (joined.includes("高難度")) return "高難度";
+  if (joined.includes("周回")) return "周回";
+  return "そのほか";
 }
 
 function uniqueParts(form: BuildPostInput) {
@@ -430,41 +501,38 @@ const PartCandidateCard = memo(function PartCandidateCard({
 function PartCandidateBrowser({
   kind,
   activeName,
-  query,
-  onQueryChange,
+  filters,
+  onFilterChange,
   onClose,
   onSelect,
 }: {
   kind: PartBrowserKind;
   activeName: string;
-  query: string;
-  onQueryChange: (query: string) => void;
+  filters: CandidateFilters;
+  onFilterChange: (filters: CandidateFilters) => void;
   onClose?: () => void;
   onSelect: (name: string) => void;
 }) {
   const [page, setPage] = useState(1);
   const options = partOptions(kind);
-  const normalizedQuery = query.trim().toLowerCase();
+  const elementFilter = filters.element;
+  const categoryFilter = filters.category;
+  const hasFilters = Boolean(elementFilter || categoryFilter);
+  const elementFilterOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(options.map((item) => item.element).filter(Boolean)),
+      ) as string[],
+    [options],
+  );
   const candidates = useMemo(() => {
-    if (!normalizedQuery) {
-      return options;
-    }
-
-    return options.filter((item) =>
-      [
-        item.name,
-        item.element,
-        item.rarity,
-        item.weaponType,
-        item.series,
-        ...(item.tags ?? []),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedQuery),
-      );
-  }, [normalizedQuery, options]);
+    return options.filter((item) => {
+      const matchesElement = !elementFilter || item.element === elementFilter;
+      const matchesCategory =
+        !categoryFilter || classifyCandidate(item) === categoryFilter;
+      return matchesElement && matchesCategory;
+    });
+  }, [categoryFilter, elementFilter, options]);
   const pageCount = Math.max(1, Math.ceil(candidates.length / candidatePageSize));
   const currentPage = Math.min(page, pageCount);
   const pagedCandidates = useMemo(
@@ -478,14 +546,14 @@ function PartCandidateBrowser({
 
   useEffect(() => {
     setPage(1);
-  }, [normalizedQuery, kind]);
+  }, [categoryFilter, elementFilter, kind]);
 
   return (
     <div className="part-browser">
       <div className="part-browser-header">
         <div>
           <p className="eyebrow">{partKindLabel(kind)}候補</p>
-          <h3>{normalizedQuery ? "検索結果" : "候補一覧"}</h3>
+          <h3>{hasFilters ? "絞り込み結果" : "候補一覧"}</h3>
         </div>
         {onClose && (
           <button
@@ -497,13 +565,33 @@ function PartCandidateBrowser({
             <X size={16} />
           </button>
         )}
-        <label className="part-search-field">
-          <Search size={16} />
-          <input
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder={`${partKindLabel(kind)}名・属性で検索`}
-            value={query}
-          />
+        <label>
+          属性
+          <select
+            onChange={(event) =>
+              onFilterChange({ ...filters, element: event.target.value })
+            }
+            value={filters.element}
+          >
+            <option value="">すべて</option>
+            {elementFilterOptions.map((option) => (
+              <option key={option}>{option}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          分類
+          <select
+            onChange={(event) =>
+              onFilterChange({ ...filters, category: event.target.value })
+            }
+            value={filters.category}
+          >
+            <option value="">すべて</option>
+            {candidateCategoryOptions(kind).map((option) => (
+              <option key={option}>{option}</option>
+            ))}
+          </select>
         </label>
       </div>
 
@@ -513,7 +601,7 @@ function PartCandidateBrowser({
         aria-label={`${partKindLabel(kind)}選択表示`}
       >
         <span className="active">候補一覧</span>
-        <span className={normalizedQuery ? "active" : ""}>検索結果</span>
+        <span className={hasFilters ? "active" : ""}>絞り込み</span>
         <span>{candidates.length}件</span>
       </div>
 
@@ -582,9 +670,15 @@ export function BuildFormSteps({
   const [activeSummonIndex, setActiveSummonIndex] = useState(0);
   const [openPartBrowser, setOpenPartBrowser] =
     useState<PartBrowserKind | null>(null);
-  const [characterQuery, setCharacterQuery] = useState("");
-  const [weaponQuery, setWeaponQuery] = useState("");
-  const [summonQuery, setSummonQuery] = useState("");
+  const [characterFilters, setCharacterFilters] = useState<CandidateFilters>(
+    emptyCandidateFilters,
+  );
+  const [weaponFilters, setWeaponFilters] = useState<CandidateFilters>(
+    emptyCandidateFilters,
+  );
+  const [summonFilters, setSummonFilters] = useState<CandidateFilters>(
+    emptyCandidateFilters,
+  );
   const [subCharacterSlotCount, setSubCharacterSlotCount] = useState<2 | 5>(
     () =>
       form.characterDetails.filter((item) => item.position === "サブ").length >
@@ -1328,11 +1422,11 @@ export function BuildFormSteps({
                 {openPartBrowser === "character" && (
                   <PartCandidateBrowser
                     activeName={activeCharacter?.name ?? ""}
+                    filters={characterFilters}
                     kind="character"
                     onClose={() => setOpenPartBrowser(null)}
-                    onQueryChange={setCharacterQuery}
+                    onFilterChange={setCharacterFilters}
                     onSelect={selectCharacterCandidate}
-                    query={characterQuery}
                   />
                 )}
               </div>
@@ -1508,11 +1602,11 @@ export function BuildFormSteps({
                 {openPartBrowser === "weapon" && (
                   <PartCandidateBrowser
                     activeName={activeWeapon?.name ?? ""}
+                    filters={weaponFilters}
                     kind="weapon"
                     onClose={() => setOpenPartBrowser(null)}
-                    onQueryChange={setWeaponQuery}
+                    onFilterChange={setWeaponFilters}
                     onSelect={selectWeaponCandidate}
-                    query={weaponQuery}
                   />
                 )}
               </div>
@@ -1685,11 +1779,11 @@ export function BuildFormSteps({
                 {openPartBrowser === "summon" && (
                   <PartCandidateBrowser
                     activeName={activeSummon?.name ?? ""}
+                    filters={summonFilters}
                     kind="summon"
                     onClose={() => setOpenPartBrowser(null)}
-                    onQueryChange={setSummonQuery}
+                    onFilterChange={setSummonFilters}
                     onSelect={selectSummonCandidate}
-                    query={summonQuery}
                   />
                 )}
               </div>
