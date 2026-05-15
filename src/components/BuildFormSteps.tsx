@@ -219,9 +219,11 @@ function PartSlot({
   onClick: () => void;
   onClear: () => void;
 }) {
+  const master = findBuildMaster(kind, name);
+
   return (
     <button
-      className={`formation-slot ${active ? "active" : ""}`}
+      className={`formation-slot ${active ? "active formation-slot--active" : ""} ${name ? "" : "formation-slot--empty"}`}
       onClick={onClick}
       type="button"
     >
@@ -229,7 +231,7 @@ function PartSlot({
       <span className="formation-slot-body">
         <small>{label}</small>
         <strong>{name || "未選択"}</strong>
-        {meta && <em>{meta}</em>}
+        {(meta || master) && <em>{[meta, master?.element, master?.weaponType, master?.series].filter(Boolean).join(" / ")}</em>}
       </span>
       {name && (
         <span
@@ -548,6 +550,32 @@ export function BuildFormSteps({
   const activeCharacter = form.characterDetails[safeCharacterIndex];
   const activeWeapon = form.weaponDetails[safeWeaponIndex];
   const activeSummon = form.summonDetails[safeSummonIndex];
+  const frontCharacters = form.characterDetails
+    .map((character, index) => ({ character, index }))
+    .filter((item) => item.character.position === "フロント");
+  const subCharacters = form.characterDetails
+    .map((character, index) => ({ character, index }))
+    .filter((item) => item.character.position === "サブ");
+  const otherCharacters = form.characterDetails
+    .map((character, index) => ({ character, index }))
+    .filter((item) => item.character.position !== "フロント" && item.character.position !== "サブ");
+  const mainWeapon = form.weaponDetails[0];
+  const normalWeapons = form.weaponDetails.slice(1).map((weapon, index) => ({
+    weapon,
+    index: index + 1,
+  }));
+  const mainSummons = form.summonDetails
+    .map((summon, index) => ({ summon, index }))
+    .filter((item) => item.summon.position === "メイン");
+  const friendSummons = form.summonDetails
+    .map((summon, index) => ({ summon, index }))
+    .filter((item) => item.summon.position === "フレンド");
+  const subSummons = form.summonDetails
+    .map((summon, index) => ({ summon, index }))
+    .filter((item) => item.summon.position === "サブ");
+  const otherSummons = form.summonDetails
+    .map((summon, index) => ({ summon, index }))
+    .filter((item) => item.summon.position !== "メイン" && item.summon.position !== "フレンド" && item.summon.position !== "サブ");
 
   return (
     <section className="build-form-steps-container">
@@ -737,76 +765,120 @@ export function BuildFormSteps({
                 </div>
               </div>
 
-              <div className="job-picker">
-                <label>
-                  主人公ジョブ
-                  <select
-                    onChange={(event) =>
-                      updateField("protagonistJob", event.target.value)
-                    }
-                    value={form.protagonistJob}
-                  >
-                    <option value="">選択してください</option>
-                    {jobOptions.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                </label>
-                <div className="job-preview">
-                  <PartThumbnail kind="job" name={form.protagonistJob} />
-                  <div>
-                    <strong>
-                      {form.protagonistJob || "主人公ジョブ未選択"}
-                    </strong>
-                    <span>
-                      {masterMeta(findBuildMaster("job", form.protagonistJob))}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
               <div className="formation-layout">
                 <div className="formation-board">
-                  <div className="section-header">
-                    <h3>選択済み枠</h3>
-                    <div className="inline-actions">
-                      <button
-                        className="secondary-button"
-                        onClick={() => addCharacter("フロント")}
-                        type="button"
-                      >
-                        <Plus size={16} />
-                        フロント
-                      </button>
-                      <button
-                        className="secondary-button"
-                        onClick={() => addCharacter("サブ")}
-                        type="button"
-                      >
-                        <Plus size={16} />
-                        サブ
-                      </button>
+                  <div className="formation-section formation-section--hero">
+                    <div className="formation-section-title">
+                      <span>主人公</span>
+                      <strong>Protagonist Job</strong>
+                    </div>
+                    <div className="job-picker">
+                      <label>
+                        主人公ジョブ
+                        <select
+                          onChange={(event) =>
+                            updateField("protagonistJob", event.target.value)
+                          }
+                          value={form.protagonistJob}
+                        >
+                          <option value="">選択してください</option>
+                          {jobOptions.map((option) => (
+                            <option key={option}>{option}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="job-preview">
+                        <PartThumbnail kind="job" name={form.protagonistJob} />
+                        <div>
+                          <strong>{form.protagonistJob || "主人公ジョブ未選択"}</strong>
+                          <span>{masterMeta(findBuildMaster("job", form.protagonistJob))}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="formation-slot-grid character-slots">
-                    {form.characterDetails.map((character, index) => (
-                      <PartSlot
-                        active={safeCharacterIndex === index}
-                        kind="character"
-                        key={index}
-                        label={`${character.position} ${index + 1}`}
-                        meta={character.importance}
-                        name={character.name}
-                        onClear={() => updateCharacter(index, { name: "" })}
-                        onClick={() => setActiveCharacterIndex(index)}
-                      />
-                    ))}
+                  <div className="formation-section">
+                    <div className="formation-section-title">
+                      <span>フロントメンバー</span>
+                      <strong>Front Member</strong>
+                      <button className="secondary-button" onClick={() => addCharacter("フロント")} type="button">
+                        <Plus size={16} />
+                        追加
+                      </button>
+                    </div>
+                    <div className="formation-slot-grid character-slots character-slots--front">
+                      {frontCharacters.map(({ character, index }) => (
+                        <PartSlot
+                          active={safeCharacterIndex === index}
+                          kind="character"
+                          key={index}
+                          label={`フロント ${frontCharacters.findIndex((item) => item.index === index) + 1}`}
+                          meta={character.importance || character.roleMemo}
+                          name={character.name}
+                          onClear={() => updateCharacter(index, { name: "" })}
+                          onClick={() => setActiveCharacterIndex(index)}
+                        />
+                      ))}
+                      {frontCharacters.length === 0 && (
+                        <button className="formation-slot formation-slot--empty" onClick={() => addCharacter("フロント")} type="button">
+                          <Plus size={18} />
+                          <span className="formation-slot-body"><small>フロント</small><strong>追加</strong></span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  {form.characterDetails.length === 0 && (
-                    <div className="empty-state">
-                      フロントまたはサブ枠を追加してください。
+                  <div className="formation-section">
+                    <div className="formation-section-title">
+                      <span>サブメンバー</span>
+                      <strong>Sub Member</strong>
+                      <button className="secondary-button" onClick={() => addCharacter("サブ")} type="button">
+                        <Plus size={16} />
+                        追加
+                      </button>
+                    </div>
+                    <div className="formation-slot-grid character-slots character-slots--sub">
+                      {subCharacters.map(({ character, index }) => (
+                        <PartSlot
+                          active={safeCharacterIndex === index}
+                          kind="character"
+                          key={index}
+                          label={`サブ ${subCharacters.findIndex((item) => item.index === index) + 1}`}
+                          meta={character.importance || character.roleMemo}
+                          name={character.name}
+                          onClear={() => updateCharacter(index, { name: "" })}
+                          onClick={() => setActiveCharacterIndex(index)}
+                        />
+                      ))}
+                      {subCharacters.length === 0 && (
+                        <button className="formation-slot formation-slot--empty" onClick={() => addCharacter("サブ")} type="button">
+                          <Plus size={18} />
+                          <span className="formation-slot-body"><small>サブ</small><strong>追加</strong></span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {otherCharacters.length > 0 && (
+                    <div className="formation-section">
+                      <div className="formation-section-title">
+                        <span>任意枠</span>
+                        <strong>Flexible Slots</strong>
+                      </div>
+                      <div className="formation-slot-grid character-slots">
+                        {otherCharacters.map(({ character, index }) => (
+                          <PartSlot
+                            active={safeCharacterIndex === index}
+                            kind="character"
+                            key={index}
+                            label={`任意 ${index + 1}`}
+                            meta={character.importance || character.roleMemo}
+                            name={character.name}
+                            onClear={() => updateCharacter(index, { name: "" })}
+                            onClick={() => setActiveCharacterIndex(index)}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -950,30 +1022,71 @@ export function BuildFormSteps({
 
               <div className="formation-layout">
                 <div className="formation-board">
-                  <div className="formation-slot-grid weapon-slots">
-                    {form.weaponDetails.map((weapon, index) => (
-                      <PartSlot
-                        active={safeWeaponIndex === index}
-                        kind="weapon"
-                        key={index}
-                        label={`武器 ${index + 1}`}
-                        meta={
-                          weapon.count
-                            ? `${weapon.count}本 / ${weapon.importance}`
-                            : weapon.importance
-                        }
-                        name={weapon.name}
-                        onClear={() => updateWeapon(index, { name: "" })}
-                        onClick={() => setActiveWeaponIndex(index)}
-                      />
-                    ))}
+                  <div className="formation-section">
+                    <div className="formation-section-title">
+                      <span>メイン武器</span>
+                      <strong>Main Weapon</strong>
+                    </div>
+                    {mainWeapon ? (
+                      <div className="formation-slot-grid weapon-main-slot">
+                        <PartSlot
+                          active={safeWeaponIndex === 0}
+                          kind="weapon"
+                          label="メイン武器"
+                          meta={mainWeapon.count ? `${mainWeapon.count}本 / ${mainWeapon.importance}` : mainWeapon.importance}
+                          name={mainWeapon.name}
+                          onClear={() => updateWeapon(0, { name: "" })}
+                          onClick={() => setActiveWeaponIndex(0)}
+                        />
+                      </div>
+                    ) : (
+                      <button className="formation-slot formation-slot--empty" onClick={() => normalizeWeaponSlots(10)} type="button">
+                        <Plus size={18} />
+                        <span className="formation-slot-body"><small>Main Weapon</small><strong>10枠で開始</strong></span>
+                      </button>
+                    )}
                   </div>
 
-                  {form.weaponDetails.length === 0 && (
-                    <div className="empty-state">
-                      10枠または13枠ボタンで武器枠を作成してください。
+                  <div className="formation-section">
+                    <div className="formation-section-title">
+                      <span>武器グリッド</span>
+                      <strong>Weapon Grid</strong>
                     </div>
-                  )}
+                    <div className="formation-slot-grid weapon-slots">
+                      {normalWeapons.map(({ weapon, index }) => (
+                        <PartSlot
+                          active={safeWeaponIndex === index}
+                          kind="weapon"
+                          key={index}
+                          label={`武器 ${index + 1}`}
+                          meta={weapon.count ? `${weapon.count}本 / ${weapon.importance}` : weapon.importance}
+                          name={weapon.name}
+                          onClear={() => updateWeapon(index, { name: "" })}
+                          onClick={() => setActiveWeaponIndex(index)}
+                        />
+                      ))}
+                    </div>
+                    {form.weaponDetails.length === 0 && (
+                      <div className="empty-state">
+                        10枠を基本に、必要なら13枠まで追加できます。
+                      </div>
+                    )}
+                    {form.weaponDetails.length > 0 && form.weaponDetails.length < 13 && (
+                      <button className="secondary-button formation-add-button" onClick={addWeapon} type="button">
+                        <Plus size={16} />
+                        武器枠を追加
+                      </button>
+                    )}
+                    {form.weaponDetails.length >= 13 && (
+                      <p className="muted-text">武器枠は13枠までです。</p>
+                    )}
+                  </div>
+
+                  <div className="formation-section">
+                    <div className="formation-section-title">
+                      <span>選択中の武器</span>
+                      <strong>{activeWeapon ? `武器 ${safeWeaponIndex + 1}` : "未選択"}</strong>
+                    </div>
 
                   {activeWeapon && (
                     <div className="slot-editor">
@@ -1046,6 +1159,7 @@ export function BuildFormSteps({
                       </button>
                     </div>
                   )}
+                  </div>
                 </div>
 
                 <PartCandidateBrowser
@@ -1110,29 +1224,123 @@ export function BuildFormSteps({
 
               <div className="formation-layout">
                 <div className="formation-board">
-                  <div className="formation-slot-grid summon-slots">
-                    {form.summonDetails.map((summon, index) => (
-                      <PartSlot
-                        active={safeSummonIndex === index}
-                        kind="summon"
-                        key={index}
-                        label={`${summon.position} ${index + 1}`}
-                        meta={summon.importance}
-                        name={summon.name}
-                        onClear={() => updateSummon(index, { name: "" })}
-                        onClick={() => setActiveSummonIndex(index)}
-                      />
-                    ))}
+                  <div className="formation-section summon-top-grid">
+                    <div className="summon-primary-group">
+                      <div className="formation-section-title">
+                        <span>メイン召喚石</span>
+                        <strong>Main Summon</strong>
+                      </div>
+                      <div className="formation-slot-grid summon-primary-slot">
+                        {mainSummons.map(({ summon, index }) => (
+                          <PartSlot
+                            active={safeSummonIndex === index}
+                            kind="summon"
+                            key={index}
+                            label="メイン"
+                            meta={summon.importance}
+                            name={summon.name}
+                            onClear={() => updateSummon(index, { name: "" })}
+                            onClick={() => setActiveSummonIndex(index)}
+                          />
+                        ))}
+                        {mainSummons.length === 0 && (
+                          <button className="formation-slot formation-slot--empty" onClick={() => addSummon("メイン")} type="button">
+                            <Plus size={18} />
+                            <span className="formation-slot-body"><small>Main Summon</small><strong>追加</strong></span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="summon-primary-group">
+                      <div className="formation-section-title">
+                        <span>フレンド召喚石候補</span>
+                        <strong>Support Summon</strong>
+                      </div>
+                      <div className="formation-slot-grid summon-primary-slot">
+                        {friendSummons.map(({ summon, index }) => (
+                          <PartSlot
+                            active={safeSummonIndex === index}
+                            kind="summon"
+                            key={index}
+                            label="フレンド"
+                            meta={summon.importance}
+                            name={summon.name}
+                            onClear={() => updateSummon(index, { name: "" })}
+                            onClick={() => setActiveSummonIndex(index)}
+                          />
+                        ))}
+                        {friendSummons.length === 0 && (
+                          <button className="formation-slot formation-slot--empty" onClick={() => addSummon("フレンド")} type="button">
+                            <Plus size={18} />
+                            <span className="formation-slot-body"><small>Support Summon</small><strong>追加</strong></span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {form.summonDetails.length === 0 && (
-                    <div className="empty-state">
-                      メイン、フレンド、サブ枠を追加してください。
+                  <div className="formation-section">
+                    <div className="formation-section-title">
+                      <span>サブ召喚石</span>
+                      <strong>Sub Summon</strong>
+                      <button className="secondary-button" onClick={() => addSummon("サブ")} type="button">
+                        <Plus size={16} />
+                        サブ追加
+                      </button>
+                    </div>
+                    <div className="formation-slot-grid summon-slots">
+                      {subSummons.map(({ summon, index }) => (
+                        <PartSlot
+                          active={safeSummonIndex === index}
+                          kind="summon"
+                          key={index}
+                          label={`サブ ${subSummons.findIndex((item) => item.index === index) + 1}`}
+                          meta={summon.importance}
+                          name={summon.name}
+                          onClear={() => updateSummon(index, { name: "" })}
+                          onClick={() => setActiveSummonIndex(index)}
+                        />
+                      ))}
+                      {subSummons.length === 0 && (
+                        <button className="formation-slot formation-slot--empty" onClick={() => addSummon("サブ")} type="button">
+                          <Plus size={18} />
+                          <span className="formation-slot-body"><small>Sub Summon</small><strong>追加</strong></span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {otherSummons.length > 0 && (
+                    <div className="formation-section">
+                      <div className="formation-section-title">
+                        <span>任意・サブ加護枠</span>
+                        <strong>Flexible Slots</strong>
+                      </div>
+                      <div className="formation-slot-grid summon-slots">
+                        {otherSummons.map(({ summon, index }) => (
+                          <PartSlot
+                            active={safeSummonIndex === index}
+                            kind="summon"
+                            key={index}
+                            label={`${summon.position} ${index + 1}`}
+                            meta={summon.importance}
+                            name={summon.name}
+                            onClear={() => updateSummon(index, { name: "" })}
+                            onClick={() => setActiveSummonIndex(index)}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
 
-                  {activeSummon && (
-                    <div className="slot-editor">
+                  <div className="formation-section">
+                    <div className="formation-section-title">
+                      <span>選択中の召喚石</span>
+                      <strong>{activeSummon ? `${activeSummon.position} ${safeSummonIndex + 1}` : "未選択"}</strong>
+                    </div>
+                    {activeSummon && (
+                      <div className="slot-editor">
                       <label>
                         配置
                         <select
@@ -1204,8 +1412,9 @@ export function BuildFormSteps({
                       >
                         <Trash2 size={16} />
                       </button>
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <PartCandidateBrowser

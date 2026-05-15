@@ -2246,3 +2246,327 @@ textarea {
     width: 100%;
   }
 }
+
+/* Build post form UI rework */
+.build-form-page-stack {
+  max-width: 1400px;
+  width: 100%;
+}
+
+.content-grid--build-form {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(100%, 1400px);
+  max-width: 1400px;
+  margin-inline: auto;
+}
+
+.content-grid--build-form .build-form-steps-container {
+  width: 100%;
+  min-width: 0;
+}
+
+.content-grid--build-form .build-form-steps {
+  min-width: 0;
+}
+
+.build-form-steps .form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.build-form-steps label,
+.build-form-steps input,
+.build-form-steps select,
+.build-form-steps textarea {
+  min-width: 0;
+}
+
+.formation-layout {
+  grid-template-columns: minmax(520px, 1.08fr) minmax(360px, 0.92fr);
+  gap: 20px;
+}
+
+.formation-board {
+  gap: 16px;
+  padding: 16px;
+  background:
+    linear-gradient(180deg, rgba(47, 142, 102, 0.06), rgba(255, 255, 255, 0) 160px),
+    #fbfcfd;
+}
+
+.formation-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e1e8ef;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.formation-section--hero {
+  background: #f3f8f6;
+}
+
+.formation-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.formation-section-title span {
+  color: #657688;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.formation-section-title strong {
+  margin-right: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.formation-section-title .secondary-button {
+  flex: 0 0 auto;
+}
+
+.character-slots--front {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.character-slots--sub {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.weapon-main-slot,
+.summon-primary-slot {
+  grid-template-columns: minmax(180px, 320px);
+}
+
+.weapon-slots {
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+}
+
+.summon-top-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.summon-primary-group {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.summon-slots {
+  grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
+}
+
+.formation-slot {
+  min-height: 86px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  padding: 10px;
+  border-color: #cfd9e3;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #edf4f8 100%);
+}
+
+.formation-slot .part-thumbnail {
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(20, 33, 43, 0.08);
+}
+
+.formation-slot--active,
+.formation-slot.active {
+  border-color: #2f8e66;
+  background: linear-gradient(180deg, #f8fffb 0%, #e6f4ee 100%);
+  box-shadow: 0 0 0 3px rgba(47, 142, 102, 0.18), 0 8px 18px rgba(20, 33, 43, 0.07);
+}
+
+.formation-slot--empty {
+  border-style: dashed;
+  color: #657688;
+}
+
+.formation-add-button {
+  justify-self: start;
+}
+
+.slot-editor {
+  grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(120px, 1fr)) auto;
+  padding: 12px;
+  border: 1px solid #e1e8ef;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.part-browser {
+  padding: 16px;
+}
+
+.part-browser-header {
+  grid-template-columns: minmax(0, 0.75fr) minmax(260px, 1fr);
+}
+
+.part-candidate-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  max-height: 460px;
+}
+
+.part-candidate-card {
+  grid-template-columns: 48px minmax(0, 1fr) 18px;
+  min-height: 68px;
+  padding: 10px;
+}
+
+.part-candidate-card .part-thumbnail {
+  width: 44px;
+  height: 44px;
+}
+
+.selected-part-picker {
+  padding: 16px;
+}
+
+.selected-part-chip-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.selected-part-chip {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 8px;
+  padding: 12px;
+}
+
+.selected-part-chip span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.selected-part-chip button {
+  min-height: 34px;
+}
+
+.selected-part-chip button + button {
+  margin-left: 0;
+}
+
+.selected-part-chip {
+  grid-template-areas:
+    "name name name"
+    "required recommend substitute";
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.selected-part-chip span {
+  grid-area: name;
+}
+
+.reference-item {
+  grid-template-columns: minmax(120px, 160px) minmax(160px, 1fr) minmax(240px, 1.4fr) minmax(160px, 1fr) auto;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #e1e8ef;
+  background: #fbfcfd;
+}
+
+.reference-item .icon-button {
+  justify-self: end;
+}
+
+@media (max-width: 1180px) {
+  .formation-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .part-candidate-grid {
+    max-height: 360px;
+  }
+}
+
+@media (max-width: 900px) {
+  .build-form-page-stack {
+    max-width: 100%;
+  }
+
+  .content-grid--build-form {
+    width: 100%;
+  }
+
+  .summon-top-grid,
+  .character-slots--front,
+  .character-slots--sub {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .slot-editor,
+  .reference-item {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reference-item .icon-button {
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .main-content {
+    overflow-x: hidden;
+  }
+
+  .content-grid--build-form,
+  .build-form-steps-container,
+  .formation-board,
+  .part-browser,
+  .formation-section {
+    min-width: 0;
+  }
+
+  .formation-section-title,
+  .job-picker,
+  .slot-editor,
+  .reference-item,
+  .selected-part-chip {
+    grid-template-columns: 1fr;
+  }
+
+  .formation-section-title {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .weapon-main-slot,
+  .summon-primary-slot,
+  .weapon-slots,
+  .summon-slots,
+  .character-slots--front,
+  .character-slots--sub,
+  .part-candidate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .part-browser-header {
+    grid-template-columns: 1fr;
+  }
+
+  .formation-slot {
+    width: 100%;
+  }
+
+  .selected-part-chip {
+    grid-template-areas: none;
+  }
+
+  .selected-part-chip span {
+    grid-area: auto;
+  }
+}

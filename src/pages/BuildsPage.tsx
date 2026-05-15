@@ -1520,7 +1520,7 @@ export function BuildsPage() {
   }
 
   return (
-    <div className="page-stack">
+    <div className={`page-stack ${activeBuildTab === "form" ? "build-form-page-stack" : ""}`}>
       <section className="page-heading">
         <div>
           <p className="eyebrow">Build Presets</p>
@@ -1868,7 +1868,7 @@ export function BuildsPage() {
       )}
 
       {activeBuildTab === "form" && (
-        <section className="content-grid">
+        <section className="content-grid content-grid--build-form">
           <BuildFormSteps
             error={error}
             editMode={Boolean(editingPostId)}
