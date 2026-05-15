@@ -13,6 +13,7 @@ import {
 } from "../lib/api";
 import { useAuth } from "../components/AuthContext";
 import { buildMasterOptions, findBuildMaster, type BuildMasterKind, type BuildMasterItem } from "../lib/buildMasters";
+import { BuildFormSteps } from "../components/BuildFormSteps";
 
 const emptyForm: BuildPostInput = {
   title: "",
@@ -1065,17 +1066,16 @@ export function BuildsPage() {
     setError("");
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submit(formData: BuildPostInput) {
     setError("");
 
     try {
       const payload = {
-        ...form,
-        characters: namesFromCharacters(form.characterDetails),
-        summons: namesFromSummons(form.summonDetails),
-        weapons: namesFromWeapons(form.weaponDetails),
-        referenceUrls: form.referenceUrls.filter((ref) => ref.url.trim())
+        ...formData,
+        characters: namesFromCharacters(formData.characterDetails),
+        summons: namesFromSummons(formData.summonDetails),
+        weapons: namesFromWeapons(formData.weaponDetails),
+        referenceUrls: formData.referenceUrls.filter((ref) => ref.url.trim())
       };
       const data = editingPostId ? await api.updateBuildPost(editingPostId, payload) : await api.createBuildPost(payload);
       setPosts((current) => {
@@ -1085,6 +1085,7 @@ export function BuildsPage() {
         return current.map((post) => (post.id === data.post.id ? data.post : post));
       });
       resetForm();
+      setActiveBuildTab("search");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "編成メモの保存に失敗しました");
     }
@@ -1375,483 +1376,21 @@ export function BuildsPage() {
       )}
 
       {activeBuildTab === "form" && (
-      <section className="content-grid build-page-grid">
-        <form className="panel task-form build-form" onSubmit={submit}>
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Post</p>
-              <h2>{editingPostId ? "投稿を編集" : "投稿フォーム"}</h2>
-            </div>
-            {form.sourcePresetName && <span className="pill">元プリセット: {form.sourcePresetName}</span>}
-          </div>
-
-          <label>
-            編成タイトル
-            <input onChange={(event) => update("title", event.target.value)} required value={form.title} />
-          </label>
-
-          <div className="form-row">
-            <label>
-              クエスト分類
-              <select
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    category: event.target.value,
-                    purpose: event.target.value === "周回・武器集め用" ? "周回向け" : "参考メモ"
-                  }))
-                }
-                value={form.category}
-              >
-                {categoryOptions.map((option) => (
-                  <option key={option} value={option}>{categoryLabel(option)}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              属性
-              <select onChange={(event) => update("element", event.target.value)} required value={form.element}>
-                <option value="">選択</option>
-                {elementOptions.map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="form-row">
-            <label>
-              クエスト名
-              <input list="build-quest-options" onChange={(event) => update("questName", event.target.value)} required value={form.questName} />
-            </label>
-            <label>
-              目的
-              <select onChange={(event) => update("purpose", event.target.value)} value={form.purpose}>
-                {purposeOptions.map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="form-row">
-            <label>
-              操作タイプ
-              <select onChange={(event) => update("operationType", event.target.value)} value={form.operationType}>
-                {operationOptions.map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              検証状態
-              <select onChange={(event) => update("verificationStatus", event.target.value)} value={form.verificationStatus}>
-                {verificationOptions.map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <label>
-            概要メモ
-            <textarea onChange={(event) => update("overview", event.target.value)} rows={3} value={form.overview ?? ""} />
-          </label>
-
-          <div className="form-row">
-            <label>
-              主人公ジョブ
-              <input list="build-job-options" onChange={(event) => update("protagonistJob", event.target.value)} value={form.protagonistJob ?? ""} />
-            </label>
-            <label>
-              変更メモ
-              <input onChange={(event) => update("changeMemo", event.target.value)} value={form.changeMemo ?? ""} />
-            </label>
-          </div>
-
-          <div className="template-block">
-            <div className="inline-section-heading">
-              <h3>キャラ</h3>
-              <button className="secondary-button" onClick={addCharacter} type="button">
-                <Plus size={16} />
-                追加
-              </button>
-            </div>
-            <div className="build-detail-list">
-              {form.characterDetails.map((character, index) => (
-                <div className="build-detail-row character-row" key={`character-${index}`}>
-                  <select
-                    aria-label="配置"
-                    onChange={(event) => updateCharacter(index, { position: event.target.value })}
-                    value={character.position}
-                  >
-                    {characterPositionOptions.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label="キャラ名"
-                    list="build-character-options"
-                    onChange={(event) => updateCharacter(index, { name: event.target.value })}
-                    placeholder="キャラ名"
-                    value={character.name}
-                  />
-                  <select
-                    aria-label="重要度"
-                    onChange={(event) => updateCharacter(index, { importance: event.target.value })}
-                    value={character.importance}
-                  >
-                    {importanceOptions.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label="役割メモ"
-                    onChange={(event) => updateCharacter(index, { roleMemo: event.target.value })}
-                    placeholder="役割メモ"
-                    value={character.roleMemo}
-                  />
-                  <input
-                    aria-label="代用メモ"
-                    onChange={(event) => updateCharacter(index, { substituteMemo: event.target.value })}
-                    placeholder="代用メモ"
-                    value={character.substituteMemo}
-                  />
-                  <button aria-label="キャラ行を削除" className="icon-button danger" onClick={() => removeCharacter(index)} type="button">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              {form.characterDetails.length === 0 && <div className="empty-state compact">候補から選ぶか、そのまま自由入力できます。</div>}
-            </div>
-          </div>
-
-          <div className="template-block">
-            <div className="inline-section-heading">
-              <h3>召喚石</h3>
-              <button className="secondary-button" onClick={addSummon} type="button">
-                <Plus size={16} />
-                追加
-              </button>
-            </div>
-            <div className="build-detail-list">
-              {form.summonDetails.map((summon, index) => (
-                <div className="build-detail-row summon-row" key={`summon-${index}`}>
-                  <select aria-label="配置" onChange={(event) => updateSummon(index, { position: event.target.value })} value={summon.position}>
-                    {summonPositionOptions.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label="召喚石名"
-                    list="build-summon-options"
-                    onChange={(event) => updateSummon(index, { name: event.target.value })}
-                    placeholder="召喚石名"
-                    value={summon.name}
-                  />
-                  <select
-                    aria-label="重要度"
-                    onChange={(event) => updateSummon(index, { importance: event.target.value })}
-                    value={summon.importance}
-                  >
-                    {importanceOptions.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label="用途メモ"
-                    onChange={(event) => updateSummon(index, { usageMemo: event.target.value })}
-                    placeholder="用途メモ"
-                    value={summon.usageMemo}
-                  />
-                  <input
-                    aria-label="代用メモ"
-                    onChange={(event) => updateSummon(index, { substituteMemo: event.target.value })}
-                    placeholder="代用メモ"
-                    value={summon.substituteMemo}
-                  />
-                  <button aria-label="召喚石行を削除" className="icon-button danger" onClick={() => removeSummon(index)} type="button">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              {form.summonDetails.length === 0 && <div className="empty-state compact">メイン、フレンド、サブなど必要な石だけ登録できます。</div>}
-            </div>
-          </div>
-
-          <div className="template-block">
-            <div className="inline-section-heading">
-              <h3>武器</h3>
-              <button className="secondary-button" onClick={addWeapon} type="button">
-                <Plus size={16} />
-                追加
-              </button>
-            </div>
-            <div className="build-detail-list">
-              {form.weaponDetails.map((weapon, index) => (
-                <div className="build-detail-row weapon-row" key={`weapon-${index}`}>
-                  <input
-                    aria-label="武器名"
-                    list="build-weapon-options"
-                    onChange={(event) => updateWeapon(index, { name: event.target.value })}
-                    placeholder="武器名"
-                    value={weapon.name}
-                  />
-                  <select
-                    aria-label="重要度"
-                    onChange={(event) => updateWeapon(index, { importance: event.target.value })}
-                    value={weapon.importance}
-                  >
-                    {importanceOptions.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label="本数"
-                    onChange={(event) => updateWeapon(index, { count: event.target.value })}
-                    placeholder="本数"
-                    value={weapon.count}
-                  />
-                  <input
-                    aria-label="用途メモ"
-                    onChange={(event) => updateWeapon(index, { usageMemo: event.target.value })}
-                    placeholder="用途メモ"
-                    value={weapon.usageMemo}
-                  />
-                  <input
-                    aria-label="代用メモ"
-                    onChange={(event) => updateWeapon(index, { substituteMemo: event.target.value })}
-                    placeholder="代用メモ"
-                    value={weapon.substituteMemo}
-                  />
-                  <button aria-label="武器行を削除" className="icon-button danger" onClick={() => removeWeapon(index)} type="button">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              {form.weaponDetails.length === 0 && <div className="empty-state compact">10枠すべてではなく、重要武器だけ登録できます。</div>}
-            </div>
-          </div>
-
-          <div className="form-row">
-            <label>
-              必須パーツ
-              <textarea onChange={(event) => updateLines("requiredParts", event.target.value)} rows={3} value={toLines(form.requiredParts)} />
-            </label>
-            <label>
-              推奨パーツ
-              <textarea
-                onChange={(event) => updateLines("recommendedParts", event.target.value)}
-                rows={3}
-                value={toLines(form.recommendedParts)}
-              />
-            </label>
-          </div>
-
-          <div className="form-row">
-            <label>
-              代用可パーツ
-              <textarea
-                onChange={(event) => updateLines("substitutableParts", event.target.value)}
-                rows={3}
-                value={toLines(form.substitutableParts)}
-              />
-            </label>
-            <label>
-              自由枠
-              <textarea onChange={(event) => updateLines("freeSlots", event.target.value)} rows={3} value={toLines(form.freeSlots)} />
-            </label>
-          </div>
-
-          <div className="form-row">
-            <label>
-              代用候補
-              <textarea onChange={(event) => update("substituteNotes", event.target.value)} rows={3} value={form.substituteNotes ?? ""} />
-            </label>
-            <label>
-              注意点
-              <textarea onChange={(event) => update("cautions", event.target.value)} rows={3} value={form.cautions ?? ""} />
-            </label>
-          </div>
-
-          {form.category === "高難度攻略用" ? (
-            <div className="template-block">
-              <h3>高難度メモ</h3>
-              <div className="form-row">
-                <label>
-                  役割
-                  <input onChange={(event) => update("role", event.target.value)} value={form.role ?? ""} />
-                </label>
-                <label>
-                  失敗ポイント
-                  <textarea onChange={(event) => update("failurePoints", event.target.value)} rows={2} value={form.failurePoints ?? ""} />
-                </label>
-              </div>
-              <label>
-                予兆対応
-                <textarea onChange={(event) => update("omenNotes", event.target.value)} rows={3} value={form.omenNotes ?? ""} />
-              </label>
-              <label>
-                行動メモ
-                <textarea
-                  onChange={(event) => update("actionNotes", event.target.value)}
-                  placeholder={"開幕\n100〜80%\n80〜60%\n60〜20%\n20〜0%\n予兆対応\n失敗ポイント\nその他メモ"}
-                  rows={7}
-                  value={form.actionNotes ?? ""}
-                />
-              </label>
-            </div>
-          ) : (
-            <div className="template-block">
-              <h3>周回メモ</h3>
-              <div className="form-row">
-                <label>
-                  周回目的
-                  <input onChange={(event) => update("farmingGoal", event.target.value)} value={form.farmingGoal ?? ""} />
-                </label>
-                <label>
-                  自発 / 救援
-                  <select onChange={(event) => update("raidRole", event.target.value)} value={form.raidRole ?? ""}>
-                    <option value="">未指定</option>
-                    <option>自発</option>
-                    <option>救援</option>
-                    <option>どちらでも</option>
-                  </select>
-                </label>
-              </div>
-              <div className="form-row">
-                <label>
-                  青箱狙い
-                  <select onChange={(event) => update("blueChest", event.target.value)} value={form.blueChest ?? ""}>
-                    <option value="">未指定</option>
-                    {blueChestOptions.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  討伐時間目安
-                  <input onChange={(event) => update("clearTime", event.target.value)} value={form.clearTime ?? ""} />
-                </label>
-              </div>
-              <div className="form-row">
-                <label>
-                  安定度
-                  <select onChange={(event) => update("stability", event.target.value)} value={form.stability ?? ""}>
-                    <option value="">未指定</option>
-                    {stabilityOptions.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  加護石
-                  <select onChange={(event) => update("prerequisites", event.target.value)} value={form.prerequisites ?? ""}>
-                    <option value="">未指定</option>
-                    {prerequisiteOptions.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="form-row">
-                <label>
-                  武器集め対象
-                  <input onChange={(event) => update("weaponTarget", event.target.value)} value={form.weaponTarget ?? ""} />
-                </label>
-                <label>
-                  救援タイミングメモ
-                  <input onChange={(event) => update("rescueTiming", event.target.value)} value={form.rescueTiming ?? ""} />
-                </label>
-              </div>
-              <label>
-                周回時の注意点
-                <textarea
-                  onChange={(event) => update("farmingCautions", event.target.value)}
-                  rows={3}
-                  value={form.farmingCautions ?? ""}
-                />
-              </label>
-            </div>
-          )}
-
-          <div className="template-block">
-            <div className="inline-section-heading">
-              <h3>参考URL</h3>
-              <button className="secondary-button" onClick={addReference} type="button">
-                <Plus size={16} />
-                追加
-              </button>
-            </div>
-            <div className="build-detail-list">
-              {form.referenceUrls.map((ref, index) => (
-                <div className="build-detail-row reference-row" key={`reference-${index}`}>
-                  <select aria-label="URL種別" onChange={(event) => updateReference(index, { type: event.target.value })} value={ref.type}>
-                    {referenceTypeOptions.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label="URLタイトル"
-                    onChange={(event) => updateReference(index, { title: event.target.value })}
-                    placeholder="タイトル"
-                    value={ref.title}
-                  />
-                  <input
-                    aria-label="URL"
-                    onChange={(event) => updateReference(index, { url: event.target.value })}
-                    placeholder="https://..."
-                    type="url"
-                    value={ref.url}
-                  />
-                  <input
-                    aria-label="URLメモ"
-                    onChange={(event) => updateReference(index, { memo: event.target.value })}
-                    placeholder="見る場所や要点"
-                    value={ref.memo}
-                  />
-                  <button aria-label="参考URL行を削除" className="icon-button danger" onClick={() => removeReference(index)} type="button">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              {form.referenceUrls.length === 0 && <div className="empty-state compact">外部本文は保存せず、URLと団内向けメモだけ登録します。</div>}
-            </div>
-          </div>
-
-          <button className="primary-button" type="submit">
-            <Plus size={18} />
-            {editingPostId ? "編成メモを更新" : "編成メモを投稿"}
-          </button>
-        </form>
-
-        <aside className="build-side-stack">
-          <div className="panel">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Presets</p>
-                <h2>候補</h2>
-              </div>
-            </div>
-            <div className="build-preset-list">
-              {filteredPresets.map((preset) => (
-                <button className="build-preset-card" key={preset.id} onClick={() => applyPreset(preset)} type="button">
-                  <strong>{preset.name}</strong>
-                  <span className="tag-row">
-                    <span className="pill">{preset.element}</span>
-                    <span className="pill muted">{preset.operationType}</span>
-                    <span className="pill muted">{preset.purpose}</span>
-                  </span>
-                  <small>{preset.verificationStatus} / {preset.presetStatus}</small>
-                  <small>主要パーツ: {preset.requiredParts.slice(0, 3).join(" / ")}</small>
-                  <small>参考: {preset.referenceUrls.map((ref) => ref.type).join(" / ") || "なし"}</small>
-                  <small>更新: {preset.updatedAt}</small>
-                </button>
-              ))}
-              {filteredPresets.length === 0 && <div className="empty-state">条件に合うプリセットはまだありません。</div>}
-            </div>
-          </div>
-        </aside>
+      <section className="content-grid">
+        <BuildFormSteps
+          error={error}
+          editMode={Boolean(editingPostId)}
+          form={form}
+          isSubmitting={false}
+          onApplyPreset={applyPreset}
+          onCancel={() => {
+            resetForm();
+            setActiveBuildTab("search");
+          }}
+          onFormChange={setForm}
+          onSubmit={submit}
+          presets={presets}
+        />
       </section>
       )}
     </div>
