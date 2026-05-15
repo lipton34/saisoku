@@ -189,6 +189,19 @@ function linesToArray(value: string) {
     .filter(Boolean);
 }
 
+function browserKindForStep(step: FormStep): PartBrowserKind | null {
+  if (step === 2) {
+    return "character";
+  }
+  if (step === 3) {
+    return "weapon";
+  }
+  if (step === 4) {
+    return "summon";
+  }
+  return null;
+}
+
 function sameJson<T>(first: T, second: T) {
   return JSON.stringify(first) === JSON.stringify(second);
 }
@@ -611,8 +624,13 @@ export function BuildFormSteps({
   const visiblePresets = filteredPresets.length > 0 ? filteredPresets : presets;
 
   useEffect(() => {
-    setOpenPartBrowser(null);
+    setOpenPartBrowser(browserKindForStep(currentStep));
   }, [currentStep]);
+
+  function goToStep(step: FormStep) {
+    setCurrentStep(step);
+    setOpenPartBrowser(browserKindForStep(step));
+  }
 
   useEffect(() => {
     const incomingSubSlotCount =
@@ -876,7 +894,6 @@ export function BuildFormSteps({
               },
             ];
       onFormChange({ ...currentForm, characterDetails });
-      setOpenPartBrowser(null);
       if (currentForm.characterDetails.length === 0) {
         setActiveCharacterIndex(0);
       }
@@ -893,7 +910,6 @@ export function BuildFormSteps({
             )
           : [{ ...emptyWeaponDetail, name }];
       onFormChange({ ...currentForm, weaponDetails });
-      setOpenPartBrowser(null);
       if (currentForm.weaponDetails.length === 0) {
         setActiveWeaponIndex(0);
       }
@@ -916,7 +932,6 @@ export function BuildFormSteps({
               },
             ];
       onFormChange({ ...currentForm, summonDetails });
-      setOpenPartBrowser(null);
       if (currentForm.summonDetails.length === 0) {
         setActiveSummonIndex(0);
       }
@@ -933,7 +948,7 @@ export function BuildFormSteps({
               <button
                 className={`step-badge ${currentStep === step.id ? "active" : ""} ${stepIsValid(step.id) ? "completed" : ""}`}
                 key={step.id}
-                onClick={() => setCurrentStep(step.id)}
+                onClick={() => goToStep(step.id)}
                 type="button"
               >
                 {step.id}
@@ -2021,7 +2036,7 @@ export function BuildFormSteps({
             {currentStep > 1 && (
               <button
                 className="secondary-button"
-                onClick={() => setCurrentStep((currentStep - 1) as FormStep)}
+                onClick={() => goToStep((currentStep - 1) as FormStep)}
                 type="button"
               >
                 戻る
@@ -2031,7 +2046,7 @@ export function BuildFormSteps({
               <button
                 className="primary-button"
                 disabled={!stepIsValid(currentStep)}
-                onClick={() => setCurrentStep((currentStep + 1) as FormStep)}
+                onClick={() => goToStep((currentStep + 1) as FormStep)}
                 type="button"
               >
                 次へ
@@ -2093,7 +2108,7 @@ export function BuildFormSteps({
                     );
                     onApplyPreset(preset);
                     setShowPresetModal(false);
-                    setCurrentStep(1);
+                    goToStep(1);
                   }}
                   type="button"
                 >
