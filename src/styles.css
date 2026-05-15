@@ -2607,6 +2607,34 @@ html,
   min-width: max-content;
 }
 
+.formation-board-scroll .job-picker {
+  width: max-content;
+  min-width: max-content;
+}
+
+.formation-board-scroll .job-picker label {
+  width: 220px;
+}
+
+.formation-board-scroll .job-preview {
+  width: 260px;
+}
+
+.slot-editor {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  grid-template-columns: minmax(180px, 220px) repeat(4, minmax(132px, 160px)) 42px;
+}
+
+.slot-editor label {
+  min-width: 132px;
+}
+
+.slot-editor .icon-button {
+  min-width: 36px;
+}
+
 .character-slots--front {
   grid-template-columns: repeat(3, minmax(136px, 160px));
 }
@@ -2701,6 +2729,14 @@ html,
 
   .formation-board-scroll .formation-slot-grid {
     min-width: max-content;
+  }
+
+  .formation-board-scroll .job-picker {
+    min-width: max-content;
+  }
+
+  .slot-editor {
+    grid-template-columns: minmax(180px, 220px) repeat(4, minmax(132px, 160px)) 42px;
   }
 
   .part-candidate-grid {

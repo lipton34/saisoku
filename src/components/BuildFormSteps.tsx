@@ -922,26 +922,28 @@ export function BuildFormSteps({
                       <span>主人公</span>
                       <strong>Protagonist Job</strong>
                     </div>
-                    <div className="job-picker">
-                      <label>
-                        主人公ジョブ
-                        <select
-                          onChange={(event) =>
-                            updateField("protagonistJob", event.target.value)
-                          }
-                          value={form.protagonistJob}
-                        >
-                          <option value="">選択してください</option>
-                          {jobOptions.map((option) => (
-                            <option key={option}>{option}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <div className="job-preview">
-                        <PartThumbnail kind="job" name={form.protagonistJob} />
-                        <div>
-                          <strong>{form.protagonistJob || "主人公ジョブ未選択"}</strong>
-                          <span>{masterMeta(findBuildMaster("job", form.protagonistJob))}</span>
+                    <div className="formation-board-scroll">
+                      <div className="job-picker">
+                        <label>
+                          主人公ジョブ
+                          <select
+                            onChange={(event) =>
+                              updateField("protagonistJob", event.target.value)
+                            }
+                            value={form.protagonistJob}
+                          >
+                            <option value="">選択してください</option>
+                            {jobOptions.map((option) => (
+                              <option key={option}>{option}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <div className="job-preview">
+                          <PartThumbnail kind="job" name={form.protagonistJob} />
+                          <div>
+                            <strong>{form.protagonistJob || "主人公ジョブ未選択"}</strong>
+                            <span>{masterMeta(findBuildMaster("job", form.protagonistJob))}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
