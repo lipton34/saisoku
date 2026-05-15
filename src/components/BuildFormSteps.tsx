@@ -24,6 +24,7 @@ import {
 } from "../lib/buildMasters";
 
 type FormStep = 1 | 2 | 3 | 4 | 5;
+type PartBrowserKind = Exclude<BuildMasterKind, "job">;
 type PartBucket =
   | "requiredParts"
   | "recommendedParts"
@@ -418,12 +419,14 @@ function PartCandidateBrowser({
   activeName,
   query,
   onQueryChange,
+  onClose,
   onSelect,
 }: {
-  kind: Exclude<BuildMasterKind, "job">;
+  kind: PartBrowserKind;
   activeName: string;
   query: string;
   onQueryChange: (query: string) => void;
+  onClose?: () => void;
   onSelect: (name: string) => void;
 }) {
   const [page, setPage] = useState(1);
@@ -471,6 +474,16 @@ function PartCandidateBrowser({
           <p className="eyebrow">{partKindLabel(kind)}候補</p>
           <h3>{normalizedQuery ? "検索結果" : "候補一覧"}</h3>
         </div>
+        {onClose && (
+          <button
+            aria-label="候補一覧を閉じる"
+            className="icon-button part-browser-close"
+            onClick={onClose}
+            type="button"
+          >
+            <X size={16} />
+          </button>
+        )}
         <label className="part-search-field">
           <Search size={16} />
           <input
@@ -554,6 +567,8 @@ export function BuildFormSteps({
   const [activeCharacterIndex, setActiveCharacterIndex] = useState(0);
   const [activeWeaponIndex, setActiveWeaponIndex] = useState(0);
   const [activeSummonIndex, setActiveSummonIndex] = useState(0);
+  const [openPartBrowser, setOpenPartBrowser] =
+    useState<PartBrowserKind | null>(null);
   const [characterQuery, setCharacterQuery] = useState("");
   const [weaponQuery, setWeaponQuery] = useState("");
   const [summonQuery, setSummonQuery] = useState("");
@@ -594,6 +609,10 @@ export function BuildFormSteps({
     [form.category, form.element, form.questName, presets],
   );
   const visiblePresets = filteredPresets.length > 0 ? filteredPresets : presets;
+
+  useEffect(() => {
+    setOpenPartBrowser(null);
+  }, [currentStep]);
 
   useEffect(() => {
     const incomingSubSlotCount =
@@ -857,6 +876,7 @@ export function BuildFormSteps({
               },
             ];
       onFormChange({ ...currentForm, characterDetails });
+      setOpenPartBrowser(null);
       if (currentForm.characterDetails.length === 0) {
         setActiveCharacterIndex(0);
       }
@@ -873,6 +893,7 @@ export function BuildFormSteps({
             )
           : [{ ...emptyWeaponDetail, name }];
       onFormChange({ ...currentForm, weaponDetails });
+      setOpenPartBrowser(null);
       if (currentForm.weaponDetails.length === 0) {
         setActiveWeaponIndex(0);
       }
@@ -895,6 +916,7 @@ export function BuildFormSteps({
               },
             ];
       onFormChange({ ...currentForm, summonDetails });
+      setOpenPartBrowser(null);
       if (currentForm.summonDetails.length === 0) {
         setActiveSummonIndex(0);
       }
@@ -1090,7 +1112,9 @@ export function BuildFormSteps({
                 </div>
               </div>
 
-              <div className="formation-layout">
+              <div
+                className={`formation-layout ${openPartBrowser === "character" ? "" : "formation-layout--single"}`}
+              >
                 <div className="formation-board">
                   <div className="formation-section formation-section--hero">
                     <div className="formation-section-title">
@@ -1140,7 +1164,10 @@ export function BuildFormSteps({
                           meta={character.importance || character.roleMemo}
                           name={character.name}
                           onClear={() => updateCharacter(index, { name: "" })}
-                          onClick={() => setActiveCharacterIndex(index)}
+                          onClick={() => {
+                            setActiveCharacterIndex(index);
+                            setOpenPartBrowser("character");
+                          }}
                         />
                       ))}
                     </div>
@@ -1179,7 +1206,10 @@ export function BuildFormSteps({
                           meta={character.importance || character.roleMemo}
                           name={character.name}
                           onClear={() => updateCharacter(index, { name: "" })}
-                          onClick={() => setActiveCharacterIndex(index)}
+                          onClick={() => {
+                            setActiveCharacterIndex(index);
+                            setOpenPartBrowser("character");
+                          }}
                         />
                       ))}
                       </div>
@@ -1238,6 +1268,14 @@ export function BuildFormSteps({
                         />
                       </label>
                       <button
+                        className="secondary-button"
+                        onClick={() => setOpenPartBrowser("character")}
+                        type="button"
+                      >
+                        <Search size={16} />
+                        候補から選ぶ
+                      </button>
+                      <button
                         className="icon-button danger"
                         onClick={() => removeCharacter(safeCharacterIndex)}
                         type="button"
@@ -1248,13 +1286,16 @@ export function BuildFormSteps({
                   )}
                 </div>
 
-                <PartCandidateBrowser
-                  activeName={activeCharacter?.name ?? ""}
-                  kind="character"
-                  onQueryChange={setCharacterQuery}
-                  onSelect={selectCharacterCandidate}
-                  query={characterQuery}
-                />
+                {openPartBrowser === "character" && (
+                  <PartCandidateBrowser
+                    activeName={activeCharacter?.name ?? ""}
+                    kind="character"
+                    onClose={() => setOpenPartBrowser(null)}
+                    onQueryChange={setCharacterQuery}
+                    onSelect={selectCharacterCandidate}
+                    query={characterQuery}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -1284,7 +1325,9 @@ export function BuildFormSteps({
                 </div>
               </div>
 
-              <div className="formation-layout">
+              <div
+                className={`formation-layout ${openPartBrowser === "weapon" ? "" : "formation-layout--single"}`}
+              >
                 <div className="formation-board">
                   <div className="formation-section">
                     <div className="formation-section-title">
@@ -1300,7 +1343,10 @@ export function BuildFormSteps({
                           meta={mainWeapon.count ? `${mainWeapon.count}本 / ${mainWeapon.importance}` : mainWeapon.importance}
                           name={mainWeapon.name}
                           onClear={() => updateWeapon(0, { name: "" })}
-                          onClick={() => setActiveWeaponIndex(0)}
+                          onClick={() => {
+                            setActiveWeaponIndex(0);
+                            setOpenPartBrowser("weapon");
+                          }}
                         />
                       </div>
                     </div>
@@ -1322,7 +1368,10 @@ export function BuildFormSteps({
                           meta={weapon.count ? `${weapon.count}本 / ${weapon.importance}` : weapon.importance}
                           name={weapon.name}
                           onClear={() => updateWeapon(index, { name: "" })}
-                          onClick={() => setActiveWeaponIndex(index)}
+                          onClick={() => {
+                            setActiveWeaponIndex(index);
+                            setOpenPartBrowser("weapon");
+                          }}
                         />
                       ))}
                     </div>
@@ -1398,6 +1447,14 @@ export function BuildFormSteps({
                         />
                       </label>
                       <button
+                        className="secondary-button"
+                        onClick={() => setOpenPartBrowser("weapon")}
+                        type="button"
+                      >
+                        <Search size={16} />
+                        候補から選ぶ
+                      </button>
+                      <button
                         className="icon-button danger"
                         onClick={() => removeWeapon(safeWeaponIndex)}
                         type="button"
@@ -1409,13 +1466,16 @@ export function BuildFormSteps({
                   </div>
                 </div>
 
-                <PartCandidateBrowser
-                  activeName={activeWeapon?.name ?? ""}
-                  kind="weapon"
-                  onQueryChange={setWeaponQuery}
-                  onSelect={selectWeaponCandidate}
-                  query={weaponQuery}
-                />
+                {openPartBrowser === "weapon" && (
+                  <PartCandidateBrowser
+                    activeName={activeWeapon?.name ?? ""}
+                    kind="weapon"
+                    onClose={() => setOpenPartBrowser(null)}
+                    onQueryChange={setWeaponQuery}
+                    onSelect={selectWeaponCandidate}
+                    query={weaponQuery}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -1429,7 +1489,9 @@ export function BuildFormSteps({
                 </div>
               </div>
 
-              <div className="formation-layout">
+              <div
+                className={`formation-layout ${openPartBrowser === "summon" ? "" : "formation-layout--single"}`}
+              >
                 <div className="formation-board">
                   <div className="formation-section summon-top-grid">
                     <div className="summon-primary-group">
@@ -1446,7 +1508,10 @@ export function BuildFormSteps({
                           meta={mainSummon.importance}
                           name={mainSummon.name}
                           onClear={() => updateSummon(0, { name: "" })}
-                          onClick={() => setActiveSummonIndex(0)}
+                          onClick={() => {
+                            setActiveSummonIndex(0);
+                            setOpenPartBrowser("summon");
+                          }}
                         />
                       </div>
                       </div>
@@ -1466,7 +1531,10 @@ export function BuildFormSteps({
                           meta={friendSummon.importance}
                           name={friendSummon.name}
                           onClear={() => updateSummon(1, { name: "" })}
-                          onClick={() => setActiveSummonIndex(1)}
+                          onClick={() => {
+                            setActiveSummonIndex(1);
+                            setOpenPartBrowser("summon");
+                          }}
                         />
                       </div>
                       </div>
@@ -1489,7 +1557,10 @@ export function BuildFormSteps({
                           meta={summon.importance}
                           name={summon.name}
                           onClear={() => updateSummon(index, { name: "" })}
-                          onClick={() => setActiveSummonIndex(index)}
+                          onClick={() => {
+                            setActiveSummonIndex(index);
+                            setOpenPartBrowser("summon");
+                          }}
                         />
                       ))}
                       </div>
@@ -1553,6 +1624,14 @@ export function BuildFormSteps({
                         />
                       </label>
                       <button
+                        className="secondary-button"
+                        onClick={() => setOpenPartBrowser("summon")}
+                        type="button"
+                      >
+                        <Search size={16} />
+                        候補から選ぶ
+                      </button>
+                      <button
                         className="icon-button danger"
                         onClick={() => removeSummon(safeSummonIndex)}
                         type="button"
@@ -1564,13 +1643,16 @@ export function BuildFormSteps({
                   </div>
                 </div>
 
-                <PartCandidateBrowser
-                  activeName={activeSummon?.name ?? ""}
-                  kind="summon"
-                  onQueryChange={setSummonQuery}
-                  onSelect={selectSummonCandidate}
-                  query={summonQuery}
-                />
+                {openPartBrowser === "summon" && (
+                  <PartCandidateBrowser
+                    activeName={activeSummon?.name ?? ""}
+                    kind="summon"
+                    onClose={() => setOpenPartBrowser(null)}
+                    onQueryChange={setSummonQuery}
+                    onSelect={selectSummonCandidate}
+                    query={summonQuery}
+                  />
+                )}
               </div>
             </div>
           )}

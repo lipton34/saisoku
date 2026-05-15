@@ -2295,6 +2295,10 @@ textarea {
   gap: 20px;
 }
 
+.formation-layout--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .formation-board {
   gap: 16px;
   padding: 16px;
@@ -2417,7 +2421,11 @@ textarea {
 }
 
 .part-browser-header {
-  grid-template-columns: minmax(0, 0.75fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(0, 0.75fr) auto minmax(260px, 1fr);
+}
+
+.part-browser-close {
+  align-self: end;
 }
 
 .part-candidate-grid {
@@ -2644,6 +2652,10 @@ html,
 
 .slot-editor .icon-button {
   min-width: 36px;
+}
+
+.slot-editor .secondary-button {
+  min-width: 140px;
 }
 
 .character-slots--front {
