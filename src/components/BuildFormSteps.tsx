@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, Plus, Search, Trash2, X } from "lucide-react";
 import {
   type BuildCharacterDetail,
@@ -68,14 +68,6 @@ const questOptions = [
 ];
 const jobOptions = buildMasterOptions.jobs.map((item) => item.name);
 const importanceOptions = ["必須", "推奨", "代用可", "自由枠"];
-const characterPositionOptions = ["フロント", "サブ", "任意"];
-const summonPositionOptions = [
-  "メイン",
-  "フレンド",
-  "サブ",
-  "サブ加護",
-  "任意",
-];
 const blueChestOptions = ["あり", "なし", "未指定"];
 const stabilityOptions = ["安定", "たまに失敗", "要手動確認", "未指定"];
 const prerequisiteOptions = ["マグナ", "神石", "片面"];
@@ -87,6 +79,17 @@ const referenceTypeOptions = [
   "その他",
 ];
 const raidRoleOptions = ["自発", "救援", "どちらでも"];
+const candidatePageSize = 10;
+const frontCharacterSlots = 3;
+const defaultSubCharacterSlots = 2;
+const expandedSubCharacterSlots = 5;
+const defaultWeaponSlots = 10;
+const expandedWeaponSlots = 13;
+const summonSlots = {
+  main: 1,
+  friend: 1,
+  sub: 6,
+};
 
 const emptyCharacterDetail: BuildCharacterDetail = {
   position: "任意",
@@ -177,6 +180,83 @@ function linesToArray(value: string) {
     .filter(Boolean);
 }
 
+function sameJson<T>(first: T, second: T) {
+  return JSON.stringify(first) === JSON.stringify(second);
+}
+
+function normalizeCharacters(
+  items: BuildCharacterDetail[],
+  subSlotCount: 2 | 5,
+) {
+  const frontItems = items.filter((item) => item.position === "フロント");
+  const subItems = items.filter((item) => item.position === "サブ");
+  const fallbackItems = items.filter(
+    (item) => item.position !== "フロント" && item.position !== "サブ",
+  );
+  const frontFallbackCount = Math.max(
+    0,
+    frontCharacterSlots - frontItems.length,
+  );
+  const orderedFront = [
+    ...frontItems,
+    ...fallbackItems.slice(0, frontFallbackCount),
+  ];
+  const orderedSub = [
+    ...subItems,
+    ...fallbackItems.slice(frontFallbackCount),
+  ];
+
+  return [
+    ...Array.from({ length: frontCharacterSlots }, (_, index) => ({
+      ...emptyCharacterDetail,
+      ...orderedFront[index],
+      position: "フロント",
+    })),
+    ...Array.from({ length: subSlotCount }, (_, index) => ({
+      ...emptyCharacterDetail,
+      ...orderedSub[index],
+      position: "サブ",
+    })),
+  ];
+}
+
+function normalizeWeapons(items: BuildWeaponDetail[], slotCount: 10 | 13) {
+  return Array.from({ length: slotCount }, (_, index) => ({
+    ...emptyWeaponDetail,
+    ...items[index],
+  }));
+}
+
+function normalizeSummons(items: BuildSummonDetail[]) {
+  const mainItems = items.filter((item) => item.position === "メイン");
+  const friendItems = items.filter((item) => item.position === "フレンド");
+  const subItems = items.filter((item) => item.position === "サブ");
+  const fallbackItems = items.filter(
+    (item) =>
+      item.position !== "メイン" &&
+      item.position !== "フレンド" &&
+      item.position !== "サブ",
+  );
+
+  return [
+    ...Array.from({ length: summonSlots.main }, (_, index) => ({
+      ...emptySummonDetail,
+      ...mainItems[index],
+      position: "メイン",
+    })),
+    ...Array.from({ length: summonSlots.friend }, (_, index) => ({
+      ...emptySummonDetail,
+      ...friendItems[index],
+      position: "フレンド",
+    })),
+    ...Array.from({ length: summonSlots.sub }, (_, index) => ({
+      ...emptySummonDetail,
+      ...[...subItems, ...fallbackItems][index],
+      position: "サブ",
+    })),
+  ];
+}
+
 function PartThumbnail({
   kind,
   name,
@@ -264,6 +344,7 @@ function PartCandidateBrowser({
   onQueryChange: (query: string) => void;
   onSelect: (name: string) => void;
 }) {
+  const [page, setPage] = useState(1);
   const options = partOptions(kind);
   const normalizedQuery = query.trim().toLowerCase();
   const candidates = useMemo(() => {
@@ -284,8 +365,18 @@ function PartCandidateBrowser({
         .join(" ")
         .toLowerCase()
         .includes(normalizedQuery),
-    );
+      );
   }, [normalizedQuery, options]);
+  const pageCount = Math.max(1, Math.ceil(candidates.length / candidatePageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pagedCandidates = candidates.slice(
+    (currentPage - 1) * candidatePageSize,
+    currentPage * candidatePageSize,
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [normalizedQuery, kind]);
 
   return (
     <div className="part-browser">
@@ -315,7 +406,7 @@ function PartCandidateBrowser({
       </div>
 
       <div className="part-candidate-grid">
-        {candidates.map((item) => (
+        {pagedCandidates.map((item) => (
           <button
             className={`part-candidate-card ${activeName === item.name ? "selected" : ""}`}
             key={item.id}
@@ -331,6 +422,30 @@ function PartCandidateBrowser({
           </button>
         ))}
       </div>
+
+      {candidates.length > candidatePageSize && (
+        <div className="candidate-pagination" aria-label="候補ページ切り替え">
+          <button
+            className="secondary-button"
+            disabled={currentPage <= 1}
+            onClick={() => setPage((value) => Math.max(1, value - 1))}
+            type="button"
+          >
+            前へ
+          </button>
+          <span>
+            {currentPage} / {pageCount}
+          </span>
+          <button
+            className="secondary-button"
+            disabled={currentPage >= pageCount}
+            onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
+            type="button"
+          >
+            次へ
+          </button>
+        </div>
+      )}
 
       {candidates.length === 0 && (
         <div className="empty-state">
@@ -360,6 +475,18 @@ export function BuildFormSteps({
   const [characterQuery, setCharacterQuery] = useState("");
   const [weaponQuery, setWeaponQuery] = useState("");
   const [summonQuery, setSummonQuery] = useState("");
+  const [subCharacterSlotCount, setSubCharacterSlotCount] = useState<2 | 5>(
+    () =>
+      form.characterDetails.filter((item) => item.position === "サブ").length >
+      defaultSubCharacterSlots
+        ? expandedSubCharacterSlots
+        : defaultSubCharacterSlots,
+  );
+  const [weaponSlotCount, setWeaponSlotCount] = useState<10 | 13>(() =>
+    form.weaponDetails.length > defaultWeaponSlots
+      ? expandedWeaponSlots
+      : defaultWeaponSlots,
+  );
 
   const purposeOptions =
     form.category === "周回・武器集め用"
@@ -378,6 +505,58 @@ export function BuildFormSteps({
   );
   const visiblePresets = filteredPresets.length > 0 ? filteredPresets : presets;
 
+  useEffect(() => {
+    const incomingSubSlotCount =
+      form.characterDetails.filter((item) => item.position === "サブ").length >
+      defaultSubCharacterSlots
+        ? expandedSubCharacterSlots
+        : defaultSubCharacterSlots;
+    const incomingWeaponSlotCount =
+      form.weaponDetails.length > defaultWeaponSlots
+        ? expandedWeaponSlots
+        : defaultWeaponSlots;
+
+    if (
+      incomingSubSlotCount > subCharacterSlotCount ||
+      incomingWeaponSlotCount > weaponSlotCount
+    ) {
+      setSubCharacterSlotCount((value) =>
+        incomingSubSlotCount > value ? incomingSubSlotCount : value,
+      );
+      setWeaponSlotCount((value) =>
+        incomingWeaponSlotCount > value ? incomingWeaponSlotCount : value,
+      );
+      return;
+    }
+
+    const characterDetails = normalizeCharacters(
+      form.characterDetails,
+      subCharacterSlotCount,
+    );
+    const weaponDetails = normalizeWeapons(form.weaponDetails, weaponSlotCount);
+    const summonDetails = normalizeSummons(form.summonDetails);
+
+    if (
+      sameJson(characterDetails, form.characterDetails) &&
+      sameJson(weaponDetails, form.weaponDetails) &&
+      sameJson(summonDetails, form.summonDetails)
+    ) {
+      return;
+    }
+
+    onFormChange({
+      ...form,
+      characterDetails,
+      weaponDetails,
+      summonDetails,
+    });
+  }, [
+    form,
+    onFormChange,
+    subCharacterSlotCount,
+    weaponSlotCount,
+  ]);
+
   function updateField<K extends keyof BuildPostInput>(
     key: K,
     value: BuildPostInput[K],
@@ -395,24 +574,23 @@ export function BuildFormSteps({
     onFormChange({ ...form, characterDetails });
   }
 
-  function addCharacter(position = "任意") {
-    onFormChange({
-      ...form,
-      characterDetails: [
-        ...form.characterDetails,
-        { ...emptyCharacterDetail, position },
-      ],
-    });
-    setActiveCharacterIndex(form.characterDetails.length);
-  }
-
   function removeCharacter(index: number) {
-    const characterDetails = form.characterDetails.filter(
-      (_, itemIndex) => itemIndex !== index,
+    const characterDetails = form.characterDetails.map((item, itemIndex) =>
+      itemIndex === index
+        ? { ...emptyCharacterDetail, position: item.position }
+        : item,
     );
     onFormChange({ ...form, characterDetails });
-    setActiveCharacterIndex(
-      Math.max(0, Math.min(index, characterDetails.length - 1)),
+  }
+
+  function normalizeCharacterSlots(size: 2 | 5) {
+    setSubCharacterSlotCount(size);
+    onFormChange({
+      ...form,
+      characterDetails: normalizeCharacters(form.characterDetails, size),
+    });
+    setActiveCharacterIndex((value) =>
+      Math.min(value, frontCharacterSlots + size - 1),
     );
   }
 
@@ -423,34 +601,20 @@ export function BuildFormSteps({
     onFormChange({ ...form, weaponDetails });
   }
 
-  function addWeapon() {
-    if (form.weaponDetails.length >= 13) {
-      return;
-    }
+  function normalizeWeaponSlots(size: 10 | 13) {
+    setWeaponSlotCount(size);
     onFormChange({
       ...form,
-      weaponDetails: [...form.weaponDetails, emptyWeaponDetail],
+      weaponDetails: normalizeWeapons(form.weaponDetails, size),
     });
-    setActiveWeaponIndex(form.weaponDetails.length);
-  }
-
-  function normalizeWeaponSlots(size: 10 | 13) {
-    const next = [...form.weaponDetails];
-    while (next.length < size) {
-      next.push({ ...emptyWeaponDetail });
-    }
-    onFormChange({ ...form, weaponDetails: next.slice(0, size) });
     setActiveWeaponIndex(Math.min(activeWeaponIndex, size - 1));
   }
 
   function removeWeapon(index: number) {
-    const weaponDetails = form.weaponDetails.filter(
-      (_, itemIndex) => itemIndex !== index,
+    const weaponDetails = form.weaponDetails.map((item, itemIndex) =>
+      itemIndex === index ? { ...emptyWeaponDetail } : item,
     );
     onFormChange({ ...form, weaponDetails });
-    setActiveWeaponIndex(
-      Math.max(0, Math.min(index, weaponDetails.length - 1)),
-    );
   }
 
   function updateSummon(index: number, value: Partial<BuildSummonDetail>) {
@@ -460,25 +624,11 @@ export function BuildFormSteps({
     onFormChange({ ...form, summonDetails });
   }
 
-  function addSummon(position = "任意") {
-    onFormChange({
-      ...form,
-      summonDetails: [
-        ...form.summonDetails,
-        { ...emptySummonDetail, position },
-      ],
-    });
-    setActiveSummonIndex(form.summonDetails.length);
-  }
-
   function removeSummon(index: number) {
-    const summonDetails = form.summonDetails.filter(
-      (_, itemIndex) => itemIndex !== index,
+    const summonDetails = form.summonDetails.map((item, itemIndex) =>
+      itemIndex === index ? { ...emptySummonDetail, position: item.position } : item,
     );
     onFormChange({ ...form, summonDetails });
-    setActiveSummonIndex(
-      Math.max(0, Math.min(index, summonDetails.length - 1)),
-    );
   }
 
   function updateReference(index: number, value: Partial<BuildReferenceUrl>) {
@@ -551,31 +701,31 @@ export function BuildFormSteps({
   const activeWeapon = form.weaponDetails[safeWeaponIndex];
   const activeSummon = form.summonDetails[safeSummonIndex];
   const frontCharacters = form.characterDetails
-    .map((character, index) => ({ character, index }))
-    .filter((item) => item.character.position === "フロント");
+    .slice(0, frontCharacterSlots)
+    .map((character, index) => ({ character, index }));
   const subCharacters = form.characterDetails
-    .map((character, index) => ({ character, index }))
-    .filter((item) => item.character.position === "サブ");
-  const otherCharacters = form.characterDetails
-    .map((character, index) => ({ character, index }))
-    .filter((item) => item.character.position !== "フロント" && item.character.position !== "サブ");
-  const mainWeapon = form.weaponDetails[0];
+    .slice(frontCharacterSlots, frontCharacterSlots + subCharacterSlotCount)
+    .map((character, index) => ({
+      character,
+      index: frontCharacterSlots + index,
+    }));
+  const mainWeapon = form.weaponDetails[0] ?? emptyWeaponDetail;
   const normalWeapons = form.weaponDetails.slice(1).map((weapon, index) => ({
     weapon,
     index: index + 1,
   }));
-  const mainSummons = form.summonDetails
-    .map((summon, index) => ({ summon, index }))
-    .filter((item) => item.summon.position === "メイン");
-  const friendSummons = form.summonDetails
-    .map((summon, index) => ({ summon, index }))
-    .filter((item) => item.summon.position === "フレンド");
-  const subSummons = form.summonDetails
-    .map((summon, index) => ({ summon, index }))
-    .filter((item) => item.summon.position === "サブ");
-  const otherSummons = form.summonDetails
-    .map((summon, index) => ({ summon, index }))
-    .filter((item) => item.summon.position !== "メイン" && item.summon.position !== "フレンド" && item.summon.position !== "サブ");
+  const mainSummon = form.summonDetails[0] ?? {
+    ...emptySummonDetail,
+    position: "メイン",
+  };
+  const friendSummon = form.summonDetails[1] ?? {
+    ...emptySummonDetail,
+    position: "フレンド",
+  };
+  const subSummons = form.summonDetails.slice(2, 8).map((summon, index) => ({
+    summon,
+    index: index + 2,
+  }));
 
   return (
     <section className="build-form-steps-container">
@@ -801,11 +951,8 @@ export function BuildFormSteps({
                     <div className="formation-section-title">
                       <span>フロントメンバー</span>
                       <strong>Front Member</strong>
-                      <button className="secondary-button" onClick={() => addCharacter("フロント")} type="button">
-                        <Plus size={16} />
-                        追加
-                      </button>
                     </div>
+                    <div className="formation-board-scroll">
                     <div className="formation-slot-grid character-slots character-slots--front">
                       {frontCharacters.map(({ character, index }) => (
                         <PartSlot
@@ -819,12 +966,7 @@ export function BuildFormSteps({
                           onClick={() => setActiveCharacterIndex(index)}
                         />
                       ))}
-                      {frontCharacters.length === 0 && (
-                        <button className="formation-slot formation-slot--empty" onClick={() => addCharacter("フロント")} type="button">
-                          <Plus size={18} />
-                          <span className="formation-slot-body"><small>フロント</small><strong>追加</strong></span>
-                        </button>
-                      )}
+                    </div>
                     </div>
                   </div>
 
@@ -832,11 +974,24 @@ export function BuildFormSteps({
                     <div className="formation-section-title">
                       <span>サブメンバー</span>
                       <strong>Sub Member</strong>
-                      <button className="secondary-button" onClick={() => addCharacter("サブ")} type="button">
-                        <Plus size={16} />
-                        追加
-                      </button>
+                      <div className="segmented-control" aria-label="サブキャラ枠数">
+                        <button
+                          className={subCharacterSlotCount === 2 ? "active" : ""}
+                          onClick={() => normalizeCharacterSlots(2)}
+                          type="button"
+                        >
+                          サブ2枠
+                        </button>
+                        <button
+                          className={subCharacterSlotCount === 5 ? "active" : ""}
+                          onClick={() => normalizeCharacterSlots(5)}
+                          type="button"
+                        >
+                          サブ5枠
+                        </button>
+                      </div>
                     </div>
+                    <div className="formation-board-scroll">
                     <div className="formation-slot-grid character-slots character-slots--sub">
                       {subCharacters.map(({ character, index }) => (
                         <PartSlot
@@ -850,55 +1005,12 @@ export function BuildFormSteps({
                           onClick={() => setActiveCharacterIndex(index)}
                         />
                       ))}
-                      {subCharacters.length === 0 && (
-                        <button className="formation-slot formation-slot--empty" onClick={() => addCharacter("サブ")} type="button">
-                          <Plus size={18} />
-                          <span className="formation-slot-body"><small>サブ</small><strong>追加</strong></span>
-                        </button>
-                      )}
+                      </div>
                     </div>
                   </div>
 
-                  {otherCharacters.length > 0 && (
-                    <div className="formation-section">
-                      <div className="formation-section-title">
-                        <span>任意枠</span>
-                        <strong>Flexible Slots</strong>
-                      </div>
-                      <div className="formation-slot-grid character-slots">
-                        {otherCharacters.map(({ character, index }) => (
-                          <PartSlot
-                            active={safeCharacterIndex === index}
-                            kind="character"
-                            key={index}
-                            label={`任意 ${index + 1}`}
-                            meta={character.importance || character.roleMemo}
-                            name={character.name}
-                            onClear={() => updateCharacter(index, { name: "" })}
-                            onClick={() => setActiveCharacterIndex(index)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {activeCharacter && (
                     <div className="slot-editor">
-                      <label>
-                        配置
-                        <select
-                          onChange={(event) =>
-                            updateCharacter(safeCharacterIndex, {
-                              position: event.target.value,
-                            })
-                          }
-                          value={activeCharacter.position}
-                        >
-                          {characterPositionOptions.map((option) => (
-                            <option key={option}>{option}</option>
-                          ))}
-                        </select>
-                      </label>
                       <label>
                         自由入力
                         <input
@@ -993,29 +1105,20 @@ export function BuildFormSteps({
                   <p className="eyebrow">Step 3</p>
                   <h2>{steps[2].title}</h2>
                 </div>
-                <div className="inline-actions">
+                <div className="segmented-control" aria-label="武器枠数">
                   <button
-                    className="secondary-button"
+                    className={weaponSlotCount === 10 ? "active" : ""}
                     onClick={() => normalizeWeaponSlots(10)}
                     type="button"
                   >
                     10枠
                   </button>
                   <button
-                    className="secondary-button"
+                    className={weaponSlotCount === 13 ? "active" : ""}
                     onClick={() => normalizeWeaponSlots(13)}
                     type="button"
                   >
                     13枠
-                  </button>
-                  <button
-                    className="secondary-button"
-                    disabled={form.weaponDetails.length >= 13}
-                    onClick={addWeapon}
-                    type="button"
-                  >
-                    <Plus size={16} />
-                    追加
                   </button>
                 </div>
               </div>
@@ -1027,7 +1130,7 @@ export function BuildFormSteps({
                       <span>メイン武器</span>
                       <strong>Main Weapon</strong>
                     </div>
-                    {mainWeapon ? (
+                    <div className="formation-board-scroll">
                       <div className="formation-slot-grid weapon-main-slot">
                         <PartSlot
                           active={safeWeaponIndex === 0}
@@ -1039,12 +1142,7 @@ export function BuildFormSteps({
                           onClick={() => setActiveWeaponIndex(0)}
                         />
                       </div>
-                    ) : (
-                      <button className="formation-slot formation-slot--empty" onClick={() => normalizeWeaponSlots(10)} type="button">
-                        <Plus size={18} />
-                        <span className="formation-slot-body"><small>Main Weapon</small><strong>10枠で開始</strong></span>
-                      </button>
-                    )}
+                    </div>
                   </div>
 
                   <div className="formation-section">
@@ -1052,6 +1150,7 @@ export function BuildFormSteps({
                       <span>武器グリッド</span>
                       <strong>Weapon Grid</strong>
                     </div>
+                    <div className="formation-board-scroll">
                     <div className="formation-slot-grid weapon-slots">
                       {normalWeapons.map(({ weapon, index }) => (
                         <PartSlot
@@ -1066,20 +1165,7 @@ export function BuildFormSteps({
                         />
                       ))}
                     </div>
-                    {form.weaponDetails.length === 0 && (
-                      <div className="empty-state">
-                        10枠を基本に、必要なら13枠まで追加できます。
-                      </div>
-                    )}
-                    {form.weaponDetails.length > 0 && form.weaponDetails.length < 13 && (
-                      <button className="secondary-button formation-add-button" onClick={addWeapon} type="button">
-                        <Plus size={16} />
-                        武器枠を追加
-                      </button>
-                    )}
-                    {form.weaponDetails.length >= 13 && (
-                      <p className="muted-text">武器枠は13枠までです。</p>
-                    )}
+                    </div>
                   </div>
 
                   <div className="formation-section">
@@ -1190,36 +1276,6 @@ export function BuildFormSteps({
                   <p className="eyebrow">Step 4</p>
                   <h2>{steps[3].title}</h2>
                 </div>
-                <div className="inline-actions">
-                  <button
-                    className="secondary-button"
-                    onClick={() => addSummon("メイン")}
-                    type="button"
-                  >
-                    メイン
-                  </button>
-                  <button
-                    className="secondary-button"
-                    onClick={() => addSummon("フレンド")}
-                    type="button"
-                  >
-                    フレンド
-                  </button>
-                  <button
-                    className="secondary-button"
-                    onClick={() => addSummon("サブ")}
-                    type="button"
-                  >
-                    サブ
-                  </button>
-                  <button
-                    className="secondary-button"
-                    onClick={() => addSummon("サブ加護")}
-                    type="button"
-                  >
-                    サブ加護
-                  </button>
-                </div>
               </div>
 
               <div className="formation-layout">
@@ -1230,25 +1286,18 @@ export function BuildFormSteps({
                         <span>メイン召喚石</span>
                         <strong>Main Summon</strong>
                       </div>
+                      <div className="formation-board-scroll">
                       <div className="formation-slot-grid summon-primary-slot">
-                        {mainSummons.map(({ summon, index }) => (
-                          <PartSlot
-                            active={safeSummonIndex === index}
-                            kind="summon"
-                            key={index}
-                            label="メイン"
-                            meta={summon.importance}
-                            name={summon.name}
-                            onClear={() => updateSummon(index, { name: "" })}
-                            onClick={() => setActiveSummonIndex(index)}
-                          />
-                        ))}
-                        {mainSummons.length === 0 && (
-                          <button className="formation-slot formation-slot--empty" onClick={() => addSummon("メイン")} type="button">
-                            <Plus size={18} />
-                            <span className="formation-slot-body"><small>Main Summon</small><strong>追加</strong></span>
-                          </button>
-                        )}
+                        <PartSlot
+                          active={safeSummonIndex === 0}
+                          kind="summon"
+                          label="メイン"
+                          meta={mainSummon.importance}
+                          name={mainSummon.name}
+                          onClear={() => updateSummon(0, { name: "" })}
+                          onClick={() => setActiveSummonIndex(0)}
+                        />
+                      </div>
                       </div>
                     </div>
 
@@ -1257,25 +1306,18 @@ export function BuildFormSteps({
                         <span>フレンド召喚石候補</span>
                         <strong>Support Summon</strong>
                       </div>
+                      <div className="formation-board-scroll">
                       <div className="formation-slot-grid summon-primary-slot">
-                        {friendSummons.map(({ summon, index }) => (
-                          <PartSlot
-                            active={safeSummonIndex === index}
-                            kind="summon"
-                            key={index}
-                            label="フレンド"
-                            meta={summon.importance}
-                            name={summon.name}
-                            onClear={() => updateSummon(index, { name: "" })}
-                            onClick={() => setActiveSummonIndex(index)}
-                          />
-                        ))}
-                        {friendSummons.length === 0 && (
-                          <button className="formation-slot formation-slot--empty" onClick={() => addSummon("フレンド")} type="button">
-                            <Plus size={18} />
-                            <span className="formation-slot-body"><small>Support Summon</small><strong>追加</strong></span>
-                          </button>
-                        )}
+                        <PartSlot
+                          active={safeSummonIndex === 1}
+                          kind="summon"
+                          label="フレンド"
+                          meta={friendSummon.importance}
+                          name={friendSummon.name}
+                          onClear={() => updateSummon(1, { name: "" })}
+                          onClick={() => setActiveSummonIndex(1)}
+                        />
+                      </div>
                       </div>
                     </div>
                   </div>
@@ -1284,11 +1326,8 @@ export function BuildFormSteps({
                     <div className="formation-section-title">
                       <span>サブ召喚石</span>
                       <strong>Sub Summon</strong>
-                      <button className="secondary-button" onClick={() => addSummon("サブ")} type="button">
-                        <Plus size={16} />
-                        サブ追加
-                      </button>
                     </div>
+                    <div className="formation-board-scroll">
                     <div className="formation-slot-grid summon-slots">
                       {subSummons.map(({ summon, index }) => (
                         <PartSlot
@@ -1302,37 +1341,9 @@ export function BuildFormSteps({
                           onClick={() => setActiveSummonIndex(index)}
                         />
                       ))}
-                      {subSummons.length === 0 && (
-                        <button className="formation-slot formation-slot--empty" onClick={() => addSummon("サブ")} type="button">
-                          <Plus size={18} />
-                          <span className="formation-slot-body"><small>Sub Summon</small><strong>追加</strong></span>
-                        </button>
-                      )}
+                      </div>
                     </div>
                   </div>
-
-                  {otherSummons.length > 0 && (
-                    <div className="formation-section">
-                      <div className="formation-section-title">
-                        <span>任意・サブ加護枠</span>
-                        <strong>Flexible Slots</strong>
-                      </div>
-                      <div className="formation-slot-grid summon-slots">
-                        {otherSummons.map(({ summon, index }) => (
-                          <PartSlot
-                            active={safeSummonIndex === index}
-                            kind="summon"
-                            key={index}
-                            label={`${summon.position} ${index + 1}`}
-                            meta={summon.importance}
-                            name={summon.name}
-                            onClear={() => updateSummon(index, { name: "" })}
-                            onClick={() => setActiveSummonIndex(index)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
                   <div className="formation-section">
                     <div className="formation-section-title">
@@ -1341,21 +1352,6 @@ export function BuildFormSteps({
                     </div>
                     {activeSummon && (
                       <div className="slot-editor">
-                      <label>
-                        配置
-                        <select
-                          onChange={(event) =>
-                            updateSummon(safeSummonIndex, {
-                              position: event.target.value,
-                            })
-                          }
-                          value={activeSummon.position}
-                        >
-                          {summonPositionOptions.map((option) => (
-                            <option key={option}>{option}</option>
-                          ))}
-                        </select>
-                      </label>
                       <label>
                         自由入力
                         <input
@@ -1862,6 +1858,18 @@ export function BuildFormSteps({
                   className="preset-modal-card"
                   key={preset.id}
                   onClick={() => {
+                    setSubCharacterSlotCount(
+                      preset.characterDetails.filter(
+                        (item) => item.position === "サブ",
+                      ).length > defaultSubCharacterSlots
+                        ? expandedSubCharacterSlots
+                        : defaultSubCharacterSlots,
+                    );
+                    setWeaponSlotCount(
+                      preset.weaponDetails.length > defaultWeaponSlots
+                        ? expandedWeaponSlots
+                        : defaultWeaponSlots,
+                    );
                     onApplyPreset(preset);
                     setShowPresetModal(false);
                     setCurrentStep(1);

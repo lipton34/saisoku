@@ -21,6 +21,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 button,
@@ -2568,5 +2569,150 @@ textarea {
 
   .selected-part-chip span {
     grid-area: auto;
+  }
+}
+
+/* Fixed-slot build form layout */
+html,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.app-shell,
+.main-content,
+.content-grid--build-form,
+.build-form-page-stack,
+.build-form-steps-container,
+.build-form-steps,
+.steps-content,
+.step-panel,
+.formation-layout,
+.formation-board,
+.part-browser {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.formation-board-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  padding-bottom: 2px;
+}
+
+.formation-board-scroll .formation-slot-grid {
+  width: max-content;
+  min-width: max-content;
+}
+
+.character-slots--front {
+  grid-template-columns: repeat(3, minmax(136px, 160px));
+}
+
+.character-slots--sub {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(136px, 160px);
+  grid-template-columns: none;
+}
+
+.weapon-main-slot,
+.summon-primary-slot {
+  grid-template-columns: minmax(180px, 260px);
+}
+
+.weapon-slots {
+  grid-template-columns: repeat(5, minmax(124px, 148px));
+}
+
+.summon-slots {
+  grid-template-columns: repeat(6, minmax(132px, 156px));
+}
+
+.segmented-control {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #eef3f7;
+}
+
+.segmented-control button {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #4d5d6f;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.segmented-control button.active {
+  background: #ffffff;
+  color: #2f8e66;
+  box-shadow: 0 1px 5px rgba(20, 33, 43, 0.12);
+}
+
+.part-candidate-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: 380px;
+  max-height: none;
+  overflow-y: visible;
+}
+
+.candidate-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.candidate-pagination span {
+  color: #657688;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+@media (max-width: 1180px) {
+  .part-candidate-grid {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+  .formation-board,
+  .part-browser,
+  .formation-section {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .formation-board-scroll {
+    overflow-x: auto;
+  }
+
+  .formation-board-scroll .formation-slot-grid {
+    min-width: max-content;
+  }
+
+  .part-candidate-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 360px;
+  }
+
+  .part-candidate-card {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .part-candidate-card svg {
+    display: none;
   }
 }
