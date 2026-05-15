@@ -1,4 +1,12 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ArrowLeft, Check, Plus, Search, Trash2, X } from "lucide-react";
 import {
   type BuildCharacterDetail,
@@ -184,6 +192,29 @@ function sameJson<T>(first: T, second: T) {
   return JSON.stringify(first) === JSON.stringify(second);
 }
 
+function hasFixedSlotShape(
+  characterDetails: BuildCharacterDetail[],
+  weaponDetails: BuildWeaponDetail[],
+  summonDetails: BuildSummonDetail[],
+  subSlotCount: 2 | 5,
+  weaponSlotCount: 10 | 13,
+) {
+  return (
+    characterDetails.length === frontCharacterSlots + subSlotCount &&
+    characterDetails
+      .slice(0, frontCharacterSlots)
+      .every((item) => item.position === "フロント") &&
+    characterDetails
+      .slice(frontCharacterSlots)
+      .every((item) => item.position === "サブ") &&
+    weaponDetails.length === weaponSlotCount &&
+    summonDetails.length === summonSlots.main + summonSlots.friend + summonSlots.sub &&
+    summonDetails[0]?.position === "メイン" &&
+    summonDetails[1]?.position === "フレンド" &&
+    summonDetails.slice(2).every((item) => item.position === "サブ")
+  );
+}
+
 function normalizeCharacters(
   items: BuildCharacterDetail[],
   subSlotCount: 2 | 5,
@@ -257,7 +288,7 @@ function normalizeSummons(items: BuildSummonDetail[]) {
   ];
 }
 
-function PartThumbnail({
+const PartThumbnail = memo(function PartThumbnail({
   kind,
   name,
 }: {
@@ -272,17 +303,19 @@ function PartThumbnail({
       <img
         alt={name}
         className="part-thumbnail"
+        height={48}
         loading="lazy"
         src={master.thumbnailUrl}
         title={name}
+        width={48}
       />
     );
   }
 
   return <span className={`part-thumbnail fallback ${kind}`}>{label}</span>;
-}
+});
 
-function PartSlot({
+const PartSlot = memo(function PartSlot({
   kind,
   label,
   name,
@@ -329,7 +362,38 @@ function PartSlot({
       )}
     </button>
   );
-}
+});
+
+const PartCandidateCard = memo(function PartCandidateCard({
+  kind,
+  item,
+  selected,
+  onSelect,
+}: {
+  kind: Exclude<BuildMasterKind, "job">;
+  item: BuildMasterItem;
+  selected: boolean;
+  onSelect: (name: string) => void;
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(item.name);
+  }, [item.name, onSelect]);
+
+  return (
+    <button
+      className={`part-candidate-card ${selected ? "selected" : ""}`}
+      onClick={handleClick}
+      type="button"
+    >
+      <PartThumbnail kind={kind} name={item.name} />
+      <span>
+        <strong>{item.name}</strong>
+        <small>{masterMeta(item)}</small>
+      </span>
+      {selected && <Check size={16} />}
+    </button>
+  );
+});
 
 function PartCandidateBrowser({
   kind,
@@ -369,9 +433,13 @@ function PartCandidateBrowser({
   }, [normalizedQuery, options]);
   const pageCount = Math.max(1, Math.ceil(candidates.length / candidatePageSize));
   const currentPage = Math.min(page, pageCount);
-  const pagedCandidates = candidates.slice(
-    (currentPage - 1) * candidatePageSize,
-    currentPage * candidatePageSize,
+  const pagedCandidates = useMemo(
+    () =>
+      candidates.slice(
+        (currentPage - 1) * candidatePageSize,
+        currentPage * candidatePageSize,
+      ),
+    [candidates, currentPage],
   );
 
   useEffect(() => {
@@ -407,19 +475,13 @@ function PartCandidateBrowser({
 
       <div className="part-candidate-grid">
         {pagedCandidates.map((item) => (
-          <button
-            className={`part-candidate-card ${activeName === item.name ? "selected" : ""}`}
+          <PartCandidateCard
+            item={item}
             key={item.id}
-            onClick={() => onSelect(item.name)}
-            type="button"
-          >
-            <PartThumbnail kind={kind} name={item.name} />
-            <span>
-              <strong>{item.name}</strong>
-              <small>{masterMeta(item)}</small>
-            </span>
-            {activeName === item.name && <Check size={16} />}
-          </button>
+            kind={kind}
+            onSelect={onSelect}
+            selected={activeName === item.name}
+          />
         ))}
       </div>
 
@@ -467,6 +529,8 @@ export function BuildFormSteps({
   presets = [],
   editMode = false,
 }: BuildFormStepsProps) {
+  const latestFormRef = useRef(form);
+  latestFormRef.current = form;
   const [currentStep, setCurrentStep] = useState<FormStep>(1);
   const [showPresetModal, setShowPresetModal] = useState(false);
   const [activeCharacterIndex, setActiveCharacterIndex] = useState(0);
@@ -492,7 +556,10 @@ export function BuildFormSteps({
     form.category === "周回・武器集め用"
       ? farmingPurposeOptions
       : highDifficultyPurposeOptions;
-  const selectedParts = useMemo(() => uniqueParts(form), [form]);
+  const selectedParts = useMemo(
+    () => uniqueParts(form),
+    [form.characterDetails, form.weaponDetails, form.summonDetails],
+  );
   const filteredPresets = useMemo(
     () =>
       presets.filter(
@@ -506,6 +573,18 @@ export function BuildFormSteps({
   const visiblePresets = filteredPresets.length > 0 ? filteredPresets : presets;
 
   useEffect(() => {
+    if (
+      hasFixedSlotShape(
+        form.characterDetails,
+        form.weaponDetails,
+        form.summonDetails,
+        subCharacterSlotCount,
+        weaponSlotCount,
+      )
+    ) {
+      return;
+    }
+
     const incomingSubSlotCount =
       form.characterDetails.filter((item) => item.position === "サブ").length >
       defaultSubCharacterSlots
@@ -726,6 +805,66 @@ export function BuildFormSteps({
     summon,
     index: index + 2,
   }));
+  const selectCharacterCandidate = useCallback(
+    (name: string) => {
+      const currentForm = latestFormRef.current;
+      const characterDetails =
+        currentForm.characterDetails.length > 0
+          ? currentForm.characterDetails.map((item, itemIndex) =>
+              itemIndex === safeCharacterIndex ? { ...item, name } : item,
+            )
+          : [
+              {
+                ...emptyCharacterDetail,
+                position: "フロント",
+                name,
+              },
+            ];
+      onFormChange({ ...currentForm, characterDetails });
+      if (currentForm.characterDetails.length === 0) {
+        setActiveCharacterIndex(0);
+      }
+    },
+    [onFormChange, safeCharacterIndex],
+  );
+  const selectWeaponCandidate = useCallback(
+    (name: string) => {
+      const currentForm = latestFormRef.current;
+      const weaponDetails =
+        currentForm.weaponDetails.length > 0
+          ? currentForm.weaponDetails.map((item, itemIndex) =>
+              itemIndex === safeWeaponIndex ? { ...item, name } : item,
+            )
+          : [{ ...emptyWeaponDetail, name }];
+      onFormChange({ ...currentForm, weaponDetails });
+      if (currentForm.weaponDetails.length === 0) {
+        setActiveWeaponIndex(0);
+      }
+    },
+    [onFormChange, safeWeaponIndex],
+  );
+  const selectSummonCandidate = useCallback(
+    (name: string) => {
+      const currentForm = latestFormRef.current;
+      const summonDetails =
+        currentForm.summonDetails.length > 0
+          ? currentForm.summonDetails.map((item, itemIndex) =>
+              itemIndex === safeSummonIndex ? { ...item, name } : item,
+            )
+          : [
+              {
+                ...emptySummonDetail,
+                position: "サブ",
+                name,
+              },
+            ];
+      onFormChange({ ...currentForm, summonDetails });
+      if (currentForm.summonDetails.length === 0) {
+        setActiveSummonIndex(0);
+      }
+    },
+    [onFormChange, safeSummonIndex],
+  );
 
   return (
     <section className="build-form-steps-container">
@@ -1077,23 +1216,7 @@ export function BuildFormSteps({
                   activeName={activeCharacter?.name ?? ""}
                   kind="character"
                   onQueryChange={setCharacterQuery}
-                  onSelect={(name) => {
-                    if (!activeCharacter) {
-                      onFormChange({
-                        ...form,
-                        characterDetails: [
-                          {
-                            ...emptyCharacterDetail,
-                            position: "フロント",
-                            name,
-                          },
-                        ],
-                      });
-                      setActiveCharacterIndex(0);
-                      return;
-                    }
-                    updateCharacter(safeCharacterIndex, { name });
-                  }}
+                  onSelect={selectCharacterCandidate}
                   query={characterQuery}
                 />
               </div>
@@ -1254,17 +1377,7 @@ export function BuildFormSteps({
                   activeName={activeWeapon?.name ?? ""}
                   kind="weapon"
                   onQueryChange={setWeaponQuery}
-                  onSelect={(name) => {
-                    if (!activeWeapon) {
-                      onFormChange({
-                        ...form,
-                        weaponDetails: [{ ...emptyWeaponDetail, name }],
-                      });
-                      setActiveWeaponIndex(0);
-                      return;
-                    }
-                    updateWeapon(safeWeaponIndex, { name });
-                  }}
+                  onSelect={selectWeaponCandidate}
                   query={weaponQuery}
                 />
               </div>
@@ -1419,19 +1532,7 @@ export function BuildFormSteps({
                   activeName={activeSummon?.name ?? ""}
                   kind="summon"
                   onQueryChange={setSummonQuery}
-                  onSelect={(name) => {
-                    if (!activeSummon) {
-                      onFormChange({
-                        ...form,
-                        summonDetails: [
-                          { ...emptySummonDetail, position: "サブ", name },
-                        ],
-                      });
-                      setActiveSummonIndex(0);
-                      return;
-                    }
-                    updateSummon(safeSummonIndex, { name });
-                  }}
+                  onSelect={selectSummonCandidate}
                   query={summonQuery}
                 />
               </div>
