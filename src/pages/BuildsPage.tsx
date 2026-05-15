@@ -1,5 +1,15 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CopyPlus, ExternalLink, FilePenLine, FilePlus2, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  CopyPlus,
+  ExternalLink,
+  FilePenLine,
+  FilePlus2,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   api,
@@ -9,10 +19,15 @@ import {
   type BuildPreset,
   type BuildReferenceUrl,
   type BuildSummonDetail,
-  type BuildWeaponDetail
+  type BuildWeaponDetail,
 } from "../lib/api";
 import { useAuth } from "../components/AuthContext";
-import { buildMasterOptions, findBuildMaster, type BuildMasterKind, type BuildMasterItem } from "../lib/buildMasters";
+import {
+  buildMasterOptions,
+  findBuildMaster,
+  type BuildMasterKind,
+  type BuildMasterItem,
+} from "../lib/buildMasters";
 import { BuildFormSteps } from "../components/BuildFormSteps";
 
 const emptyForm: BuildPostInput = {
@@ -53,16 +68,45 @@ const emptyForm: BuildPostInput = {
   referenceUrls: [],
   sourcePresetId: null,
   sourcePresetName: null,
-  changeMemo: null
+  changeMemo: null,
 };
 
 const categoryOptions = ["高難度攻略用", "周回・武器集め用"];
 const elementOptions = ["火", "水", "土", "風", "光", "闇"];
 const operationOptions = ["手動", "フルオート", "セミオート", "未指定"];
-const verificationOptions = ["未検証", "投稿者クリア済", "団内クリア済", "要調整"];
-const highDifficultyPurposeOptions = ["団内挑戦", "団内練習", "個人練習", "ソロ挑戦", "クリア編成", "参考メモ"];
-const farmingPurposeOptions = ["周回向け", "自発向け", "救援向け", "青箱狙い", "参考メモ"];
-const questOptions = ["ルシゼロ", "天元HL", "天元HLフリークエスト", "ルシゼロ系フリークエスト", "ムゲンHL", "ディアスポラHL", "ジークフリートHL", "シエテHL", "コスモスHL", "アガスティアHL"];
+const verificationOptions = [
+  "未検証",
+  "投稿者クリア済",
+  "団内クリア済",
+  "要調整",
+];
+const highDifficultyPurposeOptions = [
+  "団内挑戦",
+  "団内練習",
+  "個人練習",
+  "ソロ挑戦",
+  "クリア編成",
+  "参考メモ",
+];
+const farmingPurposeOptions = [
+  "周回向け",
+  "自発向け",
+  "救援向け",
+  "青箱狙い",
+  "参考メモ",
+];
+const questOptions = [
+  "ルシゼロ",
+  "天元HL",
+  "天元HLフリークエスト",
+  "ルシゼロ系フリークエスト",
+  "ムゲンHL",
+  "ディアスポラHL",
+  "ジークフリートHL",
+  "シエテHL",
+  "コスモスHL",
+  "アガスティアHL",
+];
 const jobOptions = buildMasterOptions.jobs.map((item) => item.name);
 const characterOptions = buildMasterOptions.characters.map((item) => item.name);
 const summonOptions = buildMasterOptions.summons.map((item) => item.name);
@@ -73,10 +117,18 @@ const summonPositionOptions = ["メイン", "フレンド", "サブ", "任意"];
 const blueChestOptions = ["あり", "なし", "未指定"];
 const stabilityOptions = ["安定", "たまに失敗", "要手動確認", "未指定"];
 const prerequisiteOptions = ["マグナ", "神石", "片面"];
-const referenceTypeOptions = ["攻略記事", "YouTube", "X", "note / ブログ", "その他"];
+const referenceTypeOptions = [
+  "攻略記事",
+  "YouTube",
+  "X",
+  "note / ブログ",
+  "その他",
+];
 const listCategoryOptions = categoryOptions;
 const sourceTypeOptions = ["すべて", "投稿編成", "プリセット"];
-const allPurposeOptions = Array.from(new Set([...highDifficultyPurposeOptions, ...farmingPurposeOptions]));
+const allPurposeOptions = Array.from(
+  new Set([...highDifficultyPurposeOptions, ...farmingPurposeOptions]),
+);
 const raidRoleOptions = ["自発", "救援", "どちらでも"];
 const buildTabOptions = ["search", "form"] as const;
 
@@ -162,7 +214,7 @@ const emptyListFilters: BuildListFilters = {
   raidRole: "",
   blueChest: "",
   stability: "",
-  prerequisites: ""
+  prerequisites: "",
 };
 
 const emptyCharacterDetail: BuildCharacterDetail = {
@@ -170,7 +222,7 @@ const emptyCharacterDetail: BuildCharacterDetail = {
   name: "",
   importance: "自由枠",
   roleMemo: "",
-  substituteMemo: ""
+  substituteMemo: "",
 };
 
 const emptySummonDetail: BuildSummonDetail = {
@@ -178,7 +230,7 @@ const emptySummonDetail: BuildSummonDetail = {
   name: "",
   importance: "自由枠",
   usageMemo: "",
-  substituteMemo: ""
+  substituteMemo: "",
 };
 
 const emptyWeaponDetail: BuildWeaponDetail = {
@@ -186,14 +238,14 @@ const emptyWeaponDetail: BuildWeaponDetail = {
   importance: "自由枠",
   count: "",
   usageMemo: "",
-  substituteMemo: ""
+  substituteMemo: "",
 };
 
 const emptyReferenceUrl: BuildReferenceUrl = {
   type: "その他",
   title: "",
   url: "",
-  memo: ""
+  memo: "",
 };
 
 function namesFromCharacters(items: BuildCharacterDetail[]) {
@@ -259,7 +311,7 @@ function presetToForm(preset: BuildPreset): BuildPostInput {
     referenceUrls: preset.referenceUrls,
     sourcePresetId: preset.id,
     sourcePresetName: preset.name,
-    changeMemo: ""
+    changeMemo: "",
   };
 }
 
@@ -269,7 +321,7 @@ function postToForm(post: BuildPost): BuildPostInput {
     title: `${post.title} コピー`,
     sourcePresetId: post.sourcePresetId,
     sourcePresetName: post.sourcePresetName ?? post.title,
-    changeMemo: post.changeMemo ?? ""
+    changeMemo: post.changeMemo ?? "",
   };
 }
 
@@ -278,7 +330,7 @@ function postToEditForm(post: BuildPost): BuildPostInput {
     ...post,
     sourcePresetId: post.sourcePresetId,
     sourcePresetName: post.sourcePresetName,
-    changeMemo: post.changeMemo ?? ""
+    changeMemo: post.changeMemo ?? "",
   };
 }
 
@@ -291,7 +343,7 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("ja-JP", {
     year: "numeric",
     month: "2-digit",
-    day: "2-digit"
+    day: "2-digit",
   }).format(date);
 }
 
@@ -326,7 +378,7 @@ function mainParts(item: BuildListItem) {
     ...item.requiredParts,
     ...item.characters,
     ...item.summons,
-    ...item.weapons
+    ...item.weapons,
   ]).slice(0, 5);
 }
 
@@ -339,7 +391,15 @@ function masterMeta(master: BuildMasterItem | undefined) {
     return "自由入力";
   }
 
-  return [master.element, master.rarity, master.weaponType, master.series, ...(master.tags ?? [])].filter(Boolean).join(" / ");
+  return [
+    master.element,
+    master.rarity,
+    master.weaponType,
+    master.series,
+    ...(master.tags ?? []),
+  ]
+    .filter(Boolean)
+    .join(" / ");
 }
 
 function notesToBlocks(value: string | null | undefined) {
@@ -348,8 +408,20 @@ function notesToBlocks(value: string | null | undefined) {
     return [];
   }
 
-  const knownHeadings = ["開幕", "100〜80%", "80〜60%", "60〜20%", "20〜0%", "予兆対応", "失敗ポイント", "その他メモ"];
-  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const knownHeadings = [
+    "開幕",
+    "100〜80%",
+    "80〜60%",
+    "60〜20%",
+    "20〜0%",
+    "予兆対応",
+    "失敗ポイント",
+    "その他メモ",
+  ];
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
   const blocks: { title: string; body: string }[] = [];
   let current: { title: string; body: string[] } | null = null;
 
@@ -398,7 +470,7 @@ function normalizePreset(preset: BuildPreset): BuildListItem {
     rescueTiming: preset.rescueTiming ?? null,
     farmingCautions: preset.farmingCautions ?? null,
     authorName: "団内テンプレート",
-    preset
+    preset,
   };
 }
 
@@ -424,7 +496,7 @@ function normalizePost(post: BuildPost): BuildListItem {
     rescueTiming: post.rescueTiming ?? null,
     farmingCautions: post.farmingCautions ?? null,
     authorName: post.authorName ?? "自分",
-    post
+    post,
   };
 }
 
@@ -450,10 +522,22 @@ function searchableText(item: BuildListItem) {
     ...item.recommendedParts,
     ...item.substitutableParts,
     ...item.freeSlots,
-    ...item.characterDetails.flatMap((detail) => [detail.name, detail.roleMemo, detail.substituteMemo]),
-    ...item.summonDetails.flatMap((detail) => [detail.name, detail.usageMemo, detail.substituteMemo]),
-    ...item.weaponDetails.flatMap((detail) => [detail.name, detail.usageMemo, detail.substituteMemo]),
-    ...item.referenceUrls.flatMap((ref) => [ref.title, ref.type, ref.memo])
+    ...item.characterDetails.flatMap((detail) => [
+      detail.name,
+      detail.roleMemo,
+      detail.substituteMemo,
+    ]),
+    ...item.summonDetails.flatMap((detail) => [
+      detail.name,
+      detail.usageMemo,
+      detail.substituteMemo,
+    ]),
+    ...item.weaponDetails.flatMap((detail) => [
+      detail.name,
+      detail.usageMemo,
+      detail.substituteMemo,
+    ]),
+    ...item.referenceUrls.flatMap((ref) => [ref.title, ref.type, ref.memo]),
   ]
     .filter(Boolean)
     .join(" ")
@@ -468,12 +552,25 @@ function CompactList({ items }: { items: string[] }) {
   return <span>{items.slice(0, 3).join(" / ")}</span>;
 }
 
-function PartThumbnail({ kind, name }: { kind: BuildMasterKind; name: string }) {
+function PartThumbnail({
+  kind,
+  name,
+}: {
+  kind: BuildMasterKind;
+  name: string;
+}) {
   const master = findBuildMaster(kind, name);
   const label = name.trim().slice(0, 2) || "?";
 
   if (master?.thumbnailUrl) {
-    return <img alt="" className="part-thumbnail" loading="lazy" src={master.thumbnailUrl} />;
+    return (
+      <img
+        alt=""
+        className="part-thumbnail"
+        loading="lazy"
+        src={master.thumbnailUrl}
+      />
+    );
   }
 
   return <span className={`part-thumbnail fallback ${kind}`}>{label}</span>;
@@ -485,7 +582,7 @@ function PartDetailRow({
   meta,
   importance,
   note,
-  substitute
+  substitute,
 }: {
   kind: BuildMasterKind;
   name: string;
@@ -494,7 +591,8 @@ function PartDetailRow({
   note?: string;
   substitute?: string;
 }) {
-  const master = kind === "job" ? findBuildMaster("job", name) : findBuildMaster(kind, name);
+  const master =
+    kind === "job" ? findBuildMaster("job", name) : findBuildMaster(kind, name);
 
   return (
     <div className="part-detail-row">
@@ -533,7 +631,7 @@ function BuildListCard({
   onOpenDetail,
   onApplyPreset,
   onCopyPost,
-  onDeletePost
+  onDeletePost,
 }: {
   item: BuildListItem;
   canDelete: boolean;
@@ -543,7 +641,8 @@ function BuildListCard({
   onDeletePost: (post: BuildPost) => void;
 }) {
   const parts = mainParts(item);
-  const actionLabel = item.category === "高難度攻略用" ? "行動メモ" : "周回メモ";
+  const actionLabel =
+    item.category === "高難度攻略用" ? "行動メモ" : "周回メモ";
   const hasMemo = hasText(item.actionNotes) || hasText(item.farmingCautions);
 
   return (
@@ -551,7 +650,13 @@ function BuildListCard({
       <div className="build-search-card-header">
         <div>
           <div className="tag-row">
-            <span className={item.sourceType === "プリセット" ? "pill" : "pill muted"}>{item.sourceType}</span>
+            <span
+              className={
+                item.sourceType === "プリセット" ? "pill" : "pill muted"
+              }
+            >
+              {item.sourceType}
+            </span>
             <span className="pill muted">{categoryLabel(item.category)}</span>
           </div>
           <h3>{item.title}</h3>
@@ -562,21 +667,41 @@ function BuildListCard({
           </div>
         </div>
         <div className="task-actions">
-          <button aria-label="詳細画面を開く" className="secondary-button compact-action" onClick={() => onOpenDetail(item)} type="button">
+          <button
+            aria-label="詳細画面を開く"
+            className="secondary-button compact-action"
+            onClick={() => onOpenDetail(item)}
+            type="button"
+          >
             詳細
           </button>
           {item.preset && (
-            <button aria-label="このプリセットを投稿フォームへ反映" className="icon-button" onClick={() => onApplyPreset(item.preset!)} type="button">
+            <button
+              aria-label="このプリセットを投稿フォームへ反映"
+              className="icon-button"
+              onClick={() => onApplyPreset(item.preset!)}
+              type="button"
+            >
               <FilePlus2 size={16} />
             </button>
           )}
           {item.post && (
             <>
-              <button aria-label="この編成をコピーして新規投稿" className="icon-button" onClick={() => onCopyPost(item.post!)} type="button">
+              <button
+                aria-label="この編成をコピーして新規投稿"
+                className="icon-button"
+                onClick={() => onCopyPost(item.post!)}
+                type="button"
+              >
                 <CopyPlus size={16} />
               </button>
               {canDelete && (
-                <button aria-label="編成メモを削除" className="icon-button danger" onClick={() => onDeletePost(item.post!)} type="button">
+                <button
+                  aria-label="編成メモを削除"
+                  className="icon-button danger"
+                  onClick={() => onDeletePost(item.post!)}
+                  type="button"
+                >
                   <Trash2 size={16} />
                 </button>
               )}
@@ -591,7 +716,9 @@ function BuildListCard({
         <span className="pill muted">{item.purpose}</span>
         <span className="pill muted">{item.verificationStatus}</span>
         {item.stability && <span className="pill muted">{item.stability}</span>}
-        {item.prerequisites && <span className="pill muted">{item.prerequisites}</span>}
+        {item.prerequisites && (
+          <span className="pill muted">{item.prerequisites}</span>
+        )}
       </div>
 
       {item.overview && <p className="build-card-note">{item.overview}</p>}
@@ -615,7 +742,9 @@ function BuildListCard({
 
       {item.category === "周回・武器集め用" && (
         <div className="build-card-note compact">
-          {[item.raidRole, item.blueChest, item.clearTime, item.weaponTarget].filter(Boolean).join(" / ") || "周回条件は詳細で確認"}
+          {[item.raidRole, item.blueChest, item.clearTime, item.weaponTarget]
+            .filter(Boolean)
+            .join(" / ") || "周回条件は詳細で確認"}
         </div>
       )}
     </article>
@@ -628,7 +757,7 @@ function BuildDetailView({
   onBack,
   onApplyPreset,
   onCopyPost,
-  onEditPost
+  onEditPost,
 }: {
   item: BuildListItem;
   canEdit: boolean;
@@ -637,19 +766,37 @@ function BuildDetailView({
   onCopyPost: (post: BuildPost) => void;
   onEditPost: (post: BuildPost) => void;
 }) {
-  const requiredCharacters = item.characterDetails.filter((detail) => detail.importance === "必須");
-  const requiredSummons = item.summonDetails.filter((detail) => detail.importance === "必須");
-  const requiredWeapons = item.weaponDetails.filter((detail) => detail.importance === "必須");
+  const requiredCharacters = item.characterDetails.filter(
+    (detail) => detail.importance === "必須",
+  );
+  const requiredSummons = item.summonDetails.filter(
+    (detail) => detail.importance === "必須",
+  );
+  const requiredWeapons = item.weaponDetails.filter(
+    (detail) => detail.importance === "必須",
+  );
   const substituteRows = [
     ...item.characterDetails
       .filter((detail) => hasText(detail.substituteMemo))
-      .map((detail) => ({ from: detail.name, to: detail.substituteMemo, note: detail.roleMemo })),
+      .map((detail) => ({
+        from: detail.name,
+        to: detail.substituteMemo,
+        note: detail.roleMemo,
+      })),
     ...item.summonDetails
       .filter((detail) => hasText(detail.substituteMemo))
-      .map((detail) => ({ from: detail.name, to: detail.substituteMemo, note: detail.usageMemo })),
+      .map((detail) => ({
+        from: detail.name,
+        to: detail.substituteMemo,
+        note: detail.usageMemo,
+      })),
     ...item.weaponDetails
       .filter((detail) => hasText(detail.substituteMemo))
-      .map((detail) => ({ from: detail.name, to: detail.substituteMemo, note: detail.usageMemo }))
+      .map((detail) => ({
+        from: detail.name,
+        to: detail.substituteMemo,
+        note: detail.usageMemo,
+      })),
   ];
   const actionBlocks = notesToBlocks(item.actionNotes);
   const labels = [
@@ -658,7 +805,7 @@ function BuildDetailView({
     item.purpose,
     item.verificationStatus,
     item.category === "周回・武器集め用" ? item.stability : item.role,
-    item.category === "周回・武器集め用" ? item.prerequisites : undefined
+    item.category === "周回・武器集め用" ? item.prerequisites : undefined,
   ].filter(Boolean);
 
   return (
@@ -670,19 +817,31 @@ function BuildDetailView({
         </button>
         <div className="task-actions">
           {item.preset && (
-            <button className="primary-button" onClick={() => onApplyPreset(item.preset!)} type="button">
+            <button
+              className="primary-button"
+              onClick={() => onApplyPreset(item.preset!)}
+              type="button"
+            >
               <FilePlus2 size={18} />
               このプリセットで投稿
             </button>
           )}
           {item.post && (
-            <button className="primary-button" onClick={() => onCopyPost(item.post!)} type="button">
+            <button
+              className="primary-button"
+              onClick={() => onCopyPost(item.post!)}
+              type="button"
+            >
               <CopyPlus size={18} />
               コピーして新規投稿
             </button>
           )}
           {item.post && canEdit && (
-            <button className="secondary-button" onClick={() => onEditPost(item.post!)} type="button">
+            <button
+              className="secondary-button"
+              onClick={() => onEditPost(item.post!)}
+              type="button"
+            >
               <FilePenLine size={16} />
               編集する
             </button>
@@ -696,7 +855,9 @@ function BuildDetailView({
           <h2>{item.title}</h2>
           <div className="tag-row">
             {labels.map((label) => (
-              <span className="pill" key={label}>{label}</span>
+              <span className="pill" key={label}>
+                {label}
+              </span>
             ))}
           </div>
           {item.overview && <p>{item.overview}</p>}
@@ -717,13 +878,34 @@ function BuildDetailView({
             </div>
           </div>
           <dl className="detail-fact-grid">
-            <div><dt>自発 / 救援</dt><dd>{textOrDash(item.raidRole)}</dd></div>
-            <div><dt>青箱狙い</dt><dd>{textOrDash(item.blueChest)}</dd></div>
-            <div><dt>討伐時間目安</dt><dd>{textOrDash(item.clearTime)}</dd></div>
-            <div><dt>安定度</dt><dd>{textOrDash(item.stability)}</dd></div>
-            <div><dt>編成前提</dt><dd>{textOrDash(item.prerequisites)}</dd></div>
-            <div><dt>武器集め対象</dt><dd>{textOrDash(item.weaponTarget)}</dd></div>
-            <div><dt>救援タイミング</dt><dd>{textOrDash(item.rescueTiming)}</dd></div>
+            <div>
+              <dt>自発 / 救援</dt>
+              <dd>{textOrDash(item.raidRole)}</dd>
+            </div>
+            <div>
+              <dt>青箱狙い</dt>
+              <dd>{textOrDash(item.blueChest)}</dd>
+            </div>
+            <div>
+              <dt>討伐時間目安</dt>
+              <dd>{textOrDash(item.clearTime)}</dd>
+            </div>
+            <div>
+              <dt>安定度</dt>
+              <dd>{textOrDash(item.stability)}</dd>
+            </div>
+            <div>
+              <dt>編成前提</dt>
+              <dd>{textOrDash(item.prerequisites)}</dd>
+            </div>
+            <div>
+              <dt>武器集め対象</dt>
+              <dd>{textOrDash(item.weaponTarget)}</dd>
+            </div>
+            <div>
+              <dt>救援タイミング</dt>
+              <dd>{textOrDash(item.rescueTiming)}</dd>
+            </div>
           </dl>
         </section>
       )}
@@ -737,19 +919,56 @@ function BuildDetailView({
         </div>
         <div className="required-part-grid">
           {requiredCharacters.map((detail) => (
-            <PartDetailRow key={`req-char-${detail.name}`} kind="character" name={detail.name} importance={detail.importance} note={detail.roleMemo} substitute={detail.substituteMemo} />
+            <PartDetailRow
+              key={`req-char-${detail.name}`}
+              kind="character"
+              name={detail.name}
+              importance={detail.importance}
+              note={detail.roleMemo}
+              substitute={detail.substituteMemo}
+            />
           ))}
           {requiredSummons.map((detail) => (
-            <PartDetailRow key={`req-summon-${detail.name}`} kind="summon" name={detail.name} importance={detail.importance} note={detail.usageMemo} substitute={detail.substituteMemo} />
+            <PartDetailRow
+              key={`req-summon-${detail.name}`}
+              kind="summon"
+              name={detail.name}
+              importance={detail.importance}
+              note={detail.usageMemo}
+              substitute={detail.substituteMemo}
+            />
           ))}
           {requiredWeapons.map((detail) => (
-            <PartDetailRow key={`req-weapon-${detail.name}`} kind="weapon" name={detail.name} importance={detail.importance} note={detail.usageMemo} substitute={detail.substituteMemo} />
+            <PartDetailRow
+              key={`req-weapon-${detail.name}`}
+              kind="weapon"
+              name={detail.name}
+              importance={detail.importance}
+              note={detail.usageMemo}
+              substitute={detail.substituteMemo}
+            />
           ))}
-          {requiredCharacters.length + requiredSummons.length + requiredWeapons.length === 0 &&
-            item.requiredParts.map((part) => <PartDetailRow key={`req-${part}`} kind="weapon" name={part} importance="必須" />)}
-          {requiredCharacters.length + requiredSummons.length + requiredWeapons.length === 0 && item.requiredParts.length === 0 && (
-            <div className="empty-state compact">必須パーツは未入力です。</div>
-          )}
+          {requiredCharacters.length +
+            requiredSummons.length +
+            requiredWeapons.length ===
+            0 &&
+            item.requiredParts.map((part) => (
+              <PartDetailRow
+                key={`req-${part}`}
+                kind="weapon"
+                name={part}
+                importance="必須"
+              />
+            ))}
+          {requiredCharacters.length +
+            requiredSummons.length +
+            requiredWeapons.length ===
+            0 &&
+            item.requiredParts.length === 0 && (
+              <div className="empty-state compact">
+                必須パーツは未入力です。
+              </div>
+            )}
         </div>
       </section>
 
@@ -768,8 +987,12 @@ function BuildDetailView({
               {row.note && <small>{row.note}</small>}
             </div>
           ))}
-          {item.substituteNotes && <p className="build-card-note">{item.substituteNotes}</p>}
-          {substituteRows.length === 0 && !item.substituteNotes && <div className="empty-state compact">代用候補は未入力です。</div>}
+          {item.substituteNotes && (
+            <p className="build-card-note">{item.substituteNotes}</p>
+          )}
+          {substituteRows.length === 0 && !item.substituteNotes && (
+            <div className="empty-state compact">代用候補は未入力です。</div>
+          )}
         </div>
       </section>
 
@@ -789,27 +1012,57 @@ function BuildDetailView({
             <h3>キャラ</h3>
             <div className="part-list">
               {item.characterDetails.map((detail) => (
-                <PartDetailRow key={`char-${detail.name}-${detail.position}`} kind="character" name={detail.name} meta={detail.position} importance={detail.importance} note={detail.roleMemo} substitute={detail.substituteMemo} />
+                <PartDetailRow
+                  key={`char-${detail.name}-${detail.position}`}
+                  kind="character"
+                  name={detail.name}
+                  meta={detail.position}
+                  importance={detail.importance}
+                  note={detail.roleMemo}
+                  substitute={detail.substituteMemo}
+                />
               ))}
-              {item.characterDetails.length === 0 && <p className="muted-text">未入力</p>}
+              {item.characterDetails.length === 0 && (
+                <p className="muted-text">未入力</p>
+              )}
             </div>
           </div>
           <div>
             <h3>召喚石</h3>
             <div className="part-list">
               {item.summonDetails.map((detail) => (
-                <PartDetailRow key={`summon-${detail.name}-${detail.position}`} kind="summon" name={detail.name} meta={detail.position} importance={detail.importance} note={detail.usageMemo} substitute={detail.substituteMemo} />
+                <PartDetailRow
+                  key={`summon-${detail.name}-${detail.position}`}
+                  kind="summon"
+                  name={detail.name}
+                  meta={detail.position}
+                  importance={detail.importance}
+                  note={detail.usageMemo}
+                  substitute={detail.substituteMemo}
+                />
               ))}
-              {item.summonDetails.length === 0 && <p className="muted-text">未入力</p>}
+              {item.summonDetails.length === 0 && (
+                <p className="muted-text">未入力</p>
+              )}
             </div>
           </div>
           <div>
             <h3>武器</h3>
             <div className="part-list">
               {item.weaponDetails.map((detail) => (
-                <PartDetailRow key={`weapon-${detail.name}-${detail.count}`} kind="weapon" name={detail.name} meta={detail.count || undefined} importance={detail.importance} note={detail.usageMemo} substitute={detail.substituteMemo} />
+                <PartDetailRow
+                  key={`weapon-${detail.name}-${detail.count}`}
+                  kind="weapon"
+                  name={detail.name}
+                  meta={detail.count || undefined}
+                  importance={detail.importance}
+                  note={detail.usageMemo}
+                  substitute={detail.substituteMemo}
+                />
               ))}
-              {item.weaponDetails.length === 0 && <p className="muted-text">未入力</p>}
+              {item.weaponDetails.length === 0 && (
+                <p className="muted-text">未入力</p>
+              )}
             </div>
           </div>
         </div>
@@ -818,22 +1071,49 @@ function BuildDetailView({
       <section className="panel">
         <div className="section-heading compact-heading">
           <div>
-            <p className="eyebrow">{item.category === "高難度攻略用" ? "Action" : "Farming Memo"}</p>
-            <h2>{item.category === "高難度攻略用" ? "行動メモ・注意点" : "周回メモ・注意点"}</h2>
+            <p className="eyebrow">
+              {item.category === "高難度攻略用" ? "Action" : "Farming Memo"}
+            </p>
+            <h2>
+              {item.category === "高難度攻略用"
+                ? "行動メモ・注意点"
+                : "周回メモ・注意点"}
+            </h2>
           </div>
         </div>
         {item.category === "高難度攻略用" ? (
           <div className="action-note-grid">
-            {item.omenNotes && <SummaryList title="予兆対応" items={[item.omenNotes]} />}
-            {actionBlocks.map((block) => <SummaryList key={block.title} title={block.title} items={[block.body]} />)}
-            {item.failurePoints && <SummaryList title="失敗ポイント" items={[item.failurePoints]} />}
-            {item.cautions && <SummaryList title="注意点" items={[item.cautions]} />}
+            {item.omenNotes && (
+              <SummaryList title="予兆対応" items={[item.omenNotes]} />
+            )}
+            {actionBlocks.map((block) => (
+              <SummaryList
+                key={block.title}
+                title={block.title}
+                items={[block.body]}
+              />
+            ))}
+            {item.failurePoints && (
+              <SummaryList title="失敗ポイント" items={[item.failurePoints]} />
+            )}
+            {item.cautions && (
+              <SummaryList title="注意点" items={[item.cautions]} />
+            )}
           </div>
         ) : (
           <div className="action-note-grid">
-            {item.farmingGoal && <SummaryList title="周回目的" items={[item.farmingGoal]} />}
-            {item.farmingCautions && <SummaryList title="周回時の注意点" items={[item.farmingCautions]} />}
-            {item.cautions && <SummaryList title="注意点" items={[item.cautions]} />}
+            {item.farmingGoal && (
+              <SummaryList title="周回目的" items={[item.farmingGoal]} />
+            )}
+            {item.farmingCautions && (
+              <SummaryList
+                title="周回時の注意点"
+                items={[item.farmingCautions]}
+              />
+            )}
+            {item.cautions && (
+              <SummaryList title="注意点" items={[item.cautions]} />
+            )}
           </div>
         )}
       </section>
@@ -847,18 +1127,27 @@ function BuildDetailView({
         </div>
         <div className="detail-reference-list">
           {item.referenceUrls.map((ref) => (
-            <a href={ref.url} key={`${ref.type}-${ref.url}`} rel="noreferrer" target="_blank">
+            <a
+              href={ref.url}
+              key={`${ref.type}-${ref.url}`}
+              rel="noreferrer"
+              target="_blank"
+            >
               <ExternalLink size={16} />
               <strong>{ref.title}</strong>
               <span>{ref.type}</span>
               {ref.memo && <small>{ref.memo}</small>}
             </a>
           ))}
-          {item.referenceUrls.length === 0 && <div className="empty-state compact">参考URLは未入力です。</div>}
+          {item.referenceUrls.length === 0 && (
+            <div className="empty-state compact">参考URLは未入力です。</div>
+          )}
         </div>
       </section>
 
-      {(item.post?.sourcePresetName || item.post?.changeMemo || item.preset) && (
+      {(item.post?.sourcePresetName ||
+        item.post?.changeMemo ||
+        item.preset) && (
         <section className="panel">
           <div className="section-heading compact-heading">
             <div>
@@ -866,9 +1155,20 @@ function BuildDetailView({
               <h2>由来・変更メモ</h2>
             </div>
           </div>
-          {item.preset && <p className="material-note">プリセット状態: {item.preset.presetStatus} / 由来: {item.preset.origins.join(" / ")}</p>}
-          {item.post?.sourcePresetName && <p className="material-note">元プリセット: {item.post.sourcePresetName}</p>}
-          {item.post?.changeMemo && <p className="material-note">変更メモ: {item.post.changeMemo}</p>}
+          {item.preset && (
+            <p className="material-note">
+              プリセット状態: {item.preset.presetStatus} / 由来:{" "}
+              {item.preset.origins.join(" / ")}
+            </p>
+          )}
+          {item.post?.sourcePresetName && (
+            <p className="material-note">
+              元プリセット: {item.post.sourcePresetName}
+            </p>
+          )}
+          {item.post?.changeMemo && (
+            <p className="material-note">変更メモ: {item.post.changeMemo}</p>
+          )}
         </section>
       )}
     </section>
@@ -884,10 +1184,14 @@ export function BuildsPage() {
   const [form, setForm] = useState<BuildPostInput>(emptyForm);
   const [activeBuildTab, setActiveBuildTab] = useState<BuildTab>("search");
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
-  const [listFilters, setListFilters] = useState<BuildListFilters>(emptyListFilters);
+  const [listFilters, setListFilters] =
+    useState<BuildListFilters>(emptyListFilters);
   const [error, setError] = useState("");
 
-  const purposeOptions = form.category === "周回・武器集め用" ? farmingPurposeOptions : highDifficultyPurposeOptions;
+  const purposeOptions =
+    form.category === "周回・武器集め用"
+      ? farmingPurposeOptions
+      : highDifficultyPurposeOptions;
   const visiblePurposeOptions =
     listFilters.category === "高難度攻略用"
       ? highDifficultyPurposeOptions
@@ -907,7 +1211,8 @@ export function BuildsPage() {
 
   const listItems = useMemo(() => {
     return [...presets.map(normalizePreset), ...posts.map(normalizePost)].sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
   }, [posts, presets]);
 
@@ -922,38 +1227,63 @@ export function BuildsPage() {
         (!listFilters.questName || item.questName === listFilters.questName) &&
         (!listFilters.element || item.element === listFilters.element) &&
         (!listFilters.purpose || item.purpose === listFilters.purpose) &&
-        (!listFilters.operationType || item.operationType === listFilters.operationType) &&
-        (!listFilters.verificationStatus || item.verificationStatus === listFilters.verificationStatus) &&
-        (listFilters.sourceType === "すべて" || item.sourceType === listFilters.sourceType) &&
+        (!listFilters.operationType ||
+          item.operationType === listFilters.operationType) &&
+        (!listFilters.verificationStatus ||
+          item.verificationStatus === listFilters.verificationStatus) &&
+        (listFilters.sourceType === "すべて" ||
+          item.sourceType === listFilters.sourceType) &&
         (!listFilters.role || item.role === listFilters.role) &&
-        (!listFilters.hasActionNotes || hasText(item.actionNotes) || hasText(item.farmingCautions)) &&
+        (!listFilters.hasActionNotes ||
+          hasText(item.actionNotes) ||
+          hasText(item.farmingCautions)) &&
         (!listFilters.hasReferenceUrls || item.referenceUrls.length > 0) &&
         (!listFilters.raidRole || item.raidRole === listFilters.raidRole) &&
         (!listFilters.blueChest || item.blueChest === listFilters.blueChest) &&
         (!listFilters.stability || item.stability === listFilters.stability) &&
-        (!listFilters.prerequisites || item.prerequisites === listFilters.prerequisites) &&
+        (!listFilters.prerequisites ||
+          item.prerequisites === listFilters.prerequisites) &&
         matchesKeyword
       );
     });
   }, [listFilters, listItems]);
 
-  const roleOptions = useMemo(() => uniqueValues(listItems.map((item) => item.role ?? "")), [listItems]);
+  const roleOptions = useMemo(
+    () => uniqueValues(listItems.map((item) => item.role ?? "")),
+    [listItems],
+  );
   const selectedItem = useMemo(() => {
     if (!sourceType || !buildId) {
       return null;
     }
 
-    const expectedSourceType = sourceType === "preset" ? "プリセット" : sourceType === "post" ? "投稿編成" : "";
-    return listItems.find((item) => item.sourceType === expectedSourceType && item.id === buildId) ?? null;
+    const expectedSourceType =
+      sourceType === "preset"
+        ? "プリセット"
+        : sourceType === "post"
+          ? "投稿編成"
+          : "";
+    return (
+      listItems.find(
+        (item) => item.sourceType === expectedSourceType && item.id === buildId,
+      ) ?? null
+    );
   }, [buildId, listItems, sourceType]);
 
   async function load() {
     try {
-      const [presetData, postData] = await Promise.all([api.buildPresets(), api.buildPosts()]);
+      const [presetData, postData] = await Promise.all([
+        api.buildPresets(),
+        api.buildPosts(),
+      ]);
       setPresets(presetData.presets);
       setPosts(postData.posts);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "編成メモの取得に失敗しました");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "編成メモの取得に失敗しました",
+      );
     }
   }
 
@@ -961,15 +1291,31 @@ export function BuildsPage() {
     void load();
   }, []);
 
-  function update<K extends keyof BuildPostInput>(key: K, value: BuildPostInput[K]) {
+  function update<K extends keyof BuildPostInput>(
+    key: K,
+    value: BuildPostInput[K],
+  ) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function updateListFilter<K extends keyof BuildListFilters>(key: K, value: BuildListFilters[K]) {
+  function updateListFilter<K extends keyof BuildListFilters>(
+    key: K,
+    value: BuildListFilters[K],
+  ) {
     setListFilters((current) => ({
       ...current,
       [key]: value,
-      ...(key === "category" ? { purpose: "", questName: "", role: "", raidRole: "", blueChest: "", stability: "", prerequisites: "" } : {})
+      ...(key === "category"
+        ? {
+            purpose: "",
+            questName: "",
+            role: "",
+            raidRole: "",
+            blueChest: "",
+            stability: "",
+            prerequisites: "",
+          }
+        : {}),
     }));
   }
 
@@ -977,77 +1323,131 @@ export function BuildsPage() {
     setForm((current) => ({ ...current, [key]: fromLines(value) }));
   }
 
-  function updateCharacter(index: number, value: Partial<BuildCharacterDetail>) {
+  function updateCharacter(
+    index: number,
+    value: Partial<BuildCharacterDetail>,
+  ) {
     setForm((current) => {
-      const characterDetails = current.characterDetails.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, ...value } : item
+      const characterDetails = current.characterDetails.map(
+        (item, itemIndex) =>
+          itemIndex === index ? { ...item, ...value } : item,
       );
-      return { ...current, characterDetails, characters: namesFromCharacters(characterDetails) };
+      return {
+        ...current,
+        characterDetails,
+        characters: namesFromCharacters(characterDetails),
+      };
     });
   }
 
   function updateSummon(index: number, value: Partial<BuildSummonDetail>) {
     setForm((current) => {
-      const summonDetails = current.summonDetails.map((item, itemIndex) => (itemIndex === index ? { ...item, ...value } : item));
-      return { ...current, summonDetails, summons: namesFromSummons(summonDetails) };
+      const summonDetails = current.summonDetails.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...value } : item,
+      );
+      return {
+        ...current,
+        summonDetails,
+        summons: namesFromSummons(summonDetails),
+      };
     });
   }
 
   function updateWeapon(index: number, value: Partial<BuildWeaponDetail>) {
     setForm((current) => {
-      const weaponDetails = current.weaponDetails.map((item, itemIndex) => (itemIndex === index ? { ...item, ...value } : item));
-      return { ...current, weaponDetails, weapons: namesFromWeapons(weaponDetails) };
+      const weaponDetails = current.weaponDetails.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...value } : item,
+      );
+      return {
+        ...current,
+        weaponDetails,
+        weapons: namesFromWeapons(weaponDetails),
+      };
     });
   }
 
   function updateReference(index: number, value: Partial<BuildReferenceUrl>) {
     setForm((current) => ({
       ...current,
-      referenceUrls: current.referenceUrls.map((item, itemIndex) => (itemIndex === index ? { ...item, ...value } : item))
+      referenceUrls: current.referenceUrls.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...value } : item,
+      ),
     }));
   }
 
   function addCharacter() {
-    setForm((current) => ({ ...current, characterDetails: [...current.characterDetails, emptyCharacterDetail] }));
+    setForm((current) => ({
+      ...current,
+      characterDetails: [...current.characterDetails, emptyCharacterDetail],
+    }));
   }
 
   function addSummon() {
-    setForm((current) => ({ ...current, summonDetails: [...current.summonDetails, emptySummonDetail] }));
+    setForm((current) => ({
+      ...current,
+      summonDetails: [...current.summonDetails, emptySummonDetail],
+    }));
   }
 
   function addWeapon() {
-    setForm((current) => ({ ...current, weaponDetails: [...current.weaponDetails, emptyWeaponDetail] }));
+    setForm((current) => ({
+      ...current,
+      weaponDetails: [...current.weaponDetails, emptyWeaponDetail],
+    }));
   }
 
   function addReference() {
-    setForm((current) => ({ ...current, referenceUrls: [...current.referenceUrls, emptyReferenceUrl] }));
+    setForm((current) => ({
+      ...current,
+      referenceUrls: [...current.referenceUrls, emptyReferenceUrl],
+    }));
   }
 
   function removeCharacter(index: number) {
     setForm((current) => {
-      const characterDetails = current.characterDetails.filter((_, itemIndex) => itemIndex !== index);
-      return { ...current, characterDetails, characters: namesFromCharacters(characterDetails) };
+      const characterDetails = current.characterDetails.filter(
+        (_, itemIndex) => itemIndex !== index,
+      );
+      return {
+        ...current,
+        characterDetails,
+        characters: namesFromCharacters(characterDetails),
+      };
     });
   }
 
   function removeSummon(index: number) {
     setForm((current) => {
-      const summonDetails = current.summonDetails.filter((_, itemIndex) => itemIndex !== index);
-      return { ...current, summonDetails, summons: namesFromSummons(summonDetails) };
+      const summonDetails = current.summonDetails.filter(
+        (_, itemIndex) => itemIndex !== index,
+      );
+      return {
+        ...current,
+        summonDetails,
+        summons: namesFromSummons(summonDetails),
+      };
     });
   }
 
   function removeWeapon(index: number) {
     setForm((current) => {
-      const weaponDetails = current.weaponDetails.filter((_, itemIndex) => itemIndex !== index);
-      return { ...current, weaponDetails, weapons: namesFromWeapons(weaponDetails) };
+      const weaponDetails = current.weaponDetails.filter(
+        (_, itemIndex) => itemIndex !== index,
+      );
+      return {
+        ...current,
+        weaponDetails,
+        weapons: namesFromWeapons(weaponDetails),
+      };
     });
   }
 
   function removeReference(index: number) {
     setForm((current) => ({
       ...current,
-      referenceUrls: current.referenceUrls.filter((_, itemIndex) => itemIndex !== index)
+      referenceUrls: current.referenceUrls.filter(
+        (_, itemIndex) => itemIndex !== index,
+      ),
     }));
   }
 
@@ -1075,19 +1475,27 @@ export function BuildsPage() {
         characters: namesFromCharacters(formData.characterDetails),
         summons: namesFromSummons(formData.summonDetails),
         weapons: namesFromWeapons(formData.weaponDetails),
-        referenceUrls: formData.referenceUrls.filter((ref) => ref.url.trim())
+        referenceUrls: formData.referenceUrls.filter((ref) => ref.url.trim()),
       };
-      const data = editingPostId ? await api.updateBuildPost(editingPostId, payload) : await api.createBuildPost(payload);
+      const data = editingPostId
+        ? await api.updateBuildPost(editingPostId, payload)
+        : await api.createBuildPost(payload);
       setPosts((current) => {
         if (!editingPostId) {
           return [data.post, ...current];
         }
-        return current.map((post) => (post.id === data.post.id ? data.post : post));
+        return current.map((post) =>
+          post.id === data.post.id ? data.post : post,
+        );
       });
       resetForm();
       setActiveBuildTab("search");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "編成メモの保存に失敗しました");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "編成メモの保存に失敗しました",
+      );
     }
   }
 
@@ -1173,225 +1581,309 @@ export function BuildsPage() {
         />
       )}
 
-      <div className="segmented build-main-tabs" role="tablist" aria-label="編成メモの表示切り替え">
-        <button className={activeBuildTab === "search" ? "active" : ""} onClick={() => setActiveBuildTab("search")} type="button">
+      <div
+        className="segmented build-main-tabs"
+        role="tablist"
+        aria-label="編成メモの表示切り替え"
+      >
+        <button
+          className={activeBuildTab === "search" ? "active" : ""}
+          onClick={() => setActiveBuildTab("search")}
+          type="button"
+        >
           編成一覧・検索
         </button>
-        <button className={activeBuildTab === "form" ? "active" : ""} onClick={() => setActiveBuildTab("form")} type="button">
+        <button
+          className={activeBuildTab === "form" ? "active" : ""}
+          onClick={() => setActiveBuildTab("form")}
+          type="button"
+        >
           投稿フォーム
         </button>
       </div>
 
       {activeBuildTab === "search" && (
-      <section className="panel build-search-panel">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Build Search</p>
-            <h2>編成一覧・検索</h2>
-          </div>
-          <button className="secondary-button" onClick={() => setListFilters(emptyListFilters)} type="button">
-            <RotateCcw size={16} />
-            リセット
-          </button>
-        </div>
-
-        <div className="segmented build-category-switch">
-          {listCategoryOptions.map((option) => (
+        <section className="panel build-search-panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Build Search</p>
+              <h2>編成一覧・検索</h2>
+            </div>
             <button
-              className={listFilters.category === option ? "active" : ""}
-              key={option}
-              onClick={() => updateListFilter("category", option)}
+              className="secondary-button"
+              onClick={() => setListFilters(emptyListFilters)}
               type="button"
             >
-              {categoryLabel(option)}
+              <RotateCcw size={16} />
+              リセット
             </button>
-          ))}
-        </div>
+          </div>
 
-        <div className="build-filter-grid">
-          <label>
-            クエスト名
-            <select onChange={(event) => updateListFilter("questName", event.target.value)} value={listFilters.questName}>
-              <option value="">すべて</option>
-              {questOptions.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            属性
-            <select onChange={(event) => updateListFilter("element", event.target.value)} value={listFilters.element}>
-              <option value="">すべて</option>
-              {elementOptions.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            加護石
-            <select onChange={(event) => updateListFilter("prerequisites", event.target.value)} value={listFilters.prerequisites}>
-              <option value="">すべて</option>
-              {prerequisiteOptions.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </label>
+          <div className="segmented build-category-switch">
+            {listCategoryOptions.map((option) => (
+              <button
+                className={listFilters.category === option ? "active" : ""}
+                key={option}
+                onClick={() => updateListFilter("category", option)}
+                type="button"
+              >
+                {categoryLabel(option)}
+              </button>
+            ))}
+          </div>
 
-          <details className="advanced-search">
-            <summary>詳細検索</summary>
-            <div className="advanced-filter-grid">
-              <label className="keyword-field">
-                キーワード
-                <span className="input-with-icon">
-                  <Search size={16} />
-                  <input
-                    onChange={(event) => updateListFilter("keyword", event.target.value)}
-                    placeholder="タイトル、キャラ名、召喚石名、武器名、メモ"
-                    value={listFilters.keyword}
-                  />
-                </span>
-              </label>
-              <label>
-                投稿種別
-                <select onChange={(event) => updateListFilter("sourceType", event.target.value)} value={listFilters.sourceType}>
-                  {sourceTypeOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                目的
-                <select onChange={(event) => updateListFilter("purpose", event.target.value)} value={listFilters.purpose}>
-                  <option value="">すべて</option>
-                  {visiblePurposeOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                操作タイプ
-                <select onChange={(event) => updateListFilter("operationType", event.target.value)} value={listFilters.operationType}>
-                  <option value="">すべて</option>
-                  {operationOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                検証状態
-                <select onChange={(event) => updateListFilter("verificationStatus", event.target.value)} value={listFilters.verificationStatus}>
-                  <option value="">すべて</option>
-                  {verificationOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
+          <div className="build-filter-grid">
+            <label>
+              クエスト名
+              <select
+                onChange={(event) =>
+                  updateListFilter("questName", event.target.value)
+                }
+                value={listFilters.questName}
+              >
+                <option value="">すべて</option>
+                {questOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              属性
+              <select
+                onChange={(event) =>
+                  updateListFilter("element", event.target.value)
+                }
+                value={listFilters.element}
+              >
+                <option value="">すべて</option>
+                {elementOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              加護石
+              <select
+                onChange={(event) =>
+                  updateListFilter("prerequisites", event.target.value)
+                }
+                value={listFilters.prerequisites}
+              >
+                <option value="">すべて</option>
+                {prerequisiteOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </label>
 
-              {listFilters.category !== "周回・武器集め用" && (
-                <>
-                  <label>
-                    役割
-                    <select onChange={(event) => updateListFilter("role", event.target.value)} value={listFilters.role}>
-                      <option value="">すべて</option>
-                      {roleOptions.map((option) => (
-                        <option key={option}>{option}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="checkbox-field">
+            <details className="advanced-search">
+              <summary>詳細検索</summary>
+              <div className="advanced-filter-grid">
+                <label className="keyword-field">
+                  キーワード
+                  <span className="input-with-icon">
+                    <Search size={16} />
                     <input
-                      checked={listFilters.hasActionNotes}
-                      onChange={(event) => updateListFilter("hasActionNotes", event.target.checked)}
-                      type="checkbox"
+                      onChange={(event) =>
+                        updateListFilter("keyword", event.target.value)
+                      }
+                      placeholder="タイトル、キャラ名、召喚石名、武器名、メモ"
+                      value={listFilters.keyword}
                     />
-                    行動メモあり
-                  </label>
-                </>
-              )}
+                  </span>
+                </label>
+                <label>
+                  投稿種別
+                  <select
+                    onChange={(event) =>
+                      updateListFilter("sourceType", event.target.value)
+                    }
+                    value={listFilters.sourceType}
+                  >
+                    {sourceTypeOptions.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  目的
+                  <select
+                    onChange={(event) =>
+                      updateListFilter("purpose", event.target.value)
+                    }
+                    value={listFilters.purpose}
+                  >
+                    <option value="">すべて</option>
+                    {visiblePurposeOptions.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  操作タイプ
+                  <select
+                    onChange={(event) =>
+                      updateListFilter("operationType", event.target.value)
+                    }
+                    value={listFilters.operationType}
+                  >
+                    <option value="">すべて</option>
+                    {operationOptions.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  検証状態
+                  <select
+                    onChange={(event) =>
+                      updateListFilter("verificationStatus", event.target.value)
+                    }
+                    value={listFilters.verificationStatus}
+                  >
+                    <option value="">すべて</option>
+                    {verificationOptions.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                </label>
 
-              {listFilters.category !== "高難度攻略用" && (
-                <>
-                  <label>
-                    自発 / 救援
-                    <select onChange={(event) => updateListFilter("raidRole", event.target.value)} value={listFilters.raidRole}>
-                      <option value="">すべて</option>
-                      {raidRoleOptions.map((option) => (
-                        <option key={option}>{option}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    青箱狙い
-                    <select onChange={(event) => updateListFilter("blueChest", event.target.value)} value={listFilters.blueChest}>
-                      <option value="">すべて</option>
-                      {blueChestOptions.map((option) => (
-                        <option key={option}>{option}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    安定度
-                    <select onChange={(event) => updateListFilter("stability", event.target.value)} value={listFilters.stability}>
-                      <option value="">すべて</option>
-                      {stabilityOptions.map((option) => (
-                        <option key={option}>{option}</option>
-                      ))}
-                    </select>
-                  </label>
-                </>
-              )}
+                {listFilters.category !== "周回・武器集め用" && (
+                  <>
+                    <label>
+                      役割
+                      <select
+                        onChange={(event) =>
+                          updateListFilter("role", event.target.value)
+                        }
+                        value={listFilters.role}
+                      >
+                        <option value="">すべて</option>
+                        {roleOptions.map((option) => (
+                          <option key={option}>{option}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="checkbox-field">
+                      <input
+                        checked={listFilters.hasActionNotes}
+                        onChange={(event) =>
+                          updateListFilter(
+                            "hasActionNotes",
+                            event.target.checked,
+                          )
+                        }
+                        type="checkbox"
+                      />
+                      行動メモあり
+                    </label>
+                  </>
+                )}
 
-              <label className="checkbox-field">
-                <input
-                  checked={listFilters.hasReferenceUrls}
-                  onChange={(event) => updateListFilter("hasReferenceUrls", event.target.checked)}
-                  type="checkbox"
-                />
-                参考URLあり
-              </label>
-            </div>
-          </details>
-        </div>
+                {listFilters.category !== "高難度攻略用" && (
+                  <>
+                    <label>
+                      自発 / 救援
+                      <select
+                        onChange={(event) =>
+                          updateListFilter("raidRole", event.target.value)
+                        }
+                        value={listFilters.raidRole}
+                      >
+                        <option value="">すべて</option>
+                        {raidRoleOptions.map((option) => (
+                          <option key={option}>{option}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      青箱狙い
+                      <select
+                        onChange={(event) =>
+                          updateListFilter("blueChest", event.target.value)
+                        }
+                        value={listFilters.blueChest}
+                      >
+                        <option value="">すべて</option>
+                        {blueChestOptions.map((option) => (
+                          <option key={option}>{option}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      安定度
+                      <select
+                        onChange={(event) =>
+                          updateListFilter("stability", event.target.value)
+                        }
+                        value={listFilters.stability}
+                      >
+                        <option value="">すべて</option>
+                        {stabilityOptions.map((option) => (
+                          <option key={option}>{option}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </>
+                )}
 
-        <div className="build-search-summary">
-          <strong>{filteredListItems.length}</strong>
-          <span>件表示 / 全{listItems.length}件</span>
-        </div>
+                <label className="checkbox-field">
+                  <input
+                    checked={listFilters.hasReferenceUrls}
+                    onChange={(event) =>
+                      updateListFilter("hasReferenceUrls", event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  参考URLあり
+                </label>
+              </div>
+            </details>
+          </div>
 
-        <div className="build-search-list">
-          {filteredListItems.map((item) => (
-            <BuildListCard
-              canDelete={item.post?.ownerId === user?.id}
-              item={item}
-              key={`${item.sourceType}-${item.id}`}
-              onOpenDetail={(target) => navigate(detailPath(target))}
-              onApplyPreset={applyPreset}
-              onCopyPost={copyPost}
-              onDeletePost={deletePost}
-            />
-          ))}
-          {filteredListItems.length === 0 && <div className="empty-state">条件に合う編成はまだありません。</div>}
-        </div>
-      </section>
+          <div className="build-search-summary">
+            <strong>{filteredListItems.length}</strong>
+            <span>件表示 / 全{listItems.length}件</span>
+          </div>
+
+          <div className="build-search-list">
+            {filteredListItems.map((item) => (
+              <BuildListCard
+                canDelete={item.post?.ownerId === user?.id}
+                item={item}
+                key={`${item.sourceType}-${item.id}`}
+                onOpenDetail={(target) => navigate(detailPath(target))}
+                onApplyPreset={applyPreset}
+                onCopyPost={copyPost}
+                onDeletePost={deletePost}
+              />
+            ))}
+            {filteredListItems.length === 0 && (
+              <div className="empty-state">
+                条件に合う編成はまだありません。
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {activeBuildTab === "form" && (
-      <section className="content-grid">
-        <BuildFormSteps
-          error={error}
-          editMode={Boolean(editingPostId)}
-          form={form}
-          isSubmitting={false}
-          onApplyPreset={applyPreset}
-          onCancel={() => {
-            resetForm();
-            setActiveBuildTab("search");
-          }}
-          onFormChange={setForm}
-          onSubmit={submit}
-          presets={presets}
-        />
-      </section>
+        <section className="content-grid">
+          <BuildFormSteps
+            error={error}
+            editMode={Boolean(editingPostId)}
+            form={form}
+            isSubmitting={false}
+            onApplyPreset={applyPreset}
+            onCancel={() => {
+              resetForm();
+              setActiveBuildTab("search");
+            }}
+            onFormChange={setForm}
+            onSubmit={submit}
+            presets={presets}
+          />
+        </section>
       )}
     </div>
   );

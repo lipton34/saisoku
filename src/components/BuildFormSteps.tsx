@@ -6,36 +6,86 @@ import {
   type BuildPreset,
   type BuildReferenceUrl,
   type BuildSummonDetail,
-  type BuildWeaponDetail
+  type BuildWeaponDetail,
 } from "../lib/api";
-import { buildMasterOptions, findBuildMaster, type BuildMasterKind, type BuildMasterItem } from "../lib/buildMasters";
+import {
+  buildMasterOptions,
+  findBuildMaster,
+  type BuildMasterKind,
+  type BuildMasterItem,
+} from "../lib/buildMasters";
 
 type FormStep = 1 | 2 | 3 | 4 | 5;
-type PartBucket = "requiredParts" | "recommendedParts" | "substitutableParts" | "freeSlots";
+type PartBucket =
+  | "requiredParts"
+  | "recommendedParts"
+  | "substitutableParts"
+  | "freeSlots";
 
 const steps: { id: FormStep; label: string; title: string }[] = [
   { id: 1, label: "基本", title: "基本情報入力" },
   { id: 2, label: "キャラ", title: "主人公ジョブ + キャラ選択" },
   { id: 3, label: "武器", title: "武器選択" },
   { id: 4, label: "召喚石", title: "召喚石選択" },
-  { id: 5, label: "その他", title: "その他情報入力" }
+  { id: 5, label: "その他", title: "その他情報入力" },
 ];
 
 const categoryOptions = ["高難度攻略用", "周回・武器集め用"];
 const elementOptions = ["火", "水", "土", "風", "光", "闇"];
 const operationOptions = ["手動", "フルオート", "セミオート", "未指定"];
-const verificationOptions = ["未検証", "投稿者クリア済", "団内クリア済", "要調整"];
-const highDifficultyPurposeOptions = ["団内挑戦", "団内練習", "個人練習", "ソロ挑戦", "クリア編成", "参考メモ"];
-const farmingPurposeOptions = ["周回向け", "自発向け", "救援向け", "青箱狙い", "参考メモ"];
-const questOptions = ["ルシゼロ", "天元HL", "天元HLフリークエスト", "ルシゼロ系フリークエスト", "ムゲンHL", "ディアスポラHL", "ジークフリートHL", "シエテHL", "コスモスHL", "アガスティアHL"];
+const verificationOptions = [
+  "未検証",
+  "投稿者クリア済",
+  "団内クリア済",
+  "要調整",
+];
+const highDifficultyPurposeOptions = [
+  "団内挑戦",
+  "団内練習",
+  "個人練習",
+  "ソロ挑戦",
+  "クリア編成",
+  "参考メモ",
+];
+const farmingPurposeOptions = [
+  "周回向け",
+  "自発向け",
+  "救援向け",
+  "青箱狙い",
+  "参考メモ",
+];
+const questOptions = [
+  "ルシゼロ",
+  "天元HL",
+  "天元HLフリークエスト",
+  "ルシゼロ系フリークエスト",
+  "ムゲンHL",
+  "ディアスポラHL",
+  "ジークフリートHL",
+  "シエテHL",
+  "コスモスHL",
+  "アガスティアHL",
+];
 const jobOptions = buildMasterOptions.jobs.map((item) => item.name);
 const importanceOptions = ["必須", "推奨", "代用可", "自由枠"];
 const characterPositionOptions = ["フロント", "サブ", "任意"];
-const summonPositionOptions = ["メイン", "フレンド", "サブ", "サブ加護", "任意"];
+const summonPositionOptions = [
+  "メイン",
+  "フレンド",
+  "サブ",
+  "サブ加護",
+  "任意",
+];
 const blueChestOptions = ["あり", "なし", "未指定"];
 const stabilityOptions = ["安定", "たまに失敗", "要手動確認", "未指定"];
 const prerequisiteOptions = ["マグナ", "神石", "片面"];
-const referenceTypeOptions = ["攻略記事", "YouTube", "X", "note / ブログ", "その他"];
+const referenceTypeOptions = [
+  "攻略記事",
+  "YouTube",
+  "X",
+  "note / ブログ",
+  "その他",
+];
 const raidRoleOptions = ["自発", "救援", "どちらでも"];
 
 const emptyCharacterDetail: BuildCharacterDetail = {
@@ -43,7 +93,7 @@ const emptyCharacterDetail: BuildCharacterDetail = {
   name: "",
   importance: "自由枠",
   roleMemo: "",
-  substituteMemo: ""
+  substituteMemo: "",
 };
 
 const emptySummonDetail: BuildSummonDetail = {
@@ -51,7 +101,7 @@ const emptySummonDetail: BuildSummonDetail = {
   name: "",
   importance: "自由枠",
   usageMemo: "",
-  substituteMemo: ""
+  substituteMemo: "",
 };
 
 const emptyWeaponDetail: BuildWeaponDetail = {
@@ -59,7 +109,7 @@ const emptyWeaponDetail: BuildWeaponDetail = {
   importance: "自由枠",
   count: "",
   usageMemo: "",
-  substituteMemo: ""
+  substituteMemo: "",
 };
 
 interface BuildFormStepsProps {
@@ -79,7 +129,15 @@ function masterMeta(master: BuildMasterItem | undefined) {
     return "候補外 / 自由入力";
   }
 
-  return [master.element, master.rarity, master.weaponType, master.series, ...(master.tags ?? [])].filter(Boolean).join(" / ");
+  return [
+    master.element,
+    master.rarity,
+    master.weaponType,
+    master.series,
+    ...(master.tags ?? []),
+  ]
+    .filter(Boolean)
+    .join(" / ");
 }
 
 function partOptions(kind: Exclude<BuildMasterKind, "job">) {
@@ -93,16 +151,22 @@ function partOptions(kind: Exclude<BuildMasterKind, "job">) {
 }
 
 function partKindLabel(kind: Exclude<BuildMasterKind, "job">) {
-  return kind === "character" ? "キャラ" : kind === "summon" ? "召喚石" : "武器";
+  return kind === "character"
+    ? "キャラ"
+    : kind === "summon"
+      ? "召喚石"
+      : "武器";
 }
 
 function uniqueParts(form: BuildPostInput) {
   return Array.from(
-    new Set([
-      ...form.characterDetails.map((item) => item.name.trim()),
-      ...form.weaponDetails.map((item) => item.name.trim()),
-      ...form.summonDetails.map((item) => item.name.trim())
-    ].filter(Boolean))
+    new Set(
+      [
+        ...form.characterDetails.map((item) => item.name.trim()),
+        ...form.weaponDetails.map((item) => item.name.trim()),
+        ...form.summonDetails.map((item) => item.name.trim()),
+      ].filter(Boolean),
+    ),
   );
 }
 
@@ -113,12 +177,26 @@ function linesToArray(value: string) {
     .filter(Boolean);
 }
 
-function PartThumbnail({ kind, name }: { kind: BuildMasterKind; name: string }) {
+function PartThumbnail({
+  kind,
+  name,
+}: {
+  kind: BuildMasterKind;
+  name: string;
+}) {
   const master = findBuildMaster(kind, name);
   const label = name.trim().slice(0, 2) || "?";
 
   if (master?.thumbnailUrl) {
-    return <img alt={name} className="part-thumbnail" loading="lazy" src={master.thumbnailUrl} title={name} />;
+    return (
+      <img
+        alt={name}
+        className="part-thumbnail"
+        loading="lazy"
+        src={master.thumbnailUrl}
+        title={name}
+      />
+    );
   }
 
   return <span className={`part-thumbnail fallback ${kind}`}>{label}</span>;
@@ -131,7 +209,7 @@ function PartSlot({
   meta,
   active,
   onClick,
-  onClear
+  onClear,
 }: {
   kind: BuildMasterKind;
   label: string;
@@ -142,7 +220,11 @@ function PartSlot({
   onClear: () => void;
 }) {
   return (
-    <button className={`formation-slot ${active ? "active" : ""}`} onClick={onClick} type="button">
+    <button
+      className={`formation-slot ${active ? "active" : ""}`}
+      onClick={onClick}
+      type="button"
+    >
       <PartThumbnail kind={kind} name={name} />
       <span className="formation-slot-body">
         <small>{label}</small>
@@ -172,7 +254,7 @@ function PartCandidateBrowser({
   activeName,
   query,
   onQueryChange,
-  onSelect
+  onSelect,
 }: {
   kind: Exclude<BuildMasterKind, "job">;
   activeName: string;
@@ -188,11 +270,18 @@ function PartCandidateBrowser({
     }
 
     return options.filter((item) =>
-      [item.name, item.element, item.rarity, item.weaponType, item.series, ...(item.tags ?? [])]
+      [
+        item.name,
+        item.element,
+        item.rarity,
+        item.weaponType,
+        item.series,
+        ...(item.tags ?? []),
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
-        .includes(normalizedQuery)
+        .includes(normalizedQuery),
     );
   }, [normalizedQuery, options]);
 
@@ -213,7 +302,11 @@ function PartCandidateBrowser({
         </label>
       </div>
 
-      <div className="part-browser-tabs" role="tablist" aria-label={`${partKindLabel(kind)}選択表示`}>
+      <div
+        className="part-browser-tabs"
+        role="tablist"
+        aria-label={`${partKindLabel(kind)}選択表示`}
+      >
         <span className="active">候補一覧</span>
         <span className={normalizedQuery ? "active" : ""}>検索結果</span>
         <span>{candidates.length}件</span>
@@ -237,7 +330,11 @@ function PartCandidateBrowser({
         ))}
       </div>
 
-      {candidates.length === 0 && <div className="empty-state">候補にありません。選択中の枠に自由入力できます。</div>}
+      {candidates.length === 0 && (
+        <div className="empty-state">
+          候補にありません。選択中の枠に自由入力できます。
+        </div>
+      )}
     </div>
   );
 }
@@ -251,7 +348,7 @@ export function BuildFormSteps({
   isSubmitting = false,
   error = "",
   presets = [],
-  editMode = false
+  editMode = false,
 }: BuildFormStepsProps) {
   const [currentStep, setCurrentStep] = useState<FormStep>(1);
   const [showPresetModal, setShowPresetModal] = useState(false);
@@ -262,7 +359,10 @@ export function BuildFormSteps({
   const [weaponQuery, setWeaponQuery] = useState("");
   const [summonQuery, setSummonQuery] = useState("");
 
-  const purposeOptions = form.category === "周回・武器集め用" ? farmingPurposeOptions : highDifficultyPurposeOptions;
+  const purposeOptions =
+    form.category === "周回・武器集め用"
+      ? farmingPurposeOptions
+      : highDifficultyPurposeOptions;
   const selectedParts = useMemo(() => uniqueParts(form), [form]);
   const filteredPresets = useMemo(
     () =>
@@ -270,34 +370,54 @@ export function BuildFormSteps({
         (preset) =>
           preset.category === form.category &&
           (!form.questName || preset.questName === form.questName) &&
-          (!form.element || preset.element === form.element)
+          (!form.element || preset.element === form.element),
       ),
-    [form.category, form.element, form.questName, presets]
+    [form.category, form.element, form.questName, presets],
   );
   const visiblePresets = filteredPresets.length > 0 ? filteredPresets : presets;
 
-  function updateField<K extends keyof BuildPostInput>(key: K, value: BuildPostInput[K]) {
+  function updateField<K extends keyof BuildPostInput>(
+    key: K,
+    value: BuildPostInput[K],
+  ) {
     onFormChange({ ...form, [key]: value });
   }
 
-  function updateCharacter(index: number, value: Partial<BuildCharacterDetail>) {
-    const characterDetails = form.characterDetails.map((item, itemIndex) => (itemIndex === index ? { ...item, ...value } : item));
+  function updateCharacter(
+    index: number,
+    value: Partial<BuildCharacterDetail>,
+  ) {
+    const characterDetails = form.characterDetails.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, ...value } : item,
+    );
     onFormChange({ ...form, characterDetails });
   }
 
   function addCharacter(position = "任意") {
-    onFormChange({ ...form, characterDetails: [...form.characterDetails, { ...emptyCharacterDetail, position }] });
+    onFormChange({
+      ...form,
+      characterDetails: [
+        ...form.characterDetails,
+        { ...emptyCharacterDetail, position },
+      ],
+    });
     setActiveCharacterIndex(form.characterDetails.length);
   }
 
   function removeCharacter(index: number) {
-    const characterDetails = form.characterDetails.filter((_, itemIndex) => itemIndex !== index);
+    const characterDetails = form.characterDetails.filter(
+      (_, itemIndex) => itemIndex !== index,
+    );
     onFormChange({ ...form, characterDetails });
-    setActiveCharacterIndex(Math.max(0, Math.min(index, characterDetails.length - 1)));
+    setActiveCharacterIndex(
+      Math.max(0, Math.min(index, characterDetails.length - 1)),
+    );
   }
 
   function updateWeapon(index: number, value: Partial<BuildWeaponDetail>) {
-    const weaponDetails = form.weaponDetails.map((item, itemIndex) => (itemIndex === index ? { ...item, ...value } : item));
+    const weaponDetails = form.weaponDetails.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, ...value } : item,
+    );
     onFormChange({ ...form, weaponDetails });
   }
 
@@ -305,7 +425,10 @@ export function BuildFormSteps({
     if (form.weaponDetails.length >= 13) {
       return;
     }
-    onFormChange({ ...form, weaponDetails: [...form.weaponDetails, emptyWeaponDetail] });
+    onFormChange({
+      ...form,
+      weaponDetails: [...form.weaponDetails, emptyWeaponDetail],
+    });
     setActiveWeaponIndex(form.weaponDetails.length);
   }
 
@@ -319,38 +442,67 @@ export function BuildFormSteps({
   }
 
   function removeWeapon(index: number) {
-    const weaponDetails = form.weaponDetails.filter((_, itemIndex) => itemIndex !== index);
+    const weaponDetails = form.weaponDetails.filter(
+      (_, itemIndex) => itemIndex !== index,
+    );
     onFormChange({ ...form, weaponDetails });
-    setActiveWeaponIndex(Math.max(0, Math.min(index, weaponDetails.length - 1)));
+    setActiveWeaponIndex(
+      Math.max(0, Math.min(index, weaponDetails.length - 1)),
+    );
   }
 
   function updateSummon(index: number, value: Partial<BuildSummonDetail>) {
-    const summonDetails = form.summonDetails.map((item, itemIndex) => (itemIndex === index ? { ...item, ...value } : item));
+    const summonDetails = form.summonDetails.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, ...value } : item,
+    );
     onFormChange({ ...form, summonDetails });
   }
 
   function addSummon(position = "任意") {
-    onFormChange({ ...form, summonDetails: [...form.summonDetails, { ...emptySummonDetail, position }] });
+    onFormChange({
+      ...form,
+      summonDetails: [
+        ...form.summonDetails,
+        { ...emptySummonDetail, position },
+      ],
+    });
     setActiveSummonIndex(form.summonDetails.length);
   }
 
   function removeSummon(index: number) {
-    const summonDetails = form.summonDetails.filter((_, itemIndex) => itemIndex !== index);
+    const summonDetails = form.summonDetails.filter(
+      (_, itemIndex) => itemIndex !== index,
+    );
     onFormChange({ ...form, summonDetails });
-    setActiveSummonIndex(Math.max(0, Math.min(index, summonDetails.length - 1)));
+    setActiveSummonIndex(
+      Math.max(0, Math.min(index, summonDetails.length - 1)),
+    );
   }
 
   function updateReference(index: number, value: Partial<BuildReferenceUrl>) {
-    const referenceUrls = form.referenceUrls.map((item, itemIndex) => (itemIndex === index ? { ...item, ...value } : item));
+    const referenceUrls = form.referenceUrls.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, ...value } : item,
+    );
     onFormChange({ ...form, referenceUrls });
   }
 
   function addReference() {
-    onFormChange({ ...form, referenceUrls: [...form.referenceUrls, { type: "その他", title: "", url: "", memo: "" }] });
+    onFormChange({
+      ...form,
+      referenceUrls: [
+        ...form.referenceUrls,
+        { type: "その他", title: "", url: "", memo: "" },
+      ],
+    });
   }
 
   function removeReference(index: number) {
-    onFormChange({ ...form, referenceUrls: form.referenceUrls.filter((_, itemIndex) => itemIndex !== index) });
+    onFormChange({
+      ...form,
+      referenceUrls: form.referenceUrls.filter(
+        (_, itemIndex) => itemIndex !== index,
+      ),
+    });
   }
 
   function addPartToBucket(bucket: PartBucket, partName: string) {
@@ -363,7 +515,15 @@ export function BuildFormSteps({
 
   function stepIsValid(step: FormStep) {
     if (step === 1) {
-      return Boolean(form.title && form.category && form.questName && form.element && form.purpose && form.operationType && form.verificationStatus);
+      return Boolean(
+        form.title &&
+        form.category &&
+        form.questName &&
+        form.element &&
+        form.purpose &&
+        form.operationType &&
+        form.verificationStatus,
+      );
     }
     return true;
   }
@@ -373,9 +533,18 @@ export function BuildFormSteps({
     await onSubmit(form);
   }
 
-  const safeCharacterIndex = form.characterDetails.length > 0 ? Math.min(activeCharacterIndex, form.characterDetails.length - 1) : 0;
-  const safeWeaponIndex = form.weaponDetails.length > 0 ? Math.min(activeWeaponIndex, form.weaponDetails.length - 1) : 0;
-  const safeSummonIndex = form.summonDetails.length > 0 ? Math.min(activeSummonIndex, form.summonDetails.length - 1) : 0;
+  const safeCharacterIndex =
+    form.characterDetails.length > 0
+      ? Math.min(activeCharacterIndex, form.characterDetails.length - 1)
+      : 0;
+  const safeWeaponIndex =
+    form.weaponDetails.length > 0
+      ? Math.min(activeWeaponIndex, form.weaponDetails.length - 1)
+      : 0;
+  const safeSummonIndex =
+    form.summonDetails.length > 0
+      ? Math.min(activeSummonIndex, form.summonDetails.length - 1)
+      : 0;
   const activeCharacter = form.characterDetails[safeCharacterIndex];
   const activeWeapon = form.weaponDetails[safeWeaponIndex];
   const activeSummon = form.summonDetails[safeSummonIndex];
@@ -398,7 +567,10 @@ export function BuildFormSteps({
           </div>
           <div className="steps-labels">
             {steps.map((step) => (
-              <span className={currentStep === step.id ? "active" : ""} key={step.id}>
+              <span
+                className={currentStep === step.id ? "active" : ""}
+                key={step.id}
+              >
                 {step.label}
               </span>
             ))}
@@ -413,7 +585,11 @@ export function BuildFormSteps({
                   <p className="eyebrow">Step 1</p>
                   <h2>{steps[0].title}</h2>
                 </div>
-                <button className="secondary-button" onClick={() => setShowPresetModal(true)} type="button">
+                <button
+                  className="secondary-button"
+                  onClick={() => setShowPresetModal(true)}
+                  type="button"
+                >
                   プリセットを使う
                 </button>
               </div>
@@ -421,14 +597,27 @@ export function BuildFormSteps({
               <div className="form-row">
                 <label>
                   編成タイトル *
-                  <input onChange={(event) => updateField("title", event.target.value)} placeholder="例：ルシゼロ水剣豪 初挑戦向け" required value={form.title} />
+                  <input
+                    onChange={(event) =>
+                      updateField("title", event.target.value)
+                    }
+                    placeholder="例：ルシゼロ水剣豪 初挑戦向け"
+                    required
+                    value={form.title}
+                  />
                 </label>
               </div>
 
               <div className="form-row">
                 <label>
                   クエスト分類 *
-                  <select onChange={(event) => updateField("category", event.target.value)} required value={form.category}>
+                  <select
+                    onChange={(event) =>
+                      updateField("category", event.target.value)
+                    }
+                    required
+                    value={form.category}
+                  >
                     {categoryOptions.map((option) => (
                       <option key={option}>{option}</option>
                     ))}
@@ -436,14 +625,27 @@ export function BuildFormSteps({
                 </label>
                 <label>
                   クエスト名 *
-                  <input list="build-quest-options" onChange={(event) => updateField("questName", event.target.value)} required value={form.questName} />
+                  <input
+                    list="build-quest-options"
+                    onChange={(event) =>
+                      updateField("questName", event.target.value)
+                    }
+                    required
+                    value={form.questName}
+                  />
                 </label>
               </div>
 
               <div className="form-row">
                 <label>
                   属性 *
-                  <select onChange={(event) => updateField("element", event.target.value)} required value={form.element}>
+                  <select
+                    onChange={(event) =>
+                      updateField("element", event.target.value)
+                    }
+                    required
+                    value={form.element}
+                  >
                     <option value="">選択してください</option>
                     {elementOptions.map((option) => (
                       <option key={option}>{option}</option>
@@ -452,7 +654,13 @@ export function BuildFormSteps({
                 </label>
                 <label>
                   目的 *
-                  <select onChange={(event) => updateField("purpose", event.target.value)} required value={form.purpose}>
+                  <select
+                    onChange={(event) =>
+                      updateField("purpose", event.target.value)
+                    }
+                    required
+                    value={form.purpose}
+                  >
                     <option value="">選択してください</option>
                     {purposeOptions.map((option) => (
                       <option key={option}>{option}</option>
@@ -464,7 +672,13 @@ export function BuildFormSteps({
               <div className="form-row">
                 <label>
                   操作タイプ *
-                  <select onChange={(event) => updateField("operationType", event.target.value)} required value={form.operationType}>
+                  <select
+                    onChange={(event) =>
+                      updateField("operationType", event.target.value)
+                    }
+                    required
+                    value={form.operationType}
+                  >
                     {operationOptions.map((option) => (
                       <option key={option}>{option}</option>
                     ))}
@@ -472,7 +686,13 @@ export function BuildFormSteps({
                 </label>
                 <label>
                   検証状態 *
-                  <select onChange={(event) => updateField("verificationStatus", event.target.value)} required value={form.verificationStatus}>
+                  <select
+                    onChange={(event) =>
+                      updateField("verificationStatus", event.target.value)
+                    }
+                    required
+                    value={form.verificationStatus}
+                  >
                     {verificationOptions.map((option) => (
                       <option key={option}>{option}</option>
                     ))}
@@ -482,13 +702,23 @@ export function BuildFormSteps({
 
               <label>
                 概要メモ
-                <textarea onChange={(event) => updateField("overview", event.target.value)} rows={3} value={form.overview} />
+                <textarea
+                  onChange={(event) =>
+                    updateField("overview", event.target.value)
+                  }
+                  rows={3}
+                  value={form.overview}
+                />
               </label>
 
               {filteredPresets.length > 0 && (
                 <div className="preset-suggestion">
                   条件に合うプリセットが {filteredPresets.length} 件あります。
-                  <button className="secondary-button" onClick={() => setShowPresetModal(true)} type="button">
+                  <button
+                    className="secondary-button"
+                    onClick={() => setShowPresetModal(true)}
+                    type="button"
+                  >
                     選択する
                   </button>
                 </div>
@@ -510,7 +740,12 @@ export function BuildFormSteps({
               <div className="job-picker">
                 <label>
                   主人公ジョブ
-                  <select onChange={(event) => updateField("protagonistJob", event.target.value)} value={form.protagonistJob}>
+                  <select
+                    onChange={(event) =>
+                      updateField("protagonistJob", event.target.value)
+                    }
+                    value={form.protagonistJob}
+                  >
                     <option value="">選択してください</option>
                     {jobOptions.map((option) => (
                       <option key={option}>{option}</option>
@@ -520,8 +755,12 @@ export function BuildFormSteps({
                 <div className="job-preview">
                   <PartThumbnail kind="job" name={form.protagonistJob} />
                   <div>
-                    <strong>{form.protagonistJob || "主人公ジョブ未選択"}</strong>
-                    <span>{masterMeta(findBuildMaster("job", form.protagonistJob))}</span>
+                    <strong>
+                      {form.protagonistJob || "主人公ジョブ未選択"}
+                    </strong>
+                    <span>
+                      {masterMeta(findBuildMaster("job", form.protagonistJob))}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -531,11 +770,19 @@ export function BuildFormSteps({
                   <div className="section-header">
                     <h3>選択済み枠</h3>
                     <div className="inline-actions">
-                      <button className="secondary-button" onClick={() => addCharacter("フロント")} type="button">
+                      <button
+                        className="secondary-button"
+                        onClick={() => addCharacter("フロント")}
+                        type="button"
+                      >
                         <Plus size={16} />
                         フロント
                       </button>
-                      <button className="secondary-button" onClick={() => addCharacter("サブ")} type="button">
+                      <button
+                        className="secondary-button"
+                        onClick={() => addCharacter("サブ")}
+                        type="button"
+                      >
                         <Plus size={16} />
                         サブ
                       </button>
@@ -557,13 +804,24 @@ export function BuildFormSteps({
                     ))}
                   </div>
 
-                  {form.characterDetails.length === 0 && <div className="empty-state">フロントまたはサブ枠を追加してください。</div>}
+                  {form.characterDetails.length === 0 && (
+                    <div className="empty-state">
+                      フロントまたはサブ枠を追加してください。
+                    </div>
+                  )}
 
                   {activeCharacter && (
                     <div className="slot-editor">
                       <label>
                         配置
-                        <select onChange={(event) => updateCharacter(safeCharacterIndex, { position: event.target.value })} value={activeCharacter.position}>
+                        <select
+                          onChange={(event) =>
+                            updateCharacter(safeCharacterIndex, {
+                              position: event.target.value,
+                            })
+                          }
+                          value={activeCharacter.position}
+                        >
                           {characterPositionOptions.map((option) => (
                             <option key={option}>{option}</option>
                           ))}
@@ -571,11 +829,26 @@ export function BuildFormSteps({
                       </label>
                       <label>
                         自由入力
-                        <input onChange={(event) => updateCharacter(safeCharacterIndex, { name: event.target.value })} placeholder="候補にないキャラ名" value={activeCharacter.name} />
+                        <input
+                          onChange={(event) =>
+                            updateCharacter(safeCharacterIndex, {
+                              name: event.target.value,
+                            })
+                          }
+                          placeholder="候補にないキャラ名"
+                          value={activeCharacter.name}
+                        />
                       </label>
                       <label>
                         重要度
-                        <select onChange={(event) => updateCharacter(safeCharacterIndex, { importance: event.target.value })} value={activeCharacter.importance}>
+                        <select
+                          onChange={(event) =>
+                            updateCharacter(safeCharacterIndex, {
+                              importance: event.target.value,
+                            })
+                          }
+                          value={activeCharacter.importance}
+                        >
                           {importanceOptions.map((option) => (
                             <option key={option}>{option}</option>
                           ))}
@@ -583,13 +856,31 @@ export function BuildFormSteps({
                       </label>
                       <label>
                         役割メモ
-                        <input onChange={(event) => updateCharacter(safeCharacterIndex, { roleMemo: event.target.value })} value={activeCharacter.roleMemo} />
+                        <input
+                          onChange={(event) =>
+                            updateCharacter(safeCharacterIndex, {
+                              roleMemo: event.target.value,
+                            })
+                          }
+                          value={activeCharacter.roleMemo}
+                        />
                       </label>
                       <label>
                         代用メモ
-                        <input onChange={(event) => updateCharacter(safeCharacterIndex, { substituteMemo: event.target.value })} value={activeCharacter.substituteMemo} />
+                        <input
+                          onChange={(event) =>
+                            updateCharacter(safeCharacterIndex, {
+                              substituteMemo: event.target.value,
+                            })
+                          }
+                          value={activeCharacter.substituteMemo}
+                        />
                       </label>
-                      <button className="icon-button danger" onClick={() => removeCharacter(safeCharacterIndex)} type="button">
+                      <button
+                        className="icon-button danger"
+                        onClick={() => removeCharacter(safeCharacterIndex)}
+                        type="button"
+                      >
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -602,7 +893,16 @@ export function BuildFormSteps({
                   onQueryChange={setCharacterQuery}
                   onSelect={(name) => {
                     if (!activeCharacter) {
-                      onFormChange({ ...form, characterDetails: [{ ...emptyCharacterDetail, position: "フロント", name }] });
+                      onFormChange({
+                        ...form,
+                        characterDetails: [
+                          {
+                            ...emptyCharacterDetail,
+                            position: "フロント",
+                            name,
+                          },
+                        ],
+                      });
                       setActiveCharacterIndex(0);
                       return;
                     }
@@ -622,9 +922,26 @@ export function BuildFormSteps({
                   <h2>{steps[2].title}</h2>
                 </div>
                 <div className="inline-actions">
-                  <button className="secondary-button" onClick={() => normalizeWeaponSlots(10)} type="button">10枠</button>
-                  <button className="secondary-button" onClick={() => normalizeWeaponSlots(13)} type="button">13枠</button>
-                  <button className="secondary-button" disabled={form.weaponDetails.length >= 13} onClick={addWeapon} type="button">
+                  <button
+                    className="secondary-button"
+                    onClick={() => normalizeWeaponSlots(10)}
+                    type="button"
+                  >
+                    10枠
+                  </button>
+                  <button
+                    className="secondary-button"
+                    onClick={() => normalizeWeaponSlots(13)}
+                    type="button"
+                  >
+                    13枠
+                  </button>
+                  <button
+                    className="secondary-button"
+                    disabled={form.weaponDetails.length >= 13}
+                    onClick={addWeapon}
+                    type="button"
+                  >
                     <Plus size={16} />
                     追加
                   </button>
@@ -640,7 +957,11 @@ export function BuildFormSteps({
                         kind="weapon"
                         key={index}
                         label={`武器 ${index + 1}`}
-                        meta={weapon.count ? `${weapon.count}本 / ${weapon.importance}` : weapon.importance}
+                        meta={
+                          weapon.count
+                            ? `${weapon.count}本 / ${weapon.importance}`
+                            : weapon.importance
+                        }
                         name={weapon.name}
                         onClear={() => updateWeapon(index, { name: "" })}
                         onClick={() => setActiveWeaponIndex(index)}
@@ -648,17 +969,36 @@ export function BuildFormSteps({
                     ))}
                   </div>
 
-                  {form.weaponDetails.length === 0 && <div className="empty-state">10枠または13枠ボタンで武器枠を作成してください。</div>}
+                  {form.weaponDetails.length === 0 && (
+                    <div className="empty-state">
+                      10枠または13枠ボタンで武器枠を作成してください。
+                    </div>
+                  )}
 
                   {activeWeapon && (
                     <div className="slot-editor">
                       <label>
                         自由入力
-                        <input onChange={(event) => updateWeapon(safeWeaponIndex, { name: event.target.value })} placeholder="候補にない武器名" value={activeWeapon.name} />
+                        <input
+                          onChange={(event) =>
+                            updateWeapon(safeWeaponIndex, {
+                              name: event.target.value,
+                            })
+                          }
+                          placeholder="候補にない武器名"
+                          value={activeWeapon.name}
+                        />
                       </label>
                       <label>
                         重要度
-                        <select onChange={(event) => updateWeapon(safeWeaponIndex, { importance: event.target.value })} value={activeWeapon.importance}>
+                        <select
+                          onChange={(event) =>
+                            updateWeapon(safeWeaponIndex, {
+                              importance: event.target.value,
+                            })
+                          }
+                          value={activeWeapon.importance}
+                        >
                           {importanceOptions.map((option) => (
                             <option key={option}>{option}</option>
                           ))}
@@ -666,17 +1006,42 @@ export function BuildFormSteps({
                       </label>
                       <label>
                         本数
-                        <input onChange={(event) => updateWeapon(safeWeaponIndex, { count: event.target.value })} value={activeWeapon.count} />
+                        <input
+                          onChange={(event) =>
+                            updateWeapon(safeWeaponIndex, {
+                              count: event.target.value,
+                            })
+                          }
+                          value={activeWeapon.count}
+                        />
                       </label>
                       <label>
                         用途
-                        <input onChange={(event) => updateWeapon(safeWeaponIndex, { usageMemo: event.target.value })} value={activeWeapon.usageMemo} />
+                        <input
+                          onChange={(event) =>
+                            updateWeapon(safeWeaponIndex, {
+                              usageMemo: event.target.value,
+                            })
+                          }
+                          value={activeWeapon.usageMemo}
+                        />
                       </label>
                       <label>
                         代用
-                        <input onChange={(event) => updateWeapon(safeWeaponIndex, { substituteMemo: event.target.value })} value={activeWeapon.substituteMemo} />
+                        <input
+                          onChange={(event) =>
+                            updateWeapon(safeWeaponIndex, {
+                              substituteMemo: event.target.value,
+                            })
+                          }
+                          value={activeWeapon.substituteMemo}
+                        />
                       </label>
-                      <button className="icon-button danger" onClick={() => removeWeapon(safeWeaponIndex)} type="button">
+                      <button
+                        className="icon-button danger"
+                        onClick={() => removeWeapon(safeWeaponIndex)}
+                        type="button"
+                      >
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -689,7 +1054,10 @@ export function BuildFormSteps({
                   onQueryChange={setWeaponQuery}
                   onSelect={(name) => {
                     if (!activeWeapon) {
-                      onFormChange({ ...form, weaponDetails: [{ ...emptyWeaponDetail, name }] });
+                      onFormChange({
+                        ...form,
+                        weaponDetails: [{ ...emptyWeaponDetail, name }],
+                      });
                       setActiveWeaponIndex(0);
                       return;
                     }
@@ -709,10 +1077,34 @@ export function BuildFormSteps({
                   <h2>{steps[3].title}</h2>
                 </div>
                 <div className="inline-actions">
-                  <button className="secondary-button" onClick={() => addSummon("メイン")} type="button">メイン</button>
-                  <button className="secondary-button" onClick={() => addSummon("フレンド")} type="button">フレンド</button>
-                  <button className="secondary-button" onClick={() => addSummon("サブ")} type="button">サブ</button>
-                  <button className="secondary-button" onClick={() => addSummon("サブ加護")} type="button">サブ加護</button>
+                  <button
+                    className="secondary-button"
+                    onClick={() => addSummon("メイン")}
+                    type="button"
+                  >
+                    メイン
+                  </button>
+                  <button
+                    className="secondary-button"
+                    onClick={() => addSummon("フレンド")}
+                    type="button"
+                  >
+                    フレンド
+                  </button>
+                  <button
+                    className="secondary-button"
+                    onClick={() => addSummon("サブ")}
+                    type="button"
+                  >
+                    サブ
+                  </button>
+                  <button
+                    className="secondary-button"
+                    onClick={() => addSummon("サブ加護")}
+                    type="button"
+                  >
+                    サブ加護
+                  </button>
                 </div>
               </div>
 
@@ -733,13 +1125,24 @@ export function BuildFormSteps({
                     ))}
                   </div>
 
-                  {form.summonDetails.length === 0 && <div className="empty-state">メイン、フレンド、サブ枠を追加してください。</div>}
+                  {form.summonDetails.length === 0 && (
+                    <div className="empty-state">
+                      メイン、フレンド、サブ枠を追加してください。
+                    </div>
+                  )}
 
                   {activeSummon && (
                     <div className="slot-editor">
                       <label>
                         配置
-                        <select onChange={(event) => updateSummon(safeSummonIndex, { position: event.target.value })} value={activeSummon.position}>
+                        <select
+                          onChange={(event) =>
+                            updateSummon(safeSummonIndex, {
+                              position: event.target.value,
+                            })
+                          }
+                          value={activeSummon.position}
+                        >
                           {summonPositionOptions.map((option) => (
                             <option key={option}>{option}</option>
                           ))}
@@ -747,11 +1150,26 @@ export function BuildFormSteps({
                       </label>
                       <label>
                         自由入力
-                        <input onChange={(event) => updateSummon(safeSummonIndex, { name: event.target.value })} placeholder="候補にない召喚石名" value={activeSummon.name} />
+                        <input
+                          onChange={(event) =>
+                            updateSummon(safeSummonIndex, {
+                              name: event.target.value,
+                            })
+                          }
+                          placeholder="候補にない召喚石名"
+                          value={activeSummon.name}
+                        />
                       </label>
                       <label>
                         重要度
-                        <select onChange={(event) => updateSummon(safeSummonIndex, { importance: event.target.value })} value={activeSummon.importance}>
+                        <select
+                          onChange={(event) =>
+                            updateSummon(safeSummonIndex, {
+                              importance: event.target.value,
+                            })
+                          }
+                          value={activeSummon.importance}
+                        >
                           {importanceOptions.map((option) => (
                             <option key={option}>{option}</option>
                           ))}
@@ -759,13 +1177,31 @@ export function BuildFormSteps({
                       </label>
                       <label>
                         用途
-                        <input onChange={(event) => updateSummon(safeSummonIndex, { usageMemo: event.target.value })} value={activeSummon.usageMemo} />
+                        <input
+                          onChange={(event) =>
+                            updateSummon(safeSummonIndex, {
+                              usageMemo: event.target.value,
+                            })
+                          }
+                          value={activeSummon.usageMemo}
+                        />
                       </label>
                       <label>
                         代用
-                        <input onChange={(event) => updateSummon(safeSummonIndex, { substituteMemo: event.target.value })} value={activeSummon.substituteMemo} />
+                        <input
+                          onChange={(event) =>
+                            updateSummon(safeSummonIndex, {
+                              substituteMemo: event.target.value,
+                            })
+                          }
+                          value={activeSummon.substituteMemo}
+                        />
                       </label>
-                      <button className="icon-button danger" onClick={() => removeSummon(safeSummonIndex)} type="button">
+                      <button
+                        className="icon-button danger"
+                        onClick={() => removeSummon(safeSummonIndex)}
+                        type="button"
+                      >
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -778,7 +1214,12 @@ export function BuildFormSteps({
                   onQueryChange={setSummonQuery}
                   onSelect={(name) => {
                     if (!activeSummon) {
-                      onFormChange({ ...form, summonDetails: [{ ...emptySummonDetail, position: "サブ", name }] });
+                      onFormChange({
+                        ...form,
+                        summonDetails: [
+                          { ...emptySummonDetail, position: "サブ", name },
+                        ],
+                      });
                       setActiveSummonIndex(0);
                       return;
                     }
@@ -808,34 +1249,90 @@ export function BuildFormSteps({
                   {selectedParts.map((part) => (
                     <div className="selected-part-chip" key={part}>
                       <span>{part}</span>
-                      <button onClick={() => addPartToBucket("requiredParts", part)} type="button">必須</button>
-                      <button onClick={() => addPartToBucket("recommendedParts", part)} type="button">推奨</button>
-                      <button onClick={() => addPartToBucket("substitutableParts", part)} type="button">代用可</button>
+                      <button
+                        onClick={() => addPartToBucket("requiredParts", part)}
+                        type="button"
+                      >
+                        必須
+                      </button>
+                      <button
+                        onClick={() =>
+                          addPartToBucket("recommendedParts", part)
+                        }
+                        type="button"
+                      >
+                        推奨
+                      </button>
+                      <button
+                        onClick={() =>
+                          addPartToBucket("substitutableParts", part)
+                        }
+                        type="button"
+                      >
+                        代用可
+                      </button>
                     </div>
                   ))}
-                  {selectedParts.length === 0 && <div className="empty-state">前のステップで選択したパーツがここに表示されます。</div>}
+                  {selectedParts.length === 0 && (
+                    <div className="empty-state">
+                      前のステップで選択したパーツがここに表示されます。
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="form-row">
                 <label>
                   必須パーツ
-                  <textarea onChange={(event) => updateField("requiredParts", linesToArray(event.target.value))} rows={3} value={(form.requiredParts || []).join("\n")} />
+                  <textarea
+                    onChange={(event) =>
+                      updateField(
+                        "requiredParts",
+                        linesToArray(event.target.value),
+                      )
+                    }
+                    rows={3}
+                    value={(form.requiredParts || []).join("\n")}
+                  />
                 </label>
                 <label>
                   推奨パーツ
-                  <textarea onChange={(event) => updateField("recommendedParts", linesToArray(event.target.value))} rows={3} value={(form.recommendedParts || []).join("\n")} />
+                  <textarea
+                    onChange={(event) =>
+                      updateField(
+                        "recommendedParts",
+                        linesToArray(event.target.value),
+                      )
+                    }
+                    rows={3}
+                    value={(form.recommendedParts || []).join("\n")}
+                  />
                 </label>
               </div>
 
               <div className="form-row">
                 <label>
                   代用可パーツ
-                  <textarea onChange={(event) => updateField("substitutableParts", linesToArray(event.target.value))} rows={3} value={(form.substitutableParts || []).join("\n")} />
+                  <textarea
+                    onChange={(event) =>
+                      updateField(
+                        "substitutableParts",
+                        linesToArray(event.target.value),
+                      )
+                    }
+                    rows={3}
+                    value={(form.substitutableParts || []).join("\n")}
+                  />
                 </label>
                 <label>
                   自由枠
-                  <textarea onChange={(event) => updateField("freeSlots", linesToArray(event.target.value))} rows={3} value={(form.freeSlots || []).join("\n")} />
+                  <textarea
+                    onChange={(event) =>
+                      updateField("freeSlots", linesToArray(event.target.value))
+                    }
+                    rows={3}
+                    value={(form.freeSlots || []).join("\n")}
+                  />
                 </label>
               </div>
 
@@ -843,30 +1340,64 @@ export function BuildFormSteps({
                 <div className="form-row single-column">
                   <label>
                     役割
-                    <input onChange={(event) => updateField("role", event.target.value)} value={form.role} />
+                    <input
+                      onChange={(event) =>
+                        updateField("role", event.target.value)
+                      }
+                      value={form.role}
+                    />
                   </label>
                   <label>
                     予兆対応
-                    <textarea onChange={(event) => updateField("omenNotes", event.target.value)} rows={3} value={form.omenNotes} />
+                    <textarea
+                      onChange={(event) =>
+                        updateField("omenNotes", event.target.value)
+                      }
+                      rows={3}
+                      value={form.omenNotes}
+                    />
                   </label>
                   <label>
                     行動メモ
-                    <textarea onChange={(event) => updateField("actionNotes", event.target.value)} placeholder={"開幕\n100〜80%\n80〜60%\n60〜20%\n20〜0%"} rows={7} value={form.actionNotes} />
+                    <textarea
+                      onChange={(event) =>
+                        updateField("actionNotes", event.target.value)
+                      }
+                      placeholder={"開幕\n100〜80%\n80〜60%\n60〜20%\n20〜0%"}
+                      rows={7}
+                      value={form.actionNotes}
+                    />
                   </label>
                   <label>
                     失敗ポイント
-                    <textarea onChange={(event) => updateField("failurePoints", event.target.value)} rows={3} value={form.failurePoints} />
+                    <textarea
+                      onChange={(event) =>
+                        updateField("failurePoints", event.target.value)
+                      }
+                      rows={3}
+                      value={form.failurePoints}
+                    />
                   </label>
                 </div>
               ) : (
                 <div className="form-row">
                   <label>
                     周回目的
-                    <input onChange={(event) => updateField("farmingGoal", event.target.value)} value={form.farmingGoal} />
+                    <input
+                      onChange={(event) =>
+                        updateField("farmingGoal", event.target.value)
+                      }
+                      value={form.farmingGoal}
+                    />
                   </label>
                   <label>
                     自発／救援
-                    <select onChange={(event) => updateField("raidRole", event.target.value)} value={form.raidRole}>
+                    <select
+                      onChange={(event) =>
+                        updateField("raidRole", event.target.value)
+                      }
+                      value={form.raidRole}
+                    >
                       <option value="">未指定</option>
                       {raidRoleOptions.map((option) => (
                         <option key={option}>{option}</option>
@@ -875,7 +1406,12 @@ export function BuildFormSteps({
                   </label>
                   <label>
                     青箱狙い
-                    <select onChange={(event) => updateField("blueChest", event.target.value)} value={form.blueChest}>
+                    <select
+                      onChange={(event) =>
+                        updateField("blueChest", event.target.value)
+                      }
+                      value={form.blueChest}
+                    >
                       <option value="">未指定</option>
                       {blueChestOptions.map((option) => (
                         <option key={option}>{option}</option>
@@ -884,11 +1420,21 @@ export function BuildFormSteps({
                   </label>
                   <label>
                     討伐時間目安
-                    <input onChange={(event) => updateField("clearTime", event.target.value)} value={form.clearTime} />
+                    <input
+                      onChange={(event) =>
+                        updateField("clearTime", event.target.value)
+                      }
+                      value={form.clearTime}
+                    />
                   </label>
                   <label>
                     安定度
-                    <select onChange={(event) => updateField("stability", event.target.value)} value={form.stability}>
+                    <select
+                      onChange={(event) =>
+                        updateField("stability", event.target.value)
+                      }
+                      value={form.stability}
+                    >
                       <option value="">未指定</option>
                       {stabilityOptions.map((option) => (
                         <option key={option}>{option}</option>
@@ -897,7 +1443,12 @@ export function BuildFormSteps({
                   </label>
                   <label>
                     編成前提
-                    <select onChange={(event) => updateField("prerequisites", event.target.value)} value={form.prerequisites}>
+                    <select
+                      onChange={(event) =>
+                        updateField("prerequisites", event.target.value)
+                      }
+                      value={form.prerequisites}
+                    >
                       <option value="">未指定</option>
                       {prerequisiteOptions.map((option) => (
                         <option key={option}>{option}</option>
@@ -906,15 +1457,31 @@ export function BuildFormSteps({
                   </label>
                   <label>
                     武器集め対象
-                    <input onChange={(event) => updateField("weaponTarget", event.target.value)} value={form.weaponTarget} />
+                    <input
+                      onChange={(event) =>
+                        updateField("weaponTarget", event.target.value)
+                      }
+                      value={form.weaponTarget}
+                    />
                   </label>
                   <label>
                     救援タイミングメモ
-                    <input onChange={(event) => updateField("rescueTiming", event.target.value)} value={form.rescueTiming} />
+                    <input
+                      onChange={(event) =>
+                        updateField("rescueTiming", event.target.value)
+                      }
+                      value={form.rescueTiming}
+                    />
                   </label>
                   <label>
                     周回時の注意点
-                    <textarea onChange={(event) => updateField("farmingCautions", event.target.value)} rows={3} value={form.farmingCautions} />
+                    <textarea
+                      onChange={(event) =>
+                        updateField("farmingCautions", event.target.value)
+                      }
+                      rows={3}
+                      value={form.farmingCautions}
+                    />
                   </label>
                 </div>
               )}
@@ -922,11 +1489,23 @@ export function BuildFormSteps({
               <div className="form-row">
                 <label>
                   代用候補
-                  <textarea onChange={(event) => updateField("substituteNotes", event.target.value)} rows={3} value={form.substituteNotes} />
+                  <textarea
+                    onChange={(event) =>
+                      updateField("substituteNotes", event.target.value)
+                    }
+                    rows={3}
+                    value={form.substituteNotes}
+                  />
                 </label>
                 <label>
                   注意点
-                  <textarea onChange={(event) => updateField("cautions", event.target.value)} rows={3} value={form.cautions} />
+                  <textarea
+                    onChange={(event) =>
+                      updateField("cautions", event.target.value)
+                    }
+                    rows={3}
+                    value={form.cautions}
+                  />
                 </label>
               </div>
 
@@ -934,14 +1513,24 @@ export function BuildFormSteps({
                 <div className="form-row">
                   <label>
                     プリセット由来・変更メモ
-                    <textarea onChange={(event) => updateField("changeMemo", event.target.value)} rows={3} value={form.changeMemo ?? ""} />
+                    <textarea
+                      onChange={(event) =>
+                        updateField("changeMemo", event.target.value)
+                      }
+                      rows={3}
+                      value={form.changeMemo ?? ""}
+                    />
                   </label>
                 </div>
               )}
 
               <div className="section-header">
                 <h3>参考URL</h3>
-                <button className="secondary-button" onClick={addReference} type="button">
+                <button
+                  className="secondary-button"
+                  onClick={addReference}
+                  type="button"
+                >
                   <Plus size={16} />
                   追加
                 </button>
@@ -950,15 +1539,43 @@ export function BuildFormSteps({
               <div className="reference-list">
                 {form.referenceUrls.map((ref, index) => (
                   <div className="reference-item" key={index}>
-                    <select onChange={(event) => updateReference(index, { type: event.target.value })} value={ref.type}>
+                    <select
+                      onChange={(event) =>
+                        updateReference(index, { type: event.target.value })
+                      }
+                      value={ref.type}
+                    >
                       {referenceTypeOptions.map((option) => (
                         <option key={option}>{option}</option>
                       ))}
                     </select>
-                    <input onChange={(event) => updateReference(index, { title: event.target.value })} placeholder="タイトル" value={ref.title} />
-                    <input onChange={(event) => updateReference(index, { url: event.target.value })} placeholder="https://..." type="url" value={ref.url} />
-                    <input onChange={(event) => updateReference(index, { memo: event.target.value })} placeholder="メモ" value={ref.memo} />
-                    <button className="icon-button danger" onClick={() => removeReference(index)} type="button">
+                    <input
+                      onChange={(event) =>
+                        updateReference(index, { title: event.target.value })
+                      }
+                      placeholder="タイトル"
+                      value={ref.title}
+                    />
+                    <input
+                      onChange={(event) =>
+                        updateReference(index, { url: event.target.value })
+                      }
+                      placeholder="https://..."
+                      type="url"
+                      value={ref.url}
+                    />
+                    <input
+                      onChange={(event) =>
+                        updateReference(index, { memo: event.target.value })
+                      }
+                      placeholder="メモ"
+                      value={ref.memo}
+                    />
+                    <button
+                      className="icon-button danger"
+                      onClick={() => removeReference(index)}
+                      type="button"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -976,17 +1593,30 @@ export function BuildFormSteps({
 
           <div className="steps-nav-buttons">
             {currentStep > 1 && (
-              <button className="secondary-button" onClick={() => setCurrentStep((currentStep - 1) as FormStep)} type="button">
+              <button
+                className="secondary-button"
+                onClick={() => setCurrentStep((currentStep - 1) as FormStep)}
+                type="button"
+              >
                 戻る
               </button>
             )}
             {currentStep < 5 && (
-              <button className="primary-button" disabled={!stepIsValid(currentStep)} onClick={() => setCurrentStep((currentStep + 1) as FormStep)} type="button">
+              <button
+                className="primary-button"
+                disabled={!stepIsValid(currentStep)}
+                onClick={() => setCurrentStep((currentStep + 1) as FormStep)}
+                type="button"
+              >
                 次へ
               </button>
             )}
             {currentStep === 5 && (
-              <button className="primary-button" disabled={isSubmitting} type="submit">
+              <button
+                className="primary-button"
+                disabled={isSubmitting}
+                type="submit"
+              >
                 {editMode ? "更新する" : "投稿する"}
               </button>
             )}
@@ -995,14 +1625,24 @@ export function BuildFormSteps({
       </form>
 
       {showPresetModal && (
-        <div className="modal-overlay" onClick={() => setShowPresetModal(false)}>
-          <div className="modal-content preset-modal-content" onClick={(event) => event.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowPresetModal(false)}
+        >
+          <div
+            className="modal-content preset-modal-content"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="modal-header">
               <div>
                 <p className="eyebrow">Preset</p>
                 <h3>プリセットを使う</h3>
               </div>
-              <button className="icon-button" onClick={() => setShowPresetModal(false)} type="button">
+              <button
+                className="icon-button"
+                onClick={() => setShowPresetModal(false)}
+                type="button"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -1026,11 +1666,34 @@ export function BuildFormSteps({
                     <span className="pill">{preset.purpose}</span>
                     <span className="pill muted">{preset.presetStatus}</span>
                   </div>
-                  <small>主要パーツ: {[preset.protagonistJob, ...preset.requiredParts, ...preset.characters, ...preset.summons, ...preset.weapons].filter(Boolean).slice(0, 5).join(" / ") || "未設定"}</small>
-                  <small>参考: {preset.referenceUrls.length > 0 ? `${preset.referenceUrls.length}件あり` : "なし"} / 更新: {new Date(preset.updatedAt).toLocaleDateString("ja-JP")}</small>
+                  <small>
+                    主要パーツ:{" "}
+                    {[
+                      preset.protagonistJob,
+                      ...preset.requiredParts,
+                      ...preset.characters,
+                      ...preset.summons,
+                      ...preset.weapons,
+                    ]
+                      .filter(Boolean)
+                      .slice(0, 5)
+                      .join(" / ") || "未設定"}
+                  </small>
+                  <small>
+                    参考:{" "}
+                    {preset.referenceUrls.length > 0
+                      ? `${preset.referenceUrls.length}件あり`
+                      : "なし"}{" "}
+                    / 更新:{" "}
+                    {new Date(preset.updatedAt).toLocaleDateString("ja-JP")}
+                  </small>
                 </button>
               ))}
-              {visiblePresets.length === 0 && <div className="empty-state">利用できるプリセットはまだありません。</div>}
+              {visiblePresets.length === 0 && (
+                <div className="empty-state">
+                  利用できるプリセットはまだありません。
+                </div>
+              )}
             </div>
           </div>
         </div>
