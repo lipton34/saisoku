@@ -1915,4 +1915,34 @@ export const characterMasterSeeds: GbfMasterSeedItem[] = [
       seasonalType: "浴衣",
     },
   },
+
+  // Additional seeds: 季節限定 / ドレスアップ / SSR
+  {
+    id: "char-fraux-formal",
+    kind: GbfMasterKind.character,
+    name: "フラウ(ドレスアップ)",
+    element: "土",
+    rarity: "SSR",
+    thumbnailPath: "characters/fraux-formal.webp",
+    aliases: ["フォーマルフラウ", "ドレスアップフラウ"],
+    tags: ["季節限定", "ドレスアップ", "土"],
+    metadata: {
+      series: "季節限定",
+      seasonalType: "ドレスアップ",
+    },
+  },
+  {
+    id: "char-ilsa-formal",
+    kind: GbfMasterKind.character,
+    name: "イルザ(ドレスアップ)",
+    element: "水",
+    rarity: "SSR",
+    thumbnailPath: "characters/ilsa-formal.webp",
+    aliases: ["フォーマルイルザ", "ドレスアップイルザ"],
+    tags: ["季節限定", "ドレスアップ", "水"],
+    metadata: {
+      series: "季節限定",
+      seasonalType: "ドレスアップ",
+    },
+  },
 ];
