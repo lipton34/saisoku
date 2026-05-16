@@ -171,6 +171,7 @@ model SharedGoal {
   targetValue        Float?
   currentValue       Float?
   unit               String?
+  details            Json          @default("{}")
   progressRate       Float?
   status             String        @default("未着手")
   dueDate            DateTime?
@@ -202,6 +203,7 @@ model GoalProposal {
   description    String?
   targetValue    Float?
   unit           String?
+  details        Json        @default("{}")
   dueDate        DateTime?
   proposalMemo   String?
   status         String      @default("提案中")

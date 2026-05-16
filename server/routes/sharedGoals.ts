@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { Router } from "express";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
@@ -6,13 +7,35 @@ const router = Router();
 
 router.use(requireAuth);
 
-const goalCategories = ["古戦場", "高難度", "周回", "育成", "その他"] as const;
-const goalStatuses = ["未着手", "進行中", "達成", "中止"] as const;
+const goalCategories = ["周回", "編成", "その他"] as const;
+const standardGoalStatuses = ["未着手", "進行中", "達成", "中止"] as const;
+const otherGoalStatuses = ["未達成", "達成"] as const;
+const allGoalStatuses = [...standardGoalStatuses, ...otherGoalStatuses] as const;
 const proposalStatuses = ["提案中", "受け入れ済み", "見送り"] as const;
 
 type GoalCategory = (typeof goalCategories)[number];
-type GoalStatus = (typeof goalStatuses)[number];
+type GoalStatus = (typeof allGoalStatuses)[number];
 type ProposalStatus = (typeof proposalStatuses)[number];
+
+type FormationPart = {
+  kind: "character" | "weapon" | "summon";
+  name: string;
+  masterId?: string | null;
+  owned: boolean;
+  position?: string;
+};
+
+type GoalDetails = {
+  itemName?: string | null;
+  questName?: string | null;
+  questUrl?: string | null;
+  content?: string | null;
+  sourceBuildPostId?: string | null;
+  sourceBuildPostTitle?: string | null;
+  characters?: FormationPart[];
+  weapons?: FormationPart[];
+  summons?: FormationPart[];
+};
 
 function currentUserId(req: Parameters<Parameters<typeof router.get>[1]>[0]) {
   return req.user?.id ?? "";
@@ -31,8 +54,20 @@ function parseCategory(value: unknown): GoalCategory {
   return goalCategories.includes(value as GoalCategory) ? (value as GoalCategory) : "その他";
 }
 
-function parseGoalStatus(value: unknown, fallback: GoalStatus = "未着手"): GoalStatus {
-  return goalStatuses.includes(value as GoalStatus) ? (value as GoalStatus) : fallback;
+function parseGoalStatus(value: unknown, category: GoalCategory, fallback?: string): GoalStatus {
+  if (category === "その他") {
+    return otherGoalStatuses.includes(value as (typeof otherGoalStatuses)[number])
+      ? (value as GoalStatus)
+      : fallback === "達成"
+        ? "達成"
+        : "未達成";
+  }
+
+  return standardGoalStatuses.includes(value as (typeof standardGoalStatuses)[number])
+    ? (value as GoalStatus)
+    : standardGoalStatuses.includes(fallback as (typeof standardGoalStatuses)[number])
+      ? (fallback as GoalStatus)
+      : "未着手";
 }
 
 function parseProposalStatus(value: unknown): ProposalStatus | null {
@@ -63,6 +98,100 @@ function progressRate(targetValue: number | null, currentValue: number | null) {
   }
 
   return Math.min(100, Math.max(0, Math.round((currentValue / targetValue) * 1000) / 10));
+}
+
+function parsePart(value: unknown, kind: FormationPart["kind"]): FormationPart | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const name = parseText(record.name);
+  if (!name) {
+    return null;
+  }
+
+  return {
+    kind,
+    name,
+    masterId: parseOptionalText(record.masterId),
+    owned: Boolean(record.owned),
+    position: parseOptionalText(record.position) ?? undefined
+  };
+}
+
+function parseParts(value: unknown, kind: FormationPart["kind"]) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item) => parsePart(item, kind)).filter((item): item is FormationPart => Boolean(item));
+}
+
+function parseDetails(value: unknown, category: GoalCategory): GoalDetails {
+  const record = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+
+  if (category === "周回") {
+    return {
+      itemName: parseOptionalText(record.itemName),
+      questName: parseOptionalText(record.questName),
+      questUrl: parseOptionalText(record.questUrl)
+    };
+  }
+
+  if (category === "編成") {
+    return {
+      sourceBuildPostId: parseOptionalText(record.sourceBuildPostId),
+      sourceBuildPostTitle: parseOptionalText(record.sourceBuildPostTitle),
+      characters: parseParts(record.characters, "character"),
+      weapons: parseParts(record.weapons, "weapon"),
+      summons: parseParts(record.summons, "summon")
+    };
+  }
+
+  return {
+    content: parseOptionalText(record.content)
+  };
+}
+
+function inputJson(value: unknown): Prisma.InputJsonValue {
+  if (value && typeof value === "object") {
+    return value as Prisma.InputJsonObject;
+  }
+
+  return {};
+}
+
+function goalDataFromBody(body: Record<string, unknown>, fallback?: { category: string; status: string }) {
+  const category = "category" in body ? parseCategory(body.category) : parseCategory(fallback?.category);
+  const details = parseDetails(body.details, category);
+  const title = parseText(body.title);
+  const targetValue =
+    category === "周回"
+      ? parseOptionalNumber(body.targetValue ?? (body.details as Record<string, unknown> | undefined)?.requiredCount)
+      : null;
+  const currentValue =
+    category === "周回"
+      ? parseOptionalNumber(body.currentValue ?? (body.details as Record<string, unknown> | undefined)?.currentCount)
+      : null;
+
+  return {
+    title,
+    category,
+    description:
+      category === "その他" ? details.content ?? parseOptionalText(body.description) : parseOptionalText(body.description),
+    targetValue,
+    currentValue,
+    unit: null,
+    details: {
+      ...details,
+      ...(category === "周回" ? { requiredCount: targetValue, currentCount: currentValue } : {})
+    },
+    progressRate: category === "周回" ? progressRate(targetValue, currentValue) : null,
+    status: parseGoalStatus(body.status, category, fallback?.status),
+    dueDate: "dueDate" in body ? parseDate(body.dueDate) : undefined,
+    memo: "memo" in body ? parseOptionalText(body.memo) : undefined
+  };
 }
 
 const userSelect = {
@@ -107,27 +236,32 @@ router.get("/", async (req, res, next) => {
       where: {
         ...(userId ? { ownerId: userId } : {}),
         ...(goalCategories.includes(category as GoalCategory) ? { category } : {}),
-        ...(goalStatuses.includes(status as GoalStatus) ? { status } : {}),
+        ...(allGoalStatuses.includes(status as GoalStatus) ? { status } : {}),
         ...(due === "overdue" ? { dueDate: { lt: now }, status: { notIn: ["達成", "中止"] } } : {}),
         ...(due === "upcoming" ? { dueDate: { gte: now } } : {}),
         ...(due === "none" ? { dueDate: null } : {}),
-        ...(keyword
-          ? {
-              OR: [
-                { title: { contains: keyword, mode: "insensitive" } },
-                { description: { contains: keyword, mode: "insensitive" } },
-                { memo: { contains: keyword, mode: "insensitive" } },
-                { owner: { displayName: { contains: keyword, mode: "insensitive" } } },
-                { owner: { username: { contains: keyword, mode: "insensitive" } } }
-              ]
-            }
-          : {})
       },
       include: goalInclude,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }]
     });
 
-    res.json({ goals });
+    const normalizedKeyword = keyword.toLowerCase();
+    const filteredGoals = keyword
+      ? goals.filter((goal) =>
+          [
+            goal.title,
+            goal.description,
+            goal.memo,
+            goal.owner.displayName,
+            goal.owner.username,
+            JSON.stringify(goal.details)
+          ]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(normalizedKeyword))
+        )
+      : goals;
+
+    res.json({ goals: filteredGoals });
   } catch (error) {
     next(error);
   }
@@ -153,26 +287,25 @@ router.get("/:id", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   try {
-    const title = parseText(req.body.title);
-    if (!title) {
+    const parsed = goalDataFromBody(req.body);
+    if (!parsed.title) {
       res.status(400).json({ message: "目標タイトルを入力してください" });
       return;
     }
 
-    const targetValue = parseOptionalNumber(req.body.targetValue);
-    const currentValue = parseOptionalNumber(req.body.currentValue);
     const goal = await prisma.sharedGoal.create({
       data: {
-        title,
-        category: parseCategory(req.body.category),
-        description: parseOptionalText(req.body.description),
-        targetValue,
-        currentValue,
-        unit: parseOptionalText(req.body.unit),
-        progressRate: progressRate(targetValue, currentValue),
-        status: parseGoalStatus(req.body.status),
-        dueDate: parseDate(req.body.dueDate),
-        memo: parseOptionalText(req.body.memo),
+        title: parsed.title,
+        category: parsed.category,
+        description: parsed.description,
+        targetValue: parsed.targetValue,
+        currentValue: parsed.currentValue,
+        unit: null,
+        details: parsed.details,
+        progressRate: parsed.progressRate,
+        status: parsed.status,
+        dueDate: parsed.dueDate ?? null,
+        memo: parsed.memo ?? null,
         ownerId: currentUserId(req)
       },
       include: goalInclude
@@ -195,29 +328,34 @@ router.patch("/:id", async (req, res, next) => {
       return;
     }
 
-    const title = "title" in req.body ? parseText(req.body.title) : existing.title;
+    const parsed = goalDataFromBody(req.body, { category: existing.category, status: existing.status });
+    const title = "title" in req.body ? parsed.title : existing.title;
     if (!title) {
       res.status(400).json({ message: "目標タイトルを入力してください" });
       return;
     }
 
-    const targetValue = "targetValue" in req.body ? parseOptionalNumber(req.body.targetValue) : existing.targetValue;
+    const category = "category" in req.body ? parsed.category : parseCategory(existing.category);
+    const targetValue =
+      "targetValue" in req.body || "details" in req.body ? parsed.targetValue : existing.targetValue;
     const currentValue =
-      "currentValue" in req.body ? parseOptionalNumber(req.body.currentValue) : existing.currentValue;
+      "currentValue" in req.body || "details" in req.body ? parsed.currentValue : existing.currentValue;
 
     const goal = await prisma.sharedGoal.update({
       where: { id: existing.id },
       data: {
         title,
-        category: "category" in req.body ? parseCategory(req.body.category) : existing.category,
-        description: "description" in req.body ? parseOptionalText(req.body.description) : existing.description,
+        category,
+        description:
+          "description" in req.body || "details" in req.body ? parsed.description : existing.description,
         targetValue,
         currentValue,
-        unit: "unit" in req.body ? parseOptionalText(req.body.unit) : existing.unit,
-        progressRate: progressRate(targetValue, currentValue),
-        status: "status" in req.body ? parseGoalStatus(req.body.status, existing.status as GoalStatus) : existing.status,
-        dueDate: "dueDate" in req.body ? parseDate(req.body.dueDate) : existing.dueDate,
-        memo: "memo" in req.body ? parseOptionalText(req.body.memo) : existing.memo
+        unit: null,
+        details: "details" in req.body ? parsed.details : inputJson(existing.details),
+        progressRate: category === "周回" ? progressRate(targetValue, currentValue) : null,
+        status: "status" in req.body ? parseGoalStatus(req.body.status, category, existing.status) : existing.status,
+        dueDate: "dueDate" in req.body ? parsed.dueDate ?? null : existing.dueDate,
+        memo: "memo" in req.body ? parsed.memo ?? null : existing.memo
       },
       include: goalInclude
     });
@@ -248,10 +386,10 @@ router.get("/proposals/inbox/list", async (req, res, next) => {
 
 router.post("/proposals", async (req, res, next) => {
   try {
-    const title = parseText(req.body.title);
     const targetUserId = parseText(req.body.targetUserId);
+    const parsed = goalDataFromBody(req.body);
 
-    if (!title || !targetUserId) {
+    if (!parsed.title || !targetUserId) {
       res.status(400).json({ message: "提案先と目標タイトルを入力してください" });
       return;
     }
@@ -271,12 +409,13 @@ router.post("/proposals", async (req, res, next) => {
       data: {
         proposerUserId: currentUserId(req),
         targetUserId,
-        title,
-        category: parseCategory(req.body.category),
-        description: parseOptionalText(req.body.description),
-        targetValue: parseOptionalNumber(req.body.targetValue),
-        unit: parseOptionalText(req.body.unit),
-        dueDate: parseDate(req.body.dueDate),
+        title: parsed.title,
+        category: parsed.category,
+        description: parsed.description,
+        targetValue: parsed.targetValue,
+        unit: null,
+        details: parsed.details,
+        dueDate: parsed.dueDate ?? null,
         proposalMemo: parseOptionalText(req.body.proposalMemo)
       },
       include: proposalInclude
@@ -304,18 +443,24 @@ router.post("/proposals/:id/accept", async (req, res, next) => {
       return;
     }
 
+    const category = parseCategory(existing.category);
     const result = await prisma.$transaction(async (tx) => {
-      const targetValue = existing.targetValue;
+      const targetValue = category === "周回" ? existing.targetValue : null;
+      const currentValue = category === "周回" ? 0 : null;
       const goal = await tx.sharedGoal.create({
         data: {
           title: existing.title,
-          category: existing.category,
+          category,
           description: existing.description,
           targetValue,
-          currentValue: 0,
-          unit: existing.unit,
-          progressRate: progressRate(targetValue, 0),
-          status: "未着手",
+          currentValue,
+          unit: null,
+          details:
+            category === "周回" && existing.details && typeof existing.details === "object"
+              ? { ...(existing.details as Record<string, unknown>), currentCount: 0 }
+              : inputJson(existing.details),
+          progressRate: category === "周回" ? progressRate(targetValue, currentValue) : null,
+          status: category === "その他" ? "未達成" : "未着手",
           dueDate: existing.dueDate,
           memo: existing.proposalMemo,
           sourceProposalId: existing.id,

@@ -1275,11 +1275,19 @@ textarea {
   gap: 12px;
 }
 
+.goals-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+}
+
 .goal-row {
   display: grid;
-  grid-template-columns: minmax(90px, 0.7fr) minmax(160px, 1.2fr) 78px 100px minmax(130px, 1fr) 74px 128px;
+  grid-template-columns: 120px 220px 80px 110px 180px 150px 180px 90px;
   gap: 10px;
-  width: 100%;
+  min-width: 1180px;
+  width: max-content;
   align-items: center;
   padding: 12px;
   border: 1px solid #dfe6ee;
@@ -1301,6 +1309,18 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.goal-card-title h3,
+.goal-note,
+.proposal-card,
+.goal-detail,
+.goal-detail-list dd,
+.goal-meta,
+.goal-part-row,
+.break-link {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .goal-detail-panel {
@@ -1367,6 +1387,70 @@ textarea {
   border: 1px solid #dfe6ee;
   border-radius: 8px;
   background: #fbfcfd;
+}
+
+.formation-goal-editor,
+.formation-detail-blocks,
+.goal-part-section,
+.goal-part-list {
+  display: grid;
+  gap: 12px;
+}
+
+.goal-part-section {
+  padding: 14px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.goal-part-section h3 {
+  margin: 0;
+}
+
+.goal-candidate-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.goal-part-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(96px, auto) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #e2e9f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.goal-part-row > span {
+  display: grid;
+  gap: 2px;
+}
+
+.goal-part-row small {
+  color: #657688;
+}
+
+.goal-manual-add {
+  align-self: end;
+}
+
+.part-search-field {
+  position: relative;
+}
+
+.part-search-field svg {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  color: #657688;
+}
+
+.part-search-field input {
+  padding-right: 38px;
 }
 
 .proposal-card p {
@@ -1583,16 +1667,6 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .goal-row {
-    grid-template-columns: minmax(90px, 0.7fr) minmax(160px, 1.2fr) 74px;
-  }
-
-  .goal-row span:nth-child(4),
-  .goal-row span:nth-child(5),
-  .goal-row span:nth-child(7) {
-    grid-column: 1 / -1;
-  }
-
   .goal-detail-panel {
     position: static;
   }
@@ -1635,16 +1709,18 @@ textarea {
     grid-column: auto;
   }
 
-  .goal-row,
   .proposal-card,
   .goal-detail-list {
     grid-template-columns: 1fr;
   }
 
-  .goal-row span:nth-child(4),
-  .goal-row span:nth-child(5),
-  .goal-row span:nth-child(7) {
-    grid-column: auto;
+  .goal-part-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .goal-part-row select,
+  .goal-part-row .secondary-button {
+    grid-column: 1 / -1;
   }
 
   .build-detail-topbar {

@@ -6,9 +6,31 @@ export type User = {
   displayName: string | null;
 };
 
-export type GoalCategory = "古戦場" | "高難度" | "周回" | "育成" | "その他";
-export type GoalStatus = "未着手" | "進行中" | "達成" | "中止";
+export type GoalCategory = "周回" | "編成" | "その他";
+export type GoalStatus = "未着手" | "進行中" | "達成" | "中止" | "未達成";
 export type ProposalStatus = "提案中" | "受け入れ済み" | "見送り";
+
+export type GoalFormationPart = {
+  kind: "character" | "weapon" | "summon";
+  name: string;
+  masterId?: string | null;
+  owned: boolean;
+  position?: string;
+};
+
+export type SharedGoalDetails = {
+  itemName?: string | null;
+  questName?: string | null;
+  questUrl?: string | null;
+  requiredCount?: number | null;
+  currentCount?: number | null;
+  content?: string | null;
+  sourceBuildPostId?: string | null;
+  sourceBuildPostTitle?: string | null;
+  characters?: GoalFormationPart[];
+  weapons?: GoalFormationPart[];
+  summons?: GoalFormationPart[];
+};
 
 export type SharedGoal = {
   id: string;
@@ -18,6 +40,7 @@ export type SharedGoal = {
   targetValue: number | null;
   currentValue: number | null;
   unit: string | null;
+  details: SharedGoalDetails;
   progressRate: number | null;
   status: GoalStatus;
   dueDate: string | null;
@@ -42,6 +65,7 @@ export type GoalProposal = {
   description: string | null;
   targetValue: number | null;
   unit: string | null;
+  details: SharedGoalDetails;
   dueDate: string | null;
   proposalMemo: string | null;
   status: ProposalStatus;
@@ -56,7 +80,7 @@ export type SharedGoalInput = {
   description?: string;
   targetValue?: number | string | null;
   currentValue?: number | string | null;
-  unit?: string;
+  details?: SharedGoalDetails;
   status?: GoalStatus;
   dueDate?: string;
   memo?: string;
@@ -68,7 +92,8 @@ export type GoalProposalInput = {
   category: GoalCategory;
   description?: string;
   targetValue?: number | string | null;
-  unit?: string;
+  currentValue?: number | string | null;
+  details?: SharedGoalDetails;
   dueDate?: string;
   proposalMemo?: string;
 };
