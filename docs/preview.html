@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GBFマスタデータ運用手順</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --text: #1f2937;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --primary: #2563eb;
+      --primary-soft: #e0ecff;
+      --accent: #0891b2;
+      --accent-soft: #ddf7fb;
+      --warning: #b45309;
+      --warning-soft: #fff7ed;
+      --danger: #b91c1c;
+      --danger-soft: #fef2f2;
+      --ok: #047857;
+      --ok-soft: #ecfdf5;
+      --code-bg: #0f172a;
+      --code-text: #e5e7eb;
+      --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 32rem),
+        radial-gradient(circle at top right, rgba(8, 145, 178, 0.12), transparent 28rem),
+        var(--bg);
+      line-height: 1.75;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 72px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0f172a, #1e3a8a 58%, #0e7490);
+      color: #fff;
+      border-radius: 28px;
+      padding: 40px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -80px -120px auto;
+      width: 260px;
+      height: 260px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .hero-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      color: #dbeafe;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .hero h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(30px, 5vw, 48px);
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      max-width: 760px;
+      margin: 0;
+      color: #e0f2fe;
+      font-size: 16px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin: 22px 0 0;
+    }
+
+    .summary-card {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 18px;
+      padding: 16px;
+      backdrop-filter: blur(8px);
+    }
+
+    .summary-card strong {
+      display: block;
+      color: #fff;
+      margin-bottom: 4px;
+      font-size: 15px;
+    }
+
+    .summary-card span {
+      color: #dbeafe;
+      font-size: 13px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+      margin-top: 28px;
+      align-items: start;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .toc h2 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      color: #0f172a;
+    }
+
+    .toc a {
+      display: block;
+      padding: 8px 10px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      border-radius: 10px;
+    }
+
+    .toc a:hover {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+
+    .content {
+      display: grid;
+      gap: 20px;
+    }
+
+    section.card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 26px;
+      box-shadow: var(--shadow);
+    }
+
+    section.card h2 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 16px;
+      font-size: 24px;
+      letter-spacing: -0.02em;
+    }
+
+    .num {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      border-radius: 12px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    h3 {
+      margin: 22px 0 10px;
+      font-size: 18px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ul, ol {
+      margin: 10px 0 0;
+      padding-left: 1.4em;
+    }
+
+    li {
+      margin: 4px 0;
+    }
+
+    .note {
+      border-radius: 14px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      color: var(--text);
+      margin: 14px 0;
+    }
+
+    .note.info {
+      background: var(--primary-soft);
+      border-color: #bfdbfe;
+    }
+
+    .note.ok {
+      background: var(--ok-soft);
+      border-color: #bbf7d0;
+    }
+
+    .note.warning {
+      background: var(--warning-soft);
+      border-color: #fed7aa;
+    }
+
+    .note.danger {
+      background: var(--danger-soft);
+      border-color: #fecaca;
+    }
+
+    .note strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    code {
+      padding: 2px 6px;
+      background: #e2e8f0;
+      border-radius: 6px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+
+    pre {
+      margin: 12px 0;
+      padding: 16px;
+      overflow-x: auto;
+      color: var(--code-text);
+      background: var(--code-bg);
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      border-radius: 0;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .mini-card {
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .mini-card h3 {
+      margin-top: 0;
+      font-size: 16px;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #0e7490;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .rule-list {
+      display: grid;
+      gap: 10px;
+      padding: 0;
+      margin: 14px 0 0;
+      list-style: none;
+    }
+
+    .rule-list li {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 12px;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+    }
+
+    .check {
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--ok-soft);
+      color: var(--ok);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      margin-top: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 680px;
+      background: #fff;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 800;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .steps {
+      counter-reset: step;
+      display: grid;
+      gap: 12px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .steps li {
+      counter-increment: step;
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+
+    .steps li::before {
+      content: counter(step);
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: #0f172a;
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .footer {
+      margin-top: 28px;
+      padding: 22px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: static;
+      }
+
+      .summary-grid,
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding: 28px;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .page {
+        width: 100%;
+        padding: 0;
+      }
+
+      .hero,
+      section.card,
+      .toc {
+        box-shadow: none;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="hero-label">saisoku / GBF Master Data Operation</div>
+      <h1>GBFマスタデータ運用手順</h1>
+      <p>
+        キャラ・武器・召喚石・ジョブ・素材・クエストのマスタデータを、安全に追加・更新するための運用ガイドです。
+        DBマスタを優先しつつ、fallbackと既存投稿互換を維持する方針をまとめています。
+      </p>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <strong>DB優先 + fallback</strong>
+          <span>DB取得に失敗しても静的マスタで最低限動作します。</span>
+        </div>
+        <div class="summary-card">
+          <strong>name保存を維持</strong>
+          <span>既存投稿互換を保ちながら masterId を併存します。</span>
+        </div>
+        <div class="summary-card">
+          <strong>thumbnailPath運用</strong>
+          <span>画像は gbf-asset bucket の相対パスで管理します。</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="toc">
+        <h2>目次</h2>
+        <a href="#purpose">1. 目的</a>
+        <a href="#locations">2. 管理場所</a>
+        <a href="#kind">3. kind の種類</a>
+        <a href="#id-rules">4. id 命名ルール</a>
+        <a href="#thumbnail">5. thumbnailPath ルール</a>
+        <a href="#aliases">6. aliases</a>
+        <a href="#tags">7. tags</a>
+        <a href="#metadata">8. metadata</a>
+        <a href="#steps">9. 追加手順</a>
+        <a href="#seed-notes">10. seed の注意点</a>
+        <a href="#out-of-scope">11. 今回まだ扱わないこと</a>
+      </aside>
+
+      <div class="content">
+        <section id="purpose" class="card">
+          <h2><span class="num">1</span>目的</h2>
+          <p>
+            この文書は、キャラ・武器・召喚石・ジョブ・素材・クエストのマスタデータを安全に追加・更新するための運用手順です。
+          </p>
+          <div class="note info">
+            <strong>現在の基本方針</strong>
+            saisoku では、投稿データの <code>name</code> 保存を維持しつつ、キャラ・武器・召喚石の detail JSON に
+            <code>masterId</code> を併存保存します。マスタはDBを優先し、取得できない場合は
+            <code>src/lib/buildMasters.ts</code> の fallback を使います。
+          </div>
+        </section>
+
+        <section id="locations" class="card">
+          <h2><span class="num">2</span>管理場所</h2>
+          <p>DB投入用 seed は以下で管理します。</p>
+          <pre><code>server/data/gbfMasterSeed/</code></pre>
+
+          <h3>現在の構成</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ファイル</th>
+                  <th>役割</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>types.ts</code></td><td>seedデータ用の型定義</td></tr>
+                <tr><td><code>jobs.ts</code></td><td>ジョブマスタ</td></tr>
+                <tr><td><code>characters.ts</code></td><td>キャラマスタ</td></tr>
+                <tr><td><code>summons.ts</code></td><td>召喚石マスタ</td></tr>
+                <tr><td><code>weapons.ts</code></td><td>武器マスタ</td></tr>
+                <tr><td><code>index.ts</code></td><td>各種別のseedを結合して <code>gbfMasterSeedItems</code> として公開</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="note ok">
+            <strong>投入方法</strong>
+            <code>prisma/seed.ts</code> は <code>server/data/gbfMasterSeed/index.ts</code> から
+            <code>gbfMasterSeedItems</code> を読み込み、<code>upsert</code> でDBに投入します。
+          </div>
+        </section>
+
+        <section id="kind" class="card">
+          <h2><span class="num">3</span>kind の種類</h2>
+          <p><code>GbfMasterKind</code> は以下を想定します。</p>
+          <div class="badge-row">
+            <span class="badge">character</span>
+            <span class="badge">weapon</span>
+            <span class="badge">summon</span>
+            <span class="badge">job</span>
+            <span class="badge">material</span>
+            <span class="badge">quest</span>
+          </div>
+          <div class="note">
+            現時点の投稿フォーム候補で使うのは <code>character</code> / <code>weapon</code> /
+            <code>summon</code> / <code>job</code> です。素材・クエストは今後の追加対象ですが、
+            本格投入や relation 設計は別フェーズで行います。
+          </div>
+        </section>
+
+        <section id="id-rules" class="card">
+          <h2><span class="num">4</span>id 命名ルール</h2>
+          <p>
+            <code>id</code> は投稿 detail JSON の <code>masterId</code> として保存されるため、原則として後から変更しません。
+          </p>
+
+          <h3>推奨形式</h3>
+          <pre><code>character: char-&lt;slug&gt;
+weapon: weapon-&lt;slug&gt;
+summon: summon-&lt;slug&gt;
+job: job-&lt;slug&gt;
+material: material-&lt;slug&gt;
+quest: quest-&lt;slug&gt;</code></pre>
+
+          <h3>例</h3>
+          <pre><code>char-haaselia
+weapon-dark-opus
+summon-varuna
+job-yamato
+material-example
+quest-mugen-hl</code></pre>
+
+          <ul class="rule-list">
+            <li><span class="check">✓</span><span>ASCII lowercase と <code>-</code> を使う</span></li>
+            <li><span class="check">✓</span><span>日本語名をそのまま id にしない</span></li>
+            <li><span class="check">✓</span><span>同じ種類内で重複させない</span></li>
+            <li><span class="check">✓</span><span>既存 id は変更しない</span></li>
+            <li><span class="check">✓</span><span>表記ゆれや略称は <code>aliases</code> に入れる</span></li>
+          </ul>
+
+          <div class="note warning">
+            <strong>注意</strong>
+            既存IDに改善余地があっても、投稿済みデータとの互換性を優先し、変更せず別途課題として扱います。
+          </div>
+        </section>
+
+        <section id="thumbnail" class="card">
+          <h2><span class="num">5</span>thumbnailPath ルール</h2>
+          <p>Supabase Storage bucket は以下を前提にします。</p>
+          <pre><code>gbf-asset</code></pre>
+
+          <p>
+            <code>thumbnailPath</code> は bucket より後ろの相対パスだけを書きます。seed にフルURLは基本的に書きません。
+          </p>
+
+          <h3>推奨形式</h3>
+          <pre><code>characters/&lt;slug&gt;.webp
+weapons/&lt;slug&gt;.webp
+summons/&lt;slug&gt;.webp
+jobs/&lt;slug&gt;.webp
+materials/&lt;slug&gt;.webp
+quests/&lt;slug&gt;.webp</code></pre>
+
+          <h3>例</h3>
+          <pre><code>characters/haaselia.webp
+weapons/dark-opus.webp
+summons/varuna.webp
+jobs/yamato.webp</code></pre>
+
+          <div class="grid-2">
+            <div class="mini-card">
+              <h3>画像がある場合</h3>
+              <p><code>thumbnailPath</code> に相対パスを書きます。</p>
+              <pre><code>thumbnailPath: "characters/haaselia.webp"</code></pre>
+            </div>
+            <div class="mini-card">
+              <h3>画像が未準備の場合</h3>
+              <p><code>thumbnailPath</code> を省略します。UIはプレースホルダー表示に fallback します。</p>
+              <pre><code>// thumbnailPath なし</code></pre>
+            </div>
+          </div>
+
+          <div class="note">
+            <code>thumbnailUrl</code> は例外的な直接URL用に残しますが、通常運用では <code>thumbnailPath</code> を使います。
+          </div>
+        </section>
+
+        <section id="aliases" class="card">
+          <h2><span class="num">6</span>aliases の書き方</h2>
+          <p>
+            <code>aliases</code> は検索・表記ゆれ吸収用です。正式名称そのものを大量に重複させる必要はありません。
+          </p>
+          <pre><code>aliases: ["ハーゼ", "ハーゼリーラ"]</code></pre>
+
+          <ul class="rule-list">
+            <li><span class="check">✓</span><span>略称、俗称、表記ゆれを入れる</span></li>
+            <li><span class="check">✓</span><span>空文字を入れない</span></li>
+            <li><span class="check">✓</span><span>同じ item 内で重複させない</span></li>
+            <li><span class="check">✓</span><span>別 item と紛らわしい alias は避ける</span></li>
+          </ul>
+
+          <div class="note ok">
+            seed 実行時、alias は <code>normalizedAlias</code> に正規化され、
+            <code>GbfMasterAlias</code> に upsert されます。
+          </div>
+        </section>
+
+        <section id="tags" class="card">
+          <h2><span class="num">7</span>tags の書き方</h2>
+          <p><code>tags</code> は候補表示・絞り込み・簡易分類に使います。</p>
+
+          <pre><code>tags: ["水", "十賢者", "高難度"]
+tags: ["リミテッド", "周回"]
+tags: ["神石", "メイン"]</code></pre>
+
+          <ul class="rule-list">
+            <li><span class="check">✓</span><span>UIで見せても自然な短い語にする</span></li>
+            <li><span class="check">✓</span><span>属性、シリーズ、用途、カテゴリを入れる</span></li>
+            <li><span class="check">✓</span><span>細かすぎる内部情報は <code>metadata</code> に入れる</span></li>
+            <li><span class="check">✓</span><span>外部サイト由来の説明文や攻略文を丸ごと入れない</span></li>
+          </ul>
+        </section>
+
+        <section id="metadata" class="card">
+          <h2><span class="num">8</span>metadata の書き方</h2>
+          <p>
+            <code>metadata</code> は kind ごとの差分項目を入れる場所です。何でも入れすぎず、検索や表示に使う項目を中心にします。
+          </p>
+
+          <div class="grid-2">
+            <div class="mini-card">
+              <h3>武器</h3>
+              <pre><code>metadata: {
+  weaponType: "刀",
+  series: "オメガ"
+}</code></pre>
+            </div>
+            <div class="mini-card">
+              <h3>キャラ</h3>
+              <pre><code>metadata: {
+  role: "support"
+}</code></pre>
+            </div>
+            <div class="mini-card">
+              <h3>クエスト</h3>
+              <pre><code>metadata: {
+  questGroup: "レヴァンス",
+  difficulty: "HL",
+  contentType: "周回・武器集め用"
+}</code></pre>
+            </div>
+            <div class="mini-card">
+              <h3>素材</h3>
+              <pre><code>metadata: {
+  materialCategory: "強化素材"
+}</code></pre>
+            </div>
+          </div>
+
+          <ul class="rule-list">
+            <li><span class="check">✓</span><span>キー名は英語の camelCase にする</span></li>
+            <li><span class="check">✓</span><span>値はできるだけ string / number / boolean / string[] に留める</span></li>
+            <li><span class="check">✓</span><span>relation 的な情報は、将来 relation テーブルを追加するまで最小限にする</span></li>
+          </ul>
+        </section>
+
+        <section id="steps" class="card">
+          <h2><span class="num">9</span>追加手順</h2>
+          <ol class="steps">
+            <li>
+              <span>
+                対象 kind の seed ファイルを開く。
+                <pre><code>キャラ: server/data/gbfMasterSeed/characters.ts
+武器: server/data/gbfMasterSeed/weapons.ts
+召喚石: server/data/gbfMasterSeed/summons.ts
+ジョブ: server/data/gbfMasterSeed/jobs.ts</code></pre>
+              </span>
+            </li>
+            <li><span><code>GbfMasterSeedItem</code> を追加する。</span></li>
+            <li><span><code>id</code> が命名ルールに合っているか確認する。</span></li>
+            <li><span>画像がある場合は <code>thumbnailPath</code> を相対パスで書く。</span></li>
+            <li><span>必要に応じて <code>aliases</code> / <code>tags</code> / <code>metadata</code> を追加する。</span></li>
+            <li>
+              <span>
+                seed を実行する。
+                <pre><code>npm run prisma:seed</code></pre>
+              </span>
+            </li>
+            <li>
+              <span>
+                型チェックとビルドを実行する。
+                <pre><code>npm run typecheck
+npm run build</code></pre>
+              </span>
+            </li>
+            <li><span>ログイン済み状態で <code>GET /api/build-masters</code> を確認する。</span></li>
+          </ol>
+
+          <h3>確認観点</h3>
+          <ul class="rule-list">
+            <li><span class="check">✓</span><span><code>itemCount</code> が想定件数になっている</span></li>
+            <li><span class="check">✓</span><span>既存33件が消えていない</span></li>
+            <li><span class="check">✓</span><span>追加した item の <code>id</code> / <code>kind</code> / <code>name</code> が正しい</span></li>
+            <li><span class="check">✓</span><span>alias を追加した場合は aliases に返ってくる</span></li>
+            <li><span class="check">✓</span><span>投稿フォーム候補表示が空になっていない</span></li>
+          </ul>
+        </section>
+
+        <section id="seed-notes" class="card">
+          <h2><span class="num">10</span>seed の注意点</h2>
+          <p><code>npm run prisma:seed</code> は upsert です。既存 <code>id</code> の item は更新され、新しい <code>id</code> は追加されます。</p>
+
+          <div class="note warning">
+            <strong>注意</strong>
+            seed から削除しても、現在の seed 処理ではDB上の既存 item を自動削除しません。使わなくなった item は、削除ではなく <code>isActive</code> 運用を検討します。
+          </div>
+
+          <ul class="rule-list">
+            <li><span class="check">✓</span><span><code>id</code> を変えると別 item として追加される</span></li>
+            <li><span class="check">✓</span><span>既存 id の変更は、投稿済み <code>masterId</code> との互換性を壊す可能性がある</span></li>
+            <li><span class="check">✓</span><span>seed から削除してもDB上の既存 item は自動削除されない</span></li>
+            <li><span class="check">✓</span><span>使わなくなった item は <code>isActive</code> 運用を検討する</span></li>
+            <li><span class="check">✓</span><span>フルURLを直接持たせるより <code>thumbnailPath</code> を優先する</span></li>
+          </ul>
+        </section>
+
+        <section id="out-of-scope" class="card">
+          <h2><span class="num">11</span>今回まだ扱わないこと</h2>
+          <p>以下は別フェーズで対応します。</p>
+          <div class="badge-row">
+            <span class="badge">ジョブの masterId 保存</span>
+            <span class="badge">protagonistJobDetails</span>
+            <span class="badge">素材・クエスト本格投入</span>
+            <span class="badge">relation テーブル</span>
+            <span class="badge">管理画面</span>
+            <span class="badge">画像アップロード</span>
+            <span class="badge">既存投稿の一括移行</span>
+          </div>
+        </section>
+
+        <div class="footer">
+          GBFマスタデータ運用手順 / HTML版
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Saisoku 本番環境デプロイ手順書</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17212b;
+      --muted: #5c6b7a;
+      --line: #dfe6ee;
+      --panel: #ffffff;
+      --soft: #f5f8fb;
+      --accent: #2f8e66;
+      --warn: #a86213;
+      --danger: #a03225;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #eef3f7;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.75;
+    }
+
+    main {
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 64px;
+    }
+
+    header,
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(20, 33, 43, 0.06);
+    }
+
+    header {
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+
+    section {
+      padding: 24px;
+      margin-top: 18px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      line-height: 1.35;
+      margin: 0 0 12px;
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+    }
+
+    h2 {
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      font-size: 1.35rem;
+    }
+
+    h3 {
+      margin-top: 18px;
+      font-size: 1.05rem;
+    }
+
+    p {
+      margin: 8px 0;
+    }
+
+    ul,
+    ol {
+      padding-left: 1.35rem;
+      margin: 10px 0;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    code {
+      padding: 0.1rem 0.35rem;
+      border-radius: 6px;
+      background: #eef3f7;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    pre {
+      margin: 12px 0;
+      padding: 14px;
+      border-radius: 8px;
+      background: #17212b;
+      color: #f7fafc;
+      overflow-x: auto;
+      line-height: 1.55;
+    }
+
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--soft);
+      font-weight: 800;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #e6f4ee;
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .note,
+    .warning,
+    .danger {
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin: 12px 0;
+    }
+
+    .note {
+      background: #eef7ff;
+      border-left: 4px solid #327da8;
+    }
+
+    .warning {
+      background: #fff7e8;
+      border-left: 4px solid var(--warn);
+    }
+
+    .danger {
+      background: #fdebe8;
+      border-left: 4px solid var(--danger);
+    }
+
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .checklist li {
+      padding-left: 1.8rem;
+      position: relative;
+    }
+
+    .checklist li::before {
+      content: "□";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    @media (max-width: 720px) {
+      main {
+        width: min(100% - 20px, 1080px);
+        padding-top: 20px;
+      }
+
+      header,
+      section {
+        padding: 18px;
+      }
+
+      table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Saisoku 本番環境デプロイ手順書</h1>
+      <p>React + Vite / Express + TypeScript / Prisma / Supabase PostgreSQL / Render Free 構成の本番反映手順です。</p>
+      <div class="meta">
+        <span class="pill">対象: https://saisoku.onrender.com</span>
+        <span class="pill">Repo: lipton34/saisoku</span>
+        <span class="pill">作成日: 2026-05-15</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>1. 前提</h2>
+      <ul>
+        <li>本番環境は Render Web Service で稼働している。</li>
+        <li>DB は Supabase PostgreSQL を使用し、<code>DATABASE_URL</code> は Supabase Session pooler URL を使う。</li>
+        <li>本番の秘密情報は GitHub に置かず、Render の Environment Variables に設定する。</li>
+        <li>Render の Build Command は <code>npm install --include=dev &amp;&amp; npm run prisma:generate &amp;&amp; npm run build</code>。</li>
+        <li>Render の Start Command は <code>npm run start</code>。</li>
+      </ul>
+      <div class="warning">
+        <strong>注意:</strong> Prisma migration がある変更は、コード反映前に本番DBへ <code>npm run prisma:deploy</code> を実行する段取りを必ず確認してください。
+      </div>
+    </section>
+
+    <section>
+      <h2>2. デプロイ前チェック</h2>
+      <ul class="checklist">
+        <li>作業ブランチまたは <code>main</code> の変更内容を確認する。</li>
+        <li><code>.env</code> や秘密情報が差分に含まれていないことを確認する。</li>
+        <li>破壊的なDB変更、認証/JWT/cookieまわりの変更、環境変数追加がないか確認する。</li>
+        <li>DB schema を変えた場合は migration ファイルが作成されていることを確認する。</li>
+      </ul>
+
+      <pre><code>git status --short
+git diff --stat
+git diff -- . ':(exclude).env'</code></pre>
+
+      <div class="note">
+        <strong>今回のようなフロントUI中心の変更</strong>で Prisma schema や migration に変更がなければ、本番DB migration は不要です。
+      </div>
+    </section>
+
+    <section>
+      <h2>3. ローカル検証</h2>
+      <p>最低限、型チェックと本番ビルドを通します。</p>
+      <pre><code>npm install
+npm run typecheck
+npm run build</code></pre>
+
+      <p>必要に応じてローカル起動し、画面操作を確認します。</p>
+      <pre><code>npm run dev</code></pre>
+
+      <table>
+        <thead>
+          <tr>
+            <th>確認項目</th>
+            <th>見る場所</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ログイン / 新規登録</td>
+            <td><code>http://localhost:5173</code></td>
+          </tr>
+          <tr>
+            <td>APIヘルスチェック</td>
+            <td><code>http://localhost:4000/api/health</code></td>
+          </tr>
+          <tr>
+            <td>編成投稿フォーム</td>
+            <td><code>/builds</code> の「投稿フォーム」タブ</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. DB migration がある場合</h2>
+      <p>Prisma schema を変更した場合だけ実施します。ローカルで migration を作成済みであることを確認してください。</p>
+
+      <pre><code>npm run prisma:generate
+npm run prisma:migrate -- --name &lt;migration_name&gt;</code></pre>
+
+      <p>本番DBへ適用するときは、Render の Shell か、Render と同じ本番 <code>DATABASE_URL</code> を設定した環境で次を実行します。</p>
+
+      <pre><code>npm run prisma:deploy</code></pre>
+
+      <div class="danger">
+        <strong>重要:</strong> 本番DB向けに <code>prisma:migrate</code> は使わず、作成済み migration を適用する <code>prisma:deploy</code> を使います。
+      </div>
+    </section>
+
+    <section>
+      <h2>5. GitHub へ反映</h2>
+      <p>Render が GitHub の対象ブランチを監視している場合、push 後に自動デプロイが始まります。</p>
+
+      <pre><code>git status --short
+git add .
+git commit -m "Update build post form UI"
+git push</code></pre>
+
+      <p>コミットメッセージは変更内容に合わせて変えてください。ドキュメントのみなら例:</p>
+      <pre><code>git commit -m "Add production deploy runbook"</code></pre>
+    </section>
+
+    <section>
+      <h2>6. Render 側の設定確認</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>項目</th>
+            <th>値</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Build Command</td>
+            <td><code>npm install --include=dev &amp;&amp; npm run prisma:generate &amp;&amp; npm run build</code></td>
+          </tr>
+          <tr>
+            <td>Start Command</td>
+            <td><code>npm run start</code></td>
+          </tr>
+          <tr>
+            <td>Instance Type</td>
+            <td>Free</td>
+          </tr>
+          <tr>
+            <td>Environment</td>
+            <td><code>NODE_ENV=production</code>, <code>DATABASE_URL</code>, <code>JWT_SECRET</code>, 必要なら <code>INVITE_CODE</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        Render Free は一定時間アクセスがないとスリープします。デプロイ直後や初回アクセス時は起動待ちが発生することがあります。
+      </div>
+    </section>
+
+    <section>
+      <h2>7. デプロイ実行</h2>
+      <ol>
+        <li>GitHub に push する。</li>
+        <li>Render Dashboard で対象サービスを開く。</li>
+        <li>Deploy が開始されたことを確認する。</li>
+        <li>Build log で <code>npm run prisma:generate</code> と <code>npm run build</code> が成功していることを確認する。</li>
+        <li>Deploy log で <code>npm run start</code> が起動していることを確認する。</li>
+      </ol>
+
+      <p>自動デプロイが動かない場合は、Render Dashboard から Manual Deploy を実行します。</p>
+    </section>
+
+    <section>
+      <h2>8. 本番動作確認</h2>
+      <p>公開URL:</p>
+      <pre><code>https://saisoku.onrender.com</code></pre>
+
+      <p>APIヘルスチェック:</p>
+      <pre><code>curl -sS -L https://saisoku.onrender.com/api/health</code></pre>
+
+      <ul class="checklist">
+        <li>トップページが表示される。</li>
+        <li>ログインできる。</li>
+        <li>既存データが表示される。</li>
+        <li>編成一覧・検索が表示される。</li>
+        <li>投稿フォームを開ける。</li>
+        <li>プリセットモーダルを開閉できる。</li>
+        <li>キャラ・武器・召喚石の候補検索と選択ができる。</li>
+        <li>スマホ幅または狭い画面幅でレイアウトが崩れない。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>9. 問題発生時の切り戻し</h2>
+      <h3>Render の前回デプロイへ戻す</h3>
+      <ol>
+        <li>Render Dashboard で対象サービスを開く。</li>
+        <li>Deploys から直前の安定版 Deploy を選ぶ。</li>
+        <li>Rollback / Redeploy を実行する。</li>
+      </ol>
+
+      <h3>Git の戻しコミットを作る</h3>
+      <pre><code>git log --oneline -5
+git revert &lt;problem_commit_sha&gt;
+git push</code></pre>
+
+      <div class="warning">
+        DB migration を本番適用済みの場合、コードだけ戻してもDB構造が戻らないことがあります。migration を含む変更では、事前に戻し方を別途決めてください。
+      </div>
+    </section>
+
+    <section>
+      <h2>10. デプロイ完了メモ</h2>
+      <table>
+        <tbody>
+          <tr>
+            <th>デプロイ日時</th>
+            <td>YYYY-MM-DD HH:mm JST</td>
+          </tr>
+          <tr>
+            <th>コミットSHA</th>
+            <td></td>
+          </tr>
+          <tr>
+            <th>実行者</th>
+            <td></td>
+          </tr>
+          <tr>
+            <th>実行した確認</th>
+            <td><code>npm run typecheck</code> / <code>npm run build</code> / 本番画面確認</td>
+          </tr>
+          <tr>
+            <th>補足</th>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

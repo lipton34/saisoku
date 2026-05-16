@@ -1,0 +1,33 @@
+AGENTS.md の指示に従ってください。
+
+Supabase Storage に `gbf-assets` bucket を作成し、以下のフォルダを用意済みです。
+
+- characters/
+- summons/
+- weapons/
+
+今回の作業では、画像を Supabase Storage から表示するためのアプリ側の準備を行ってください。
+
+要件書は以下を確認してください。
+
+- docs/01_overall_policy.md
+- docs/06_master_thumbnail.md
+- docs/07_build_post_form_ui_revision.md
+
+方針は以下です。
+
+- 画像本体は Supabase Storage の `gbf-assets` bucket に配置する
+- 画像パスは `characters/{slug}.webp`、`summons/{slug}.webp`、`weapons/{slug}.webp` の形式を基本とする
+- DBまたはマスタデータには公開URLを直接保存せず、Storage上の相対パス `storagePath` を持たせる
+- アプリ側で `storagePath` から Supabase Storage の公開URLを生成して表示する
+- まずはキャラ・召喚石・武器を数件ずつのサンプルデータで確認する
+- 大量画像収集や外部サイトからの自動取得は今回の対象外とする
+
+実装後は、投稿フォームのキャラ・召喚石・武器候補でサムネイルが表示できることを確認してください。
+
+可能であれば以下を実行してください。
+
+- npm run typecheck
+- npm run build
+
+完了後は、変更したファイル、実装内容、確認結果、未対応事項をまとめてください。

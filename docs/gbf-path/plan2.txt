@@ -1,0 +1,67 @@
+AGENTS.md の指示に従ってください。
+
+Supabase Storage の `gbf-assets` bucket に、サンプル画像20件を配置済みです。
+また、対応するCSVを以下に配置済みです。
+
+- docs/gbf_asset_sample_20_webp.csv
+
+今回の作業では、このCSVの内容をもとに、キャラ・召喚石・武器の候補マスタとしてサンプル表示できるようにしてください。
+
+確認する要件書は以下です。
+
+- docs/01_overall_policy.md
+- docs/06_master_thumbnail.md
+- docs/07_build_post_form_ui_revision.md
+
+## 前提
+
+画像本体は Supabase Storage にあります。
+
+Bucket:
+- gbf-assets
+
+CSVの `storagePath` は、Supabase Storage bucket 内の相対パスです。
+
+例：
+- characters/grand_sandalphon.webp
+- summons/lucifer.webp
+- weapons/ixaba.webp
+
+Supabase Storage の Public URL は以下の形式で取得できます。
+
+https://<SUPABASE_PROJECT_REF>.supabase.co/storage/v1/object/public/gbf-assets/<storagePath>
+
+`<SUPABASE_PROJECT_REF>` は既存のSupabase接続設定、または環境変数から取得してください。
+既にSupabase clientの設定がある場合は、それを優先して使用してください。
+
+## 実装方針
+
+- CSVまたはCSV相当のデータをもとに、キャラ・召喚石・武器候補を表示できるようにしてください。
+- `storagePath` から Supabase Storage の public URL を生成して、サムネイル画像を表示してください。
+- 画像URLを直接固定でDBに保存するのではなく、`storagePath` を使う方針を維持してください。
+- まずはサンプル20件で表示確認できればよいです。
+- 大量データ登録や自動収集は今回の対象外です。
+
+## 表示確認したい場所
+
+- 投稿フォームのキャラ選択UI
+- 投稿フォームの召喚石選択UI
+- 投稿フォームの武器選択UI
+- 編成詳細画面のサムネイル表示
+
+## 確認してほしいこと
+
+- キャラ・召喚石・武器が候補として表示される
+- サムネイル画像が表示される
+- 検索で候補を絞り込める
+- 選択した候補がフォームに反映される
+- 画像が存在しない場合でもUIが崩れない
+
+## 実装後の確認
+
+可能であれば、以下を実行してください。
+
+- npm run typecheck
+- npm run build
+
+完了後は、変更したファイル、実装内容、確認結果、未対応事項をまとめてください。
