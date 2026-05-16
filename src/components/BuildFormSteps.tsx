@@ -30,6 +30,7 @@ type PartBrowserKind = Exclude<BuildMasterKind, "job">;
 type CandidateFilters = {
   element: string;
   category: string;
+  query: string;
 };
 type PartBucket =
   | "requiredParts"
@@ -97,6 +98,7 @@ const candidatePageSize = 10;
 const emptyCandidateFilters: CandidateFilters = {
   element: "",
   category: "",
+  query: "",
 };
 const weaponCandidateCategories = [
   "終末武器",
@@ -107,6 +109,19 @@ const weaponCandidateCategories = [
   "そのほか",
 ];
 const characterCandidateCategories = [
+  "リミテッド",
+  "十二神将",
+  "十天衆",
+  "十賢者",
+  "季節限定",
+  "水着",
+  "浴衣",
+  "クリスマス",
+  "バレンタイン",
+  "ハロウィン",
+  "ドレスアップ",
+];
+const legacyCharacterCandidateCategories = [
   "リミテッド",
   "十天衆",
   "十賢者",
@@ -131,6 +146,32 @@ const summonSlots = {
   friend: 1,
   sub: 6,
 };
+const candidateElementOptions = [
+  "火",
+  "水",
+  "土",
+  "風",
+  "光",
+  "闇",
+  "無属性",
+  "不明",
+];
+const seasonalCharacterTypes = [
+  "水着",
+  "浴衣",
+  "クリスマス",
+  "バレンタイン",
+  "ハロウィン",
+  "ドレスアップ",
+];
+const characterSeriesOrder = [
+  "リミテッド",
+  "十二神将",
+  "十天衆",
+  "十賢者",
+  "季節限定",
+  "その他",
+];
 
 const emptyCharacterDetail: BuildCharacterDetail = {
   position: "任意",
@@ -188,7 +229,7 @@ function masterMeta(master: BuildMasterItem | undefined) {
 
 function candidateMeta(item: BuildMasterItem) {
   return [
-    item.element || "属性未設定",
+    candidateElement(item),
     item.category || classifyCandidate(item),
     item.weaponType,
     item.series,
@@ -228,6 +269,181 @@ function candidateCategoryOptions(kind: PartBrowserKind) {
   return characterCandidateCategories;
 }
 
+function textMeta(item: BuildMasterItem, key: string) {
+  const value = item.metadata?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function itemTags(item: BuildMasterItem) {
+  return item.tags ?? [];
+}
+
+function hasTag(item: BuildMasterItem, tag: string) {
+  return itemTags(item).includes(tag);
+}
+
+function candidateElement(item: BuildMasterItem) {
+  const element = item.element?.trim();
+  if (element && candidateElementOptions.includes(element)) {
+    return element;
+  }
+
+  const tagElement = candidateElementOptions
+    .filter((option) => option !== "不明")
+    .find((option) => hasTag(item, option));
+
+  return tagElement ?? "不明";
+}
+
+function seasonalType(item: BuildMasterItem) {
+  const metadataSeasonalType = textMeta(item, "seasonalType");
+  if (seasonalCharacterTypes.includes(metadataSeasonalType)) {
+    return metadataSeasonalType;
+  }
+
+  return seasonalCharacterTypes.find((type) => hasTag(item, type)) ?? "";
+}
+
+function isLimitedCharacter(item: BuildMasterItem) {
+  return textMeta(item, "series") === "リミテッド" || hasTag(item, "リミテッド");
+}
+
+function isDivineGeneralCharacter(item: BuildMasterItem) {
+  return (
+    textMeta(item, "subSeries") === "十二神将" || hasTag(item, "十二神将")
+  );
+}
+
+function isEternalsCharacter(item: BuildMasterItem) {
+  return textMeta(item, "series") === "十天衆" || hasTag(item, "十天衆");
+}
+
+function isEvokerCharacter(item: BuildMasterItem) {
+  return textMeta(item, "series") === "十賢者" || hasTag(item, "十賢者");
+}
+
+function isSeasonalCharacter(item: BuildMasterItem) {
+  return Boolean(seasonalType(item));
+}
+
+function characterSeriesRank(item: BuildMasterItem) {
+  const label = isDivineGeneralCharacter(item)
+    ? "十二神将"
+    : isLimitedCharacter(item)
+      ? "リミテッド"
+      : isEternalsCharacter(item)
+        ? "十天衆"
+        : isEvokerCharacter(item)
+          ? "十賢者"
+          : isSeasonalCharacter(item)
+            ? "季節限定"
+            : "その他";
+
+  return characterSeriesOrder.indexOf(label);
+}
+
+function matchesCandidateCategory(item: BuildMasterItem, category: string) {
+  if (!category) {
+    return true;
+  }
+
+  if (item.kind !== "character") {
+    return classifyCandidate(item) === category;
+  }
+
+  if (seasonalCharacterTypes.includes(category)) {
+    return seasonalType(item) === category;
+  }
+
+  if (category === "季節限定") {
+    return isSeasonalCharacter(item);
+  }
+  if (category === "リミテッド") {
+    return isLimitedCharacter(item) || isDivineGeneralCharacter(item);
+  }
+  if (category === "十二神将") {
+    return isDivineGeneralCharacter(item);
+  }
+  if (category === "十天衆") {
+    return isEternalsCharacter(item);
+  }
+  if (category === "十賢者") {
+    return isEvokerCharacter(item);
+  }
+
+  return legacyCharacterCandidateCategories.includes(category)
+    ? classifyCandidate(item) === category
+    : false;
+}
+
+function matchesCandidateQuery(item: BuildMasterItem, query: string) {
+  const normalizedQuery = query.trim().toLocaleLowerCase("ja-JP");
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return [item.name, item.displayName, ...(item.aliases ?? [])]
+    .filter(Boolean)
+    .some((value) =>
+      value?.toLocaleLowerCase("ja-JP").includes(normalizedQuery),
+    );
+}
+
+function sortCandidates(kind: PartBrowserKind, items: BuildMasterItem[]) {
+  if (kind !== "character") {
+    return items;
+  }
+
+  return [...items].sort((first, second) => {
+    const firstElementRank = candidateElementOptions.indexOf(
+      candidateElement(first),
+    );
+    const secondElementRank = candidateElementOptions.indexOf(
+      candidateElement(second),
+    );
+    if (firstElementRank !== secondElementRank) {
+      return firstElementRank - secondElementRank;
+    }
+
+    const firstSeriesRank = characterSeriesRank(first);
+    const secondSeriesRank = characterSeriesRank(second);
+    if (firstSeriesRank !== secondSeriesRank) {
+      return firstSeriesRank - secondSeriesRank;
+    }
+
+    return first.name.localeCompare(second.name, "ja-JP");
+  });
+}
+
+function candidateBadges(item: BuildMasterItem) {
+  if (item.kind !== "character") {
+    return [candidateElement(item), item.category || classifyCandidate(item)]
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  const badges = [candidateElement(item)];
+  const type = seasonalType(item);
+
+  if (isLimitedCharacter(item)) {
+    badges.push("リミテッド");
+  }
+  if (isDivineGeneralCharacter(item)) {
+    badges.push("十二神将");
+  }
+  if (isEternalsCharacter(item)) {
+    badges.push("十天衆");
+  }
+  if (isEvokerCharacter(item)) {
+    badges.push("十賢者");
+  }
+  if (type) {
+    badges.push(type);
+  }
+
+  return badges.slice(0, 3);
+}
+
 function classifyCandidate(item: BuildMasterItem) {
   const joined = [item.name, item.series, item.weaponType, ...(item.tags ?? [])]
     .filter(Boolean)
@@ -243,7 +459,10 @@ function classifyCandidate(item: BuildMasterItem) {
   }
 
   if (item.kind === "character") {
-    if (joined.includes("リミ")) return "リミテッド";
+    const type = seasonalType(item);
+    if (type) return type;
+    if (isDivineGeneralCharacter(item)) return "十二神将";
+    if (isLimitedCharacter(item) || joined.includes("リミ")) return "リミテッド";
     if (joined.includes("十天衆")) return "十天衆";
     if (joined.includes("十賢者")) return "十賢者";
     if (joined.includes("高難度")) return "高難度";
@@ -534,6 +753,13 @@ const PartCandidateCard = memo(function PartCandidateCard({
       <span>
         <strong>{item.name}</strong>
         <small>{candidateMeta(item)}</small>
+        <span className="candidate-meta-badges">
+          {candidateBadges(item).map((badge) => (
+            <em className="candidate-meta-badge" key={badge}>
+              {badge}
+            </em>
+          ))}
+        </span>
       </span>
       {selected && <Check size={16} />}
     </button>
@@ -560,22 +786,20 @@ function PartCandidateBrowser({
   const options = partOptions(kind, masterCatalog);
   const elementFilter = filters.element;
   const categoryFilter = filters.category;
-  const hasFilters = Boolean(elementFilter || categoryFilter);
-  const elementFilterOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(options.map((item) => item.element).filter(Boolean)),
-      ) as string[],
-    [options],
-  );
+  const queryFilter = filters.query;
+  const hasFilters = Boolean(elementFilter || categoryFilter || queryFilter);
   const candidates = useMemo(() => {
-    return options.filter((item) => {
-      const matchesElement = !elementFilter || item.element === elementFilter;
-      const matchesCategory =
-        !categoryFilter || classifyCandidate(item) === categoryFilter;
-      return matchesElement && matchesCategory;
-    });
-  }, [categoryFilter, elementFilter, options]);
+    return sortCandidates(
+      kind,
+      options.filter((item) => {
+        const matchesElement =
+          !elementFilter || candidateElement(item) === elementFilter;
+        const matchesCategory = matchesCandidateCategory(item, categoryFilter);
+        const matchesQuery = matchesCandidateQuery(item, queryFilter);
+        return matchesCategory && matchesElement && matchesQuery;
+      }),
+    );
+  }, [categoryFilter, elementFilter, kind, options, queryFilter]);
   const pageCount = Math.max(1, Math.ceil(candidates.length / candidatePageSize));
   const currentPage = Math.min(page, pageCount);
   const pagedCandidates = useMemo(
@@ -589,7 +813,7 @@ function PartCandidateBrowser({
 
   useEffect(() => {
     setPage(1);
-  }, [categoryFilter, elementFilter, kind]);
+  }, [categoryFilter, elementFilter, kind, queryFilter]);
 
   return (
     <div className="part-browser">
@@ -608,34 +832,64 @@ function PartCandidateBrowser({
             <X size={16} />
           </button>
         )}
-        <label>
-          属性
-          <select
+        <label className="part-search-field">
+          検索
+          <Search size={16} />
+          <input
             onChange={(event) =>
-              onFilterChange({ ...filters, element: event.target.value })
+              onFilterChange({ ...filters, query: event.target.value })
             }
-            value={filters.element}
-          >
-            <option value="">すべて</option>
-            {elementFilterOptions.map((option) => (
-              <option key={option}>{option}</option>
-            ))}
-          </select>
+            placeholder={`${partKindLabel(kind)}名で検索`}
+            type="search"
+            value={filters.query}
+          />
         </label>
-        <label>
-          分類
-          <select
-            onChange={(event) =>
-              onFilterChange({ ...filters, category: event.target.value })
-            }
-            value={filters.category}
+      </div>
+
+      <div className="candidate-filter-row" aria-label="分類フィルター">
+        <span>分類</span>
+        <div className="candidate-filter-bar">
+          <button
+            className={`candidate-filter-chip ${categoryFilter ? "" : "active"}`}
+            onClick={() => onFilterChange({ ...filters, category: "" })}
+            type="button"
           >
-            <option value="">すべて</option>
-            {candidateCategoryOptions(kind).map((option) => (
-              <option key={option}>{option}</option>
-            ))}
-          </select>
-        </label>
+            すべて
+          </button>
+          {candidateCategoryOptions(kind).map((option) => (
+            <button
+              className={`candidate-filter-chip ${categoryFilter === option ? "active" : ""}`}
+              key={option}
+              onClick={() => onFilterChange({ ...filters, category: option })}
+              type="button"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="candidate-filter-row" aria-label="属性フィルター">
+        <span>属性</span>
+        <div className="candidate-filter-bar">
+          <button
+            className={`candidate-filter-chip ${elementFilter ? "" : "active"}`}
+            onClick={() => onFilterChange({ ...filters, element: "" })}
+            type="button"
+          >
+            すべて
+          </button>
+          {candidateElementOptions.map((option) => (
+            <button
+              className={`candidate-filter-chip ${elementFilter === option ? "active" : ""}`}
+              key={option}
+              onClick={() => onFilterChange({ ...filters, element: option })}
+              type="button"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div
@@ -685,7 +939,7 @@ function PartCandidateBrowser({
       )}
 
       {candidates.length === 0 && (
-        <div className="empty-state">
+        <div className="empty-state candidate-empty-state">
           候補にありません。選択中の枠に自由入力できます。
         </div>
       )}

@@ -1959,15 +1959,15 @@ textarea {
 }
 
 .job-preview div,
-.part-candidate-card span,
+.part-candidate-card > span,
 .formation-slot-body {
   min-width: 0;
 }
 
 .job-preview strong,
 .job-preview span,
-.part-candidate-card strong,
-.part-candidate-card small,
+.part-candidate-card > span > strong,
+.part-candidate-card > span > small,
 .formation-slot strong,
 .formation-slot em {
   display: block;
@@ -1977,7 +1977,7 @@ textarea {
 }
 
 .job-preview span,
-.part-candidate-card small,
+.part-candidate-card > span > small,
 .formation-slot em {
   color: #657688;
   font-size: 0.78rem;
@@ -2075,7 +2075,7 @@ textarea {
 
 .part-browser-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(190px, 0.9fr);
   gap: 12px;
   align-items: end;
 }
@@ -2115,6 +2115,70 @@ textarea {
   color: #2f8e66;
 }
 
+.candidate-filter-row {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.candidate-filter-row > span {
+  color: #657688;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.candidate-filter-bar {
+  display: flex;
+  gap: 6px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 2px 6px;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.candidate-filter-chip {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid #d8e2eb;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #4d5d6f;
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.candidate-filter-chip:hover,
+.candidate-filter-chip.active {
+  border-color: #2f8e66;
+  background: #e6f4ee;
+  color: #2f8e66;
+}
+
+.candidate-meta-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+.candidate-meta-badge {
+  max-width: 100%;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #eef3f7;
+  color: #3d586f;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
 .part-candidate-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -2138,6 +2202,13 @@ textarea {
   color: #17212b;
   text-align: left;
   cursor: pointer;
+}
+
+.candidate-empty-state {
+  min-height: 96px;
+  display: grid;
+  place-items: center;
+  text-align: center;
 }
 
 .part-candidate-card:hover,
