@@ -33,6 +33,10 @@ model User {
   materialGoals MaterialGoal[]
   materialPresets MaterialPreset[]
   buildPosts   BuildPost[]
+  sharedGoals  SharedGoal[] @relation("SharedGoalOwner")
+  proposedGoals SharedGoal[] @relation("SharedGoalProposer")
+  sentGoalProposals GoalProposal[] @relation("GoalProposalProposer")
+  receivedGoalProposals GoalProposal[] @relation("GoalProposalTarget")
 }
 
 model Task {
@@ -156,6 +160,59 @@ model BuildPost {
 
   @@index([ownerId, updatedAt])
   @@index([ownerId, category, questName, element])
+}
+
+model SharedGoal {
+  id                 String        @id @default(cuid())
+  title              String
+  category           String
+  description        String?
+  targetValue        Float?
+  currentValue       Float?
+  unit               String?
+  progressRate       Float?
+  status             String        @default("未着手")
+  dueDate            DateTime?
+  memo               String?
+  sourceProposalId   String?       @unique
+  sourceProposal     GoalProposal? @relation("GoalSourceProposal", fields: [sourceProposalId], references: [id], onDelete: SetNull)
+  proposedByUserId   String?
+  proposedByUser     User?         @relation("SharedGoalProposer", fields: [proposedByUserId], references: [id], onDelete: SetNull)
+  ownerId            String
+  owner              User          @relation("SharedGoalOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  acceptedProposal   GoalProposal? @relation("GoalProposalAcceptedGoal")
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([ownerId, status])
+  @@index([category, status])
+  @@index([dueDate])
+  @@map("shared_goals")
+}
+
+model GoalProposal {
+  id             String      @id @default(cuid())
+  proposerUserId String
+  proposer       User        @relation("GoalProposalProposer", fields: [proposerUserId], references: [id], onDelete: Cascade)
+  targetUserId   String
+  targetUser     User        @relation("GoalProposalTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  title          String
+  category       String
+  description    String?
+  targetValue    Float?
+  unit           String?
+  dueDate        DateTime?
+  proposalMemo   String?
+  status         String      @default("提案中")
+  acceptedGoalId String?     @unique
+  acceptedGoal   SharedGoal? @relation("GoalProposalAcceptedGoal", fields: [acceptedGoalId], references: [id], onDelete: SetNull)
+  sourcedGoal    SharedGoal? @relation("GoalSourceProposal")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([targetUserId, status])
+  @@index([proposerUserId, status])
+  @@map("goal_proposals")
 }
 
 model GbfMasterItem {
