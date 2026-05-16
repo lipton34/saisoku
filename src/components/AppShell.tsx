@@ -1,4 +1,15 @@
-import { Boxes, FilePlus2, LogOut, Map, PanelLeftClose, PanelLeftOpen, ScrollText, Sparkles, Swords } from "lucide-react";
+import {
+  Boxes,
+  FilePlus2,
+  Flag,
+  LogOut,
+  Map,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ScrollText,
+  Sparkles,
+  Swords
+} from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
@@ -50,6 +61,10 @@ export function AppShell() {
           <NavLink to="/materials">
             <Boxes size={18} />
             <span className="sidebar-label">素材メモ</span>
+          </NavLink>
+          <NavLink to="/goals">
+            <Flag size={18} />
+            <span className="sidebar-label">目標共有</span>
           </NavLink>
           <NavLink to="/builds/search">
             <Swords size={18} />

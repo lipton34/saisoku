@@ -6,6 +6,73 @@ export type User = {
   displayName: string | null;
 };
 
+export type GoalCategory = "古戦場" | "高難度" | "周回" | "育成" | "その他";
+export type GoalStatus = "未着手" | "進行中" | "達成" | "中止";
+export type ProposalStatus = "提案中" | "受け入れ済み" | "見送り";
+
+export type SharedGoal = {
+  id: string;
+  title: string;
+  category: GoalCategory;
+  description: string | null;
+  targetValue: number | null;
+  currentValue: number | null;
+  unit: string | null;
+  progressRate: number | null;
+  status: GoalStatus;
+  dueDate: string | null;
+  memo: string | null;
+  sourceProposalId: string | null;
+  proposedByUserId: string | null;
+  ownerId: string;
+  owner: User;
+  proposedByUser: User | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GoalProposal = {
+  id: string;
+  proposerUserId: string;
+  proposer: User;
+  targetUserId: string;
+  targetUser: User;
+  title: string;
+  category: GoalCategory;
+  description: string | null;
+  targetValue: number | null;
+  unit: string | null;
+  dueDate: string | null;
+  proposalMemo: string | null;
+  status: ProposalStatus;
+  acceptedGoalId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SharedGoalInput = {
+  title: string;
+  category: GoalCategory;
+  description?: string;
+  targetValue?: number | string | null;
+  currentValue?: number | string | null;
+  unit?: string;
+  status?: GoalStatus;
+  dueDate?: string;
+  memo?: string;
+};
+
+export type GoalProposalInput = {
+  targetUserId: string;
+  title: string;
+  category: GoalCategory;
+  description?: string;
+  targetValue?: number | string | null;
+  unit?: string;
+  dueDate?: string;
+  proposalMemo?: string;
+};
+
 export type Task = {
   id: string;
   title: string;
@@ -231,6 +298,40 @@ export const api = {
       json: { username, password, displayName, inviteCode }
     }),
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
+  users: () => request<{ users: User[] }>("/api/shared-goals/members"),
+  sharedGoals: (filters?: {
+    userId?: string;
+    category?: string;
+    status?: string;
+    due?: string;
+    keyword?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.userId) params.set("userId", filters.userId);
+    if (filters?.category) params.set("category", filters.category);
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.due) params.set("due", filters.due);
+    if (filters?.keyword) params.set("keyword", filters.keyword);
+    const query = params.toString();
+    return request<{ goals: SharedGoal[] }>(`/api/shared-goals${query ? `?${query}` : ""}`);
+  },
+  sharedGoal: (id: string) => request<{ goal: SharedGoal }>(`/api/shared-goals/${id}`),
+  createSharedGoal: (goal: SharedGoalInput) =>
+    request<{ goal: SharedGoal }>("/api/shared-goals", { method: "POST", json: goal }),
+  updateSharedGoal: (id: string, goal: Partial<SharedGoalInput>) =>
+    request<{ goal: SharedGoal }>(`/api/shared-goals/${id}`, { method: "PATCH", json: goal }),
+  createGoalProposal: (proposal: GoalProposalInput) =>
+    request<{ proposal: GoalProposal }>("/api/shared-goals/proposals", { method: "POST", json: proposal }),
+  goalProposalInbox: (status?: ProposalStatus | "all") => {
+    const query = status && status !== "all" ? `?status=${encodeURIComponent(status)}` : "";
+    return request<{ proposals: GoalProposal[] }>(`/api/shared-goals/proposals/inbox/list${query}`);
+  },
+  acceptGoalProposal: (id: string) =>
+    request<{ proposal: GoalProposal; goal: SharedGoal }>(`/api/shared-goals/proposals/${id}/accept`, {
+      method: "POST"
+    }),
+  declineGoalProposal: (id: string) =>
+    request<{ proposal: GoalProposal }>(`/api/shared-goals/proposals/${id}/decline`, { method: "POST" }),
   tasks: () => request<{ tasks: Task[] }>("/api/tasks"),
   createTask: (task: {
     title: string;
