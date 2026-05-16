@@ -7,7 +7,7 @@ export type User = {
 };
 
 export type GoalCategory = "周回" | "編成" | "その他";
-export type GoalStatus = "未着手" | "進行中" | "達成" | "中止" | "未達成";
+export type GoalStatus = "達成" | "未達成";
 export type ProposalStatus = "提案中" | "受け入れ済み" | "見送り";
 
 export type GoalFormationPart = {

@@ -59,8 +59,7 @@ type GoalFormState = {
 };
 
 const goalCategories: GoalCategory[] = ["周回", "編成", "その他"];
-const standardGoalStatuses: GoalStatus[] = ["未着手", "進行中", "達成", "中止"];
-const otherGoalStatuses: GoalStatus[] = ["未達成", "達成"];
+const goalStatuses: GoalStatus[] = ["達成", "未達成"];
 const proposalStatuses: ProposalStatus[] = ["提案中", "受け入れ済み", "見送り"];
 
 const blankForm: GoalFormState = {
@@ -79,7 +78,7 @@ const blankForm: GoalFormState = {
   weapons: [],
   summons: [],
   dueDate: "",
-  status: "未着手",
+  status: "未達成",
   memo: "",
   proposalMemo: ""
 };
@@ -136,12 +135,8 @@ function proposalDetails(proposal: Pick<GoalProposal, "details">): SharedGoalDet
   return proposal.details ?? {};
 }
 
-function categoryStatuses(category: GoalCategory) {
-  return category === "その他" ? otherGoalStatuses : standardGoalStatuses;
-}
-
 function statusForCategory(status: GoalStatus, category: GoalCategory) {
-  return categoryStatuses(category).includes(status) ? status : category === "その他" ? "未達成" : "未着手";
+  return goalStatuses.includes(status) ? status : "未達成";
 }
 
 function progressLabel(goal: SharedGoal) {
@@ -280,7 +275,7 @@ function GoalsPageContent() {
   const [proposalForm, setProposalForm] = useState<GoalFormState>(blankForm);
   const [materialGoals, setMaterialGoals] = useState<MaterialGoal[]>([]);
   const [buildPosts, setBuildPosts] = useState<BuildPost[]>([]);
-  const [filters, setFilters] = useState({ userId: "", category: "", status: "", due: "", keyword: "" });
+  const [filters, setFilters] = useState({ userId: "", category: "", status: "", due: "" });
   const [proposalStatus, setProposalStatus] = useState<ProposalStatus | "all">("all");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -325,7 +320,7 @@ function GoalsPageContent() {
   const canUpdateSelected = selectedGoal?.ownerId === user?.id;
 
   function resetGoalForm(category: GoalCategory = goalForm.category) {
-    setGoalForm({ ...blankForm, category, status: category === "その他" ? "未達成" : "未着手" });
+    setGoalForm({ ...blankForm, category, status: "未達成" });
   }
 
   async function handleCreateGoal(event: FormEvent<HTMLFormElement>) {
@@ -378,7 +373,7 @@ function GoalsPageContent() {
         ...blankForm,
         targetUserId: members.find((member) => member.id !== user?.id)?.id || "",
         category: proposalForm.category,
-        status: proposalForm.category === "その他" ? "未達成" : "未着手"
+        status: "未達成"
       });
       setNotice("目標を提案しました。相手が受け入れるまで個人目標にはなりません。");
     } catch (caught) {
@@ -609,9 +604,9 @@ function GoalFilters({
   members,
   onChange
 }: {
-  filters: { userId: string; category: string; status: string; due: string; keyword: string };
+  filters: { userId: string; category: string; status: string; due: string };
   members: User[];
-  onChange: (filters: { userId: string; category: string; status: string; due: string; keyword: string }) => void;
+  onChange: (filters: { userId: string; category: string; status: string; due: string }) => void;
 }) {
   return (
     <div className="goal-filter-grid">
@@ -641,7 +636,7 @@ function GoalFilters({
         状態
         <select onChange={(event) => onChange({ ...filters, status: event.target.value })} value={filters.status}>
           <option value="">すべて</option>
-          {[...standardGoalStatuses, ...otherGoalStatuses].map((status, index) => (
+          {goalStatuses.map((status, index) => (
             <option key={`${status}-${index}`} value={status}>
               {status}
             </option>
@@ -656,14 +651,6 @@ function GoalFilters({
           <option value="overdue">確認したい期限</option>
           <option value="none">期限なし</option>
         </select>
-      </label>
-      <label className="keyword-field">
-        キーワード
-        <input
-          onChange={(event) => onChange({ ...filters, keyword: event.target.value })}
-          placeholder="タイトル・内容・メモ・団員名・パーツ名"
-          value={filters.keyword}
-        />
       </label>
     </div>
   );
@@ -691,7 +678,7 @@ function GoalEditor({
       ...blankForm,
       targetUserId: form.targetUserId,
       category,
-      status: category === "その他" ? "未達成" : "未着手",
+      status: "未達成",
       proposalMemo: form.proposalMemo
     });
   }
@@ -743,7 +730,7 @@ function GoalEditor({
         <label>
           状態
           <select onChange={(event) => update("status", event.target.value as GoalStatus)} value={statusForCategory(form.status, form.category)}>
-            {categoryStatuses(form.category).map((status) => (
+            {goalStatuses.map((status) => (
               <option key={status} value={status}>
                 {status}
               </option>
@@ -1124,7 +1111,7 @@ function GoalDetail({
               <label>
                 状態
                 <select onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as GoalStatus }))} value={form.status}>
-                  {standardGoalStatuses.map((status) => (
+                  {goalStatuses.map((status) => (
                     <option key={status} value={status}>
                       {status}
                     </option>
@@ -1139,7 +1126,7 @@ function GoalDetail({
               <label>
                 状態
                 <select onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as GoalStatus }))} value={form.status}>
-                  {standardGoalStatuses.map((status) => (
+                  {goalStatuses.map((status) => (
                     <option key={status} value={status}>
                       {status}
                     </option>
@@ -1152,7 +1139,7 @@ function GoalDetail({
             <label>
               状態
               <select onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as GoalStatus }))} value={form.status}>
-                {otherGoalStatuses.map((status) => (
+                {goalStatuses.map((status) => (
                   <option key={status} value={status}>
                     {status}
                   </option>
@@ -1289,7 +1276,7 @@ function ProposalCard({
     unit: proposal.unit,
     details: proposal.details,
     progressRate: proposal.category === "周回" ? 0 : null,
-    status: proposal.category === "その他" ? "未達成" : "未着手",
+    status: "未達成",
     dueDate: proposal.dueDate,
     memo: proposal.proposalMemo,
     sourceProposalId: null,

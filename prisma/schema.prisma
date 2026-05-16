@@ -173,7 +173,7 @@ model SharedGoal {
   unit               String?
   details            Json          @default("{}")
   progressRate       Float?
-  status             String        @default("未着手")
+  status             String        @default("未達成")
   dueDate            DateTime?
   memo               String?
   sourceProposalId   String?       @unique

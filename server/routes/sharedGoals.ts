@@ -8,13 +8,11 @@ const router = Router();
 router.use(requireAuth);
 
 const goalCategories = ["周回", "編成", "その他"] as const;
-const standardGoalStatuses = ["未着手", "進行中", "達成", "中止"] as const;
-const otherGoalStatuses = ["未達成", "達成"] as const;
-const allGoalStatuses = [...standardGoalStatuses, ...otherGoalStatuses] as const;
+const goalStatuses = ["達成", "未達成"] as const;
 const proposalStatuses = ["提案中", "受け入れ済み", "見送り"] as const;
 
 type GoalCategory = (typeof goalCategories)[number];
-type GoalStatus = (typeof allGoalStatuses)[number];
+type GoalStatus = (typeof goalStatuses)[number];
 type ProposalStatus = (typeof proposalStatuses)[number];
 
 type FormationPart = {
@@ -55,19 +53,11 @@ function parseCategory(value: unknown): GoalCategory {
 }
 
 function parseGoalStatus(value: unknown, category: GoalCategory, fallback?: string): GoalStatus {
-  if (category === "その他") {
-    return otherGoalStatuses.includes(value as (typeof otherGoalStatuses)[number])
-      ? (value as GoalStatus)
-      : fallback === "達成"
-        ? "達成"
-        : "未達成";
-  }
-
-  return standardGoalStatuses.includes(value as (typeof standardGoalStatuses)[number])
+  return goalStatuses.includes(value as GoalStatus)
     ? (value as GoalStatus)
-    : standardGoalStatuses.includes(fallback as (typeof standardGoalStatuses)[number])
-      ? (fallback as GoalStatus)
-      : "未着手";
+    : fallback === "達成"
+      ? "達成"
+      : "未達成";
 }
 
 function parseProposalStatus(value: unknown): ProposalStatus | null {
@@ -236,8 +226,8 @@ router.get("/", async (req, res, next) => {
       where: {
         ...(userId ? { ownerId: userId } : {}),
         ...(goalCategories.includes(category as GoalCategory) ? { category } : {}),
-        ...(allGoalStatuses.includes(status as GoalStatus) ? { status } : {}),
-        ...(due === "overdue" ? { dueDate: { lt: now }, status: { notIn: ["達成", "中止"] } } : {}),
+        ...(goalStatuses.includes(status as GoalStatus) ? { status } : {}),
+        ...(due === "overdue" ? { dueDate: { lt: now }, status: { not: "達成" } } : {}),
         ...(due === "upcoming" ? { dueDate: { gte: now } } : {}),
         ...(due === "none" ? { dueDate: null } : {}),
       },
@@ -460,7 +450,7 @@ router.post("/proposals/:id/accept", async (req, res, next) => {
               ? { ...(existing.details as Record<string, unknown>), currentCount: 0 }
               : inputJson(existing.details),
           progressRate: category === "周回" ? progressRate(targetValue, currentValue) : null,
-          status: category === "その他" ? "未達成" : "未着手",
+          status: "未達成",
           dueDate: existing.dueDate,
           memo: existing.proposalMemo,
           sourceProposalId: existing.id,
