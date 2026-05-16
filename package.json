@@ -18,7 +18,7 @@
     "prisma:studio": "prisma studio"
   },
   "prisma": {
-    "seed": "env TMPDIR=/tmp tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
