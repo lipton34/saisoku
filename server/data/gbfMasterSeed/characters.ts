@@ -1933,12 +1933,12 @@ export const characterMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "char-caesar",
     kind: GbfMasterKind.character,
-    name: "カエサル",
-    element: "火",
+    name: "シーザー",
+    element: "光",
     rarity: "SSR",
     thumbnailPath: "characters/caesar.webp",
     aliases: [],
-    tags: ["リミテッド", "火"],
+    tags: ["リミテッド", "光"],
     metadata: {
       series: "リミテッド",
     },
@@ -2564,11 +2564,11 @@ export const characterMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "char-sandira",
     kind: GbfMasterKind.character,
-    name: "サンディラ",
+    name: "サンチラ",
     element: "火",
     rarity: "SSR",
     thumbnailPath: "characters/sandira.webp",
-    aliases: ["十二神将サンディラ", "馬"],
+    aliases: ["十二神将サンチラ", "馬"],
     tags: ["リミテッド", "十二神将", "火"],
     metadata: {
       series: "リミテッド",
