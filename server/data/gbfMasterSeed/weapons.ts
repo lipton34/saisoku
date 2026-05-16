@@ -696,8 +696,6 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
       series: "Revans",
     },
   },
-
-  ,
   // Additional seeds: リミテッド / マグナ / アーカルム / レヴァンス
   {
     id: "weapon-grand-aetherial-maverick",
