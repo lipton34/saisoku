@@ -1244,9 +1244,42 @@ textarea {
   font-weight: 800;
 }
 
+.guild-war-page {
+  --guild-war-panel-padding: 20px;
+  --guild-war-card-padding: 14px;
+  --guild-war-control-padding-block: 10px;
+  --guild-war-control-padding-inline: 12px;
+  --guild-war-gap: 12px;
+  --guild-war-day-table-width: 980px;
+  --guild-war-result-table-width: 1640px;
+  width: min(100%, 1200px);
+  max-width: 1200px;
+  min-width: 0;
+}
+
+.guild-war-page .panel {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: var(--guild-war-panel-padding);
+}
+
+.guild-war-page input,
+.guild-war-page select,
+.guild-war-page textarea {
+  padding: var(--guild-war-control-padding-block) var(--guild-war-control-padding-inline);
+}
+
 .guild-war-page .stat-tile strong {
   overflow-wrap: anywhere;
-  font-size: clamp(1.35rem, 2vw, 2rem);
+  font-size: 2rem;
+}
+
+.guild-war-page .table-scroll {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .guild-war-stat-grid {
@@ -1264,11 +1297,11 @@ textarea {
 }
 
 .guild-war-day-table {
-  min-width: 980px;
+  min-width: var(--guild-war-day-table-width);
 }
 
 .guild-war-result-table {
-  min-width: 1640px;
+  min-width: var(--guild-war-result-table-width);
 }
 
 .guild-war-diff {
@@ -1287,14 +1320,14 @@ textarea {
 
 .speed-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: var(--guild-war-gap);
 }
 
 .speed-card {
   display: grid;
   gap: 12px;
-  padding: 14px;
+  padding: var(--guild-war-card-padding);
   border: 1px solid #dfe6ee;
   border-radius: 8px;
   background: #fbfcfd;
@@ -1321,8 +1354,11 @@ textarea {
 .guild-war-tabs {
   display: flex;
   gap: 8px;
+  max-width: 100%;
+  min-width: 0;
   margin-bottom: 14px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   padding-bottom: 6px;
 }
 
@@ -1344,8 +1380,8 @@ textarea {
 
 .active-day-summary {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+  gap: var(--guild-war-gap);
   margin-bottom: 14px;
 }
 
@@ -1378,13 +1414,21 @@ textarea {
 .break-even-list {
   display: grid;
   gap: 10px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ranking-list {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .ranking-row {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) minmax(120px, auto) minmax(120px, auto);
-  gap: 12px;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(110px, 0.22fr) minmax(110px, 0.22fr);
+  gap: var(--guild-war-gap);
   align-items: center;
+  min-width: 0;
   padding: 12px;
   border: 1px solid #dfe6ee;
   border-radius: 8px;
@@ -1886,6 +1930,18 @@ textarea {
 }
 
 @media (max-width: 980px) {
+  .guild-war-page {
+    --guild-war-panel-padding: 18px;
+    --guild-war-card-padding: 12px;
+    --guild-war-gap: 10px;
+    --guild-war-day-table-width: 900px;
+    --guild-war-result-table-width: 1460px;
+  }
+
+  .guild-war-page .stat-tile strong {
+    font-size: 1.65rem;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
   }
@@ -1963,9 +2019,41 @@ textarea {
 }
 
 @media (max-width: 680px) {
+  .guild-war-page {
+    --guild-war-panel-padding: 14px;
+    --guild-war-card-padding: 10px;
+    --guild-war-control-padding-block: 9px;
+    --guild-war-control-padding-inline: 10px;
+    --guild-war-gap: 8px;
+    --guild-war-day-table-width: 760px;
+    --guild-war-result-table-width: 1180px;
+  }
+
   .main-content {
     padding: 16px;
   }
+
+  .guild-war-page .stat-tile {
+    padding: 14px;
+  }
+
+  .guild-war-page .stat-tile strong {
+    font-size: 1.35rem;
+  }
+
+  .guild-war-tabs button {
+    padding: 8px 10px;
+  }
+
+  .guild-war-page .data-table th,
+  .guild-war-page .data-table td {
+    padding: 8px 9px;
+  }
+
+  .guild-war-page .data-table input {
+    min-width: 150px;
+  }
+
 
   .home-hero,
   .page-heading,
@@ -2009,6 +2097,7 @@ textarea {
 
   .ranking-row {
     grid-template-columns: 36px minmax(0, 1fr);
+    padding: 10px;
   }
 
   .goal-part-row select,
