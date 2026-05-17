@@ -286,7 +286,7 @@ export function GuildWarGoalsPage() {
     try {
       const data = await api.resetGuildWarGoalPlan();
       applyPlan(data);
-      setNotice("全体目標貢献度、メモ、日程別の現在貢献度をリセットしました。");
+      setNotice("全日程目標貢献度、メモ、日程別の現在貢献度をリセットしました。");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "古戦場目標の初期化に失敗しました");
     } finally {
@@ -320,7 +320,7 @@ export function GuildWarGoalsPage() {
 
       <section className="stat-grid guild-war-stat-grid">
         <div className="stat-tile">
-          <span>全体目標</span>
+          <span>全日程目標</span>
           <strong>{formatBigInt(totalTarget)}</strong>
         </div>
         <div className="stat-tile">
@@ -349,7 +349,7 @@ export function GuildWarGoalsPage() {
           <div className="section-heading">
             <div>
               <p className="eyebrow">Plan</p>
-              <h2>全体目標</h2>
+              <h2>全日程目標</h2>
             </div>
             <Calculator size={22} />
           </div>
@@ -359,7 +359,7 @@ export function GuildWarGoalsPage() {
               <input onChange={(event) => setTitle(event.target.value)} value={title} />
             </label>
             <label>
-              全体目標貢献度
+              全日程目標貢献度
               <div className="contribution-input-group">
                 <input
                   inputMode="numeric"
@@ -367,16 +367,16 @@ export function GuildWarGoalsPage() {
                   placeholder="15,000,000,000"
                   value={formatContributionInput(targetContribution)}
                 />
-                <div className="contribution-stepper" aria-label="全体目標貢献度を1億単位で調整">
+                <div className="contribution-stepper" aria-label="全日程目標貢献度を1億単位で調整">
                   <button
-                    aria-label="全体目標貢献度を1億減らす"
+                    aria-label="全日程目標貢献度を1億減らす"
                     onClick={() => setTargetContribution((current) => shiftContribution(current, -contributionStep))}
                     type="button"
                   >
                     -1億
                   </button>
                   <button
-                    aria-label="全体目標貢献度を1億増やす"
+                    aria-label="全日程目標貢献度を1億増やす"
                     onClick={() => setTargetContribution((current) => shiftContribution(current, contributionStep))}
                     type="button"
                   >
@@ -503,7 +503,7 @@ export function GuildWarGoalsPage() {
             </table>
           </div>
           <p className={targetDifference === 0n ? "guild-war-diff" : "guild-war-diff warning"}>
-            日別合計 {formatBigInt(dayTargetTotal)} / 全体目標との差分{" "}
+            日別合計 {formatBigInt(dayTargetTotal)} / 全日程目標との差分{" "}
             {targetDifference < 0n ? "-" : ""}{formatBigInt(targetDifference < 0n ? -targetDifference : targetDifference)}
           </p>
         </section>
