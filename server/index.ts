@@ -8,6 +8,7 @@ import { attachUser } from "./middleware/requireAuth.js";
 import { authRouter } from "./routes/auth.js";
 import { buildMastersRouter } from "./routes/buildMasters.js";
 import { buildsRouter } from "./routes/builds.js";
+import { guildWarGoalsRouter } from "./routes/guildWarGoals.js";
 import { materialGoalsRouter } from "./routes/materialGoals.js";
 import { sharedGoalsRouter } from "./routes/sharedGoals.js";
 import { tasksRouter } from "./routes/tasks.js";
@@ -38,6 +39,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/build-masters", buildMastersRouter);
 app.use("/api/builds", buildsRouter);
+app.use("/api/guild-war-goals", guildWarGoalsRouter);
 app.use("/api/material-goals", materialGoalsRouter);
 app.use("/api/shared-goals", sharedGoalsRouter);
 app.use("/api/tasks", tasksRouter);

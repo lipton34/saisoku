@@ -34,6 +34,7 @@ model User {
   materialGoals MaterialGoal[]
   materialPresets MaterialPreset[]
   buildPosts   BuildPost[]
+  guildWarGoalPlans GuildWarGoalPlan[]
   sharedGoals  SharedGoal[] @relation("SharedGoalOwner")
   proposedGoals SharedGoal[] @relation("SharedGoalProposer")
   sentGoalProposals GoalProposal[] @relation("GoalProposalProposer")
@@ -254,4 +255,67 @@ model GbfMasterAlias {
   @@unique([masterItemId, normalizedAlias])
   @@index([normalizedAlias])
   @@map("gbf_master_aliases")
+}
+
+model GuildWarGoalPlan {
+  id                 String              @id @default(cuid())
+  title              String
+  targetContribution BigInt              @default(0)
+  memo               String?
+  ownerId            String
+  owner              User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  days               GuildWarGoalDay[]
+  speeds             GuildWarBossSpeed[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([ownerId, updatedAt])
+  @@map("guild_war_goal_plans")
+}
+
+model GuildWarGoalDay {
+  id                 String           @id @default(cuid())
+  planId             String
+  plan               GuildWarGoalPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  dayLabel           String
+  targetContribution BigInt           @default(0)
+  sortOrder          Int
+  memo               String?
+
+  @@unique([planId, sortOrder])
+  @@index([planId])
+  @@map("guild_war_goal_days")
+}
+
+model GuildWarBossMaster {
+  id              String   @id @default(cuid())
+  eventKey        String
+  bossLevel       Int
+  name            String
+  contribution    BigInt
+  meatCost        Int      @default(0)
+  specialMeatCost Int      @default(0)
+  isEnabled       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([eventKey, bossLevel])
+  @@index([eventKey, isEnabled, bossLevel])
+  @@map("guild_war_boss_masters")
+}
+
+model GuildWarBossSpeed {
+  id               String           @id @default(cuid())
+  planId           String
+  plan             GuildWarGoalPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  bossLevel        Int
+  clearTimeSeconds Int?
+  playStyle        String           @default("未指定")
+  memo             String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([planId, bossLevel])
+  @@index([planId])
+  @@map("guild_war_boss_speeds")
 }

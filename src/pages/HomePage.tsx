@@ -8,6 +8,7 @@ const toolCards = [
   { title: "日課管理", description: "島HARD、マグナ、砂箱など毎日見る項目", icon: CalendarCheck2, href: "/tasks" },
   { title: "素材メモ", description: "必要数と所持数を追う素材集めの進捗表", icon: Boxes, href: "/materials" },
   { title: "目標共有", description: "団員の個人目標と進捗、届いた提案を確認", icon: Flag, href: "/goals" },
+  { title: "古戦場計算", description: "日程別目標からHELL討伐数と時間効率を計算", icon: Flame, href: "/guild-war-goals" },
   { title: "編成メモ", description: "プリセットから高難易度・周回向け編成を投稿", icon: Swords, href: "/builds" },
   { title: "イベント進捗", description: "箱数、貢献度、交換残りの確認", icon: Flame, href: "/tools/events" },
   { title: "マルチ救援メモ", description: "参加条件や自発素材の備忘録", icon: BookOpen, href: "/tools/raids" },

@@ -157,6 +157,65 @@ export type MaterialPreset = {
   updatedAt: string;
 };
 
+export type GuildWarGoalDay = {
+  id: string;
+  dayLabel: string;
+  targetContribution: string;
+  sortOrder: number;
+  memo: string | null;
+};
+
+export type GuildWarBossSpeed = {
+  id: string;
+  bossLevel: number;
+  clearTimeSeconds: number | null;
+  playStyle: string;
+  memo: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GuildWarGoalPlan = {
+  id: string;
+  title: string;
+  targetContribution: string;
+  memo: string | null;
+  ownerId: string;
+  days: GuildWarGoalDay[];
+  speeds: GuildWarBossSpeed[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GuildWarBossMaster = {
+  id: string;
+  eventKey: string;
+  bossLevel: number;
+  name: string;
+  contribution: string;
+  meatCost: number;
+  specialMeatCost: number;
+  isEnabled: boolean;
+};
+
+export type GuildWarGoalPayload = {
+  title: string;
+  targetContribution: string;
+  memo?: string;
+  days: {
+    dayLabel: string;
+    targetContribution: string;
+    sortOrder: number;
+    memo?: string;
+  }[];
+  speeds: {
+    bossLevel: number;
+    clearTimeSeconds: number | null;
+    playStyle: string;
+    memo?: string;
+  }[];
+};
+
 export type BuildReferenceUrl = {
   type: string;
   title: string;
@@ -412,6 +471,17 @@ export const api = {
     }),
   deleteMaterialPreset: (presetId: string) =>
     request<void>(`/api/material-goals/presets/${presetId}`, { method: "DELETE" }),
+  guildWarGoalPlan: () =>
+    request<{ plan: GuildWarGoalPlan; bossMasters: GuildWarBossMaster[] }>("/api/guild-war-goals/current"),
+  saveGuildWarGoalPlan: (plan: GuildWarGoalPayload) =>
+    request<{ plan: GuildWarGoalPlan; bossMasters: GuildWarBossMaster[] }>("/api/guild-war-goals/current", {
+      method: "PUT",
+      json: plan
+    }),
+  resetGuildWarGoalPlan: () =>
+    request<{ plan: GuildWarGoalPlan; bossMasters: GuildWarBossMaster[] }>("/api/guild-war-goals/current/reset", {
+      method: "POST"
+    }),
   buildPresets: (filters?: { category?: string; questName?: string; element?: string }) => {
     const params = new URLSearchParams();
     if (filters?.category) params.set("category", filters.category);

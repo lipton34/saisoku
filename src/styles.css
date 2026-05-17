@@ -1096,6 +1096,12 @@ textarea {
   gap: 12px;
 }
 
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .filter-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 220px));
@@ -1238,6 +1244,151 @@ textarea {
   font-weight: 800;
 }
 
+.guild-war-page .stat-tile strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(1.35rem, 2vw, 2rem);
+}
+
+.guild-war-stat-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.warning-tile {
+  border-color: #f0c36b;
+  background: #fff8e8;
+}
+
+.guild-war-form {
+  display: grid;
+  gap: 18px;
+}
+
+.guild-war-day-table {
+  min-width: 820px;
+}
+
+.guild-war-result-table {
+  min-width: 1320px;
+}
+
+.guild-war-diff {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #e7f4ec;
+  color: #246546;
+  font-weight: 800;
+}
+
+.guild-war-diff.warning {
+  background: #fff8e8;
+  color: #805c11;
+}
+
+.speed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.speed-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.speed-card > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.speed-card span,
+.ranking-row small,
+.break-even-row span,
+.guild-war-notes p {
+  color: #657688;
+}
+
+.time-input-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.guild-war-analysis-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.68fr);
+  align-items: start;
+}
+
+.ranking-list,
+.break-even-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ranking-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(120px, auto) minmax(120px, auto);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.ranking-row.top {
+  border-color: #8fb6c5;
+  background: #eef7fa;
+}
+
+.ranking-row > span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 999px;
+  background: #2f6f8e;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.ranking-row div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ranking-row strong,
+.ranking-row small,
+.break-even-row,
+.break-even-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.break-even-row {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.guild-war-notes {
+  display: grid;
+  gap: 6px;
+}
+
+.guild-war-notes p {
+  margin: 0;
+  font-weight: 700;
+}
+
 .goal-tabs {
   width: min(100%, 560px);
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1327,6 +1478,43 @@ textarea {
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 4px;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #dfe6ee;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.data-table th {
+  color: #405366;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.data-table td {
+  color: #17212b;
+  font-weight: 700;
+}
+
+.data-table input {
+  min-width: 180px;
 }
 
 .goal-row {
@@ -1739,6 +1927,8 @@ textarea {
   .tool-grid,
   .form-row,
   .filter-row,
+  .guild-war-stat-grid,
+  .guild-war-analysis-grid,
   .goal-filter-grid,
   .build-category-switch,
   .build-filter-grid,
@@ -1763,6 +1953,10 @@ textarea {
 
   .goal-part-row {
     grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ranking-row {
+    grid-template-columns: 36px minmax(0, 1fr);
   }
 
   .goal-part-row select,

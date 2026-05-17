@@ -2,6 +2,7 @@ import {
   Boxes,
   FilePlus2,
   Flag,
+  Flame,
   LogOut,
   Map,
   PanelLeftClose,
@@ -65,6 +66,10 @@ export function AppShell() {
           <NavLink to="/goals">
             <Flag size={18} />
             <span className="sidebar-label">目標共有</span>
+          </NavLink>
+          <NavLink to="/guild-war-goals">
+            <Flame size={18} />
+            <span className="sidebar-label">古戦場計算</span>
           </NavLink>
           <NavLink to="/builds/search">
             <Swords size={18} />
