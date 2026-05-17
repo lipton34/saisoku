@@ -570,19 +570,10 @@ export function GuildWarGoalsPage() {
           <table className="data-table guild-war-result-table">
             <thead>
               <tr>
-                <th>日程</th>
-                <th>目標貢献度</th>
-                <th>現在貢献度</th>
-                <th>残り目標貢献度</th>
-                <th>使用可能HELL</th>
                 <th>難易度</th>
                 <th>必要討伐数</th>
-                <th>必要通常肉数</th>
-                <th>必要250専用素材数</th>
+                <th>必要素材</th>
                 <th>入力済み討伐時間</th>
-                <th>必要総討伐時間</th>
-                <th>貢献度/分</th>
-                <th>貢献度/時</th>
               </tr>
             </thead>
             <tbody>
@@ -591,28 +582,22 @@ export function GuildWarGoalsPage() {
                   const bossContribution = BigInt(boss.contribution);
                   const runs = requiredRuns(activeDayRemaining, bossContribution);
                   const seconds = speedSeconds(speeds[boss.bossLevel]);
-                  const contributionPerMinute = seconds ? (Number(boss.contribution) / seconds) * 60 : null;
+                  const requiredMaterial =
+                    boss.specialMeatCost > 0
+                      ? `${formatBigInt(runs * BigInt(boss.specialMeatCost))} 250専用素材`
+                      : `${formatBigInt(runs * BigInt(boss.meatCost))} 通常肉`;
                   return (
                     <tr key={`${activeDay.sortOrder}-${boss.bossLevel}`}>
-                      <td>{activeDay.dayLabel}</td>
-                      <td>{formatBigInt(activeDayTarget)}</td>
-                      <td>{formatBigInt(activeDayCurrent)}</td>
-                      <td>{formatBigInt(activeDayRemaining)}</td>
-                      <td>{activeBosses.map((allowedBoss) => allowedBoss.name).join(" / ")}</td>
                       <td>{boss.name}</td>
                       <td>{formatBigInt(runs)}</td>
-                      <td>{formatBigInt(runs * BigInt(boss.meatCost))}</td>
-                      <td>{formatBigInt(runs * BigInt(boss.specialMeatCost))}</td>
+                      <td>{requiredMaterial}</td>
                       <td>{seconds ? formatSeconds(seconds) : "未入力"}</td>
-                      <td>{seconds ? formatDuration(runs * BigInt(seconds)) : "未計算"}</td>
-                      <td>{contributionPerMinute ? formatNumber(contributionPerMinute) : "未計算"}</td>
-                      <td>{contributionPerMinute ? formatNumber(contributionPerMinute * 60) : "未計算"}</td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={13}>日程データを読み込み中です。</td>
+                  <td colSpan={4}>日程データを読み込み中です。</td>
                 </tr>
               )}
             </tbody>

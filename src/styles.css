@@ -1301,7 +1301,7 @@ textarea {
 }
 
 .guild-war-result-table {
-  min-width: var(--guild-war-result-table-width);
+  min-width: min(100%, 620px);
 }
 
 .guild-war-diff {
