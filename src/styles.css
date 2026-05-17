@@ -1300,6 +1300,49 @@ textarea {
   min-width: var(--guild-war-day-table-width);
 }
 
+.contribution-input-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.contribution-input-group.compact {
+  min-width: 280px;
+}
+
+.contribution-stepper {
+  display: inline-grid;
+  grid-template-columns: repeat(2, auto);
+  overflow: hidden;
+  border: 1px solid #cfd9e3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.contribution-stepper button {
+  min-width: 46px;
+  min-height: 38px;
+  border: 0;
+  border-right: 1px solid #cfd9e3;
+  background: #f4f7fa;
+  color: #405366;
+  padding: 0 9px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.contribution-stepper button:last-child {
+  border-right: 0;
+}
+
+.contribution-stepper button:hover {
+  background: #eef7fa;
+  color: #184f68;
+}
+
 .guild-war-result-table {
   min-width: min(100%, 620px);
 }
@@ -2052,6 +2095,22 @@ textarea {
 
   .guild-war-page .data-table input {
     min-width: 150px;
+  }
+
+  .contribution-input-group {
+    grid-template-columns: 1fr;
+  }
+
+  .contribution-input-group.compact {
+    min-width: 220px;
+  }
+
+  .contribution-stepper {
+    width: 100%;
+  }
+
+  .contribution-stepper button {
+    width: 100%;
   }
 
 

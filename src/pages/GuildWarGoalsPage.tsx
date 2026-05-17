@@ -25,6 +25,7 @@ type SpeedDraft = {
 };
 
 const playStyles = ["未指定", "手動", "フルオート", "セミオート"];
+const contributionStep = 100000000n;
 
 const allowedBossLevelsByDay: Record<string, number[]> = {
   "予選1日目": [90, 95],
@@ -52,6 +53,15 @@ function formatNumber(value: number) {
 
 function formatBigInt(value: bigint) {
   return value.toLocaleString("ja-JP");
+}
+
+function formatContributionInput(value: string) {
+  return value ? formatBigInt(contributionToBigInt(value)) : "";
+}
+
+function shiftContribution(value: string, delta: bigint) {
+  const next = contributionToBigInt(value) + delta;
+  return next > 0n ? next.toString() : "";
 }
 
 function formatSeconds(value: number) {
@@ -294,6 +304,10 @@ export function GuildWarGoalsPage() {
     }));
   }
 
+  function updateDay(index: number, patch: Partial<DayDraft>) {
+    setDays((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+  }
+
   return (
     <div className="page-stack guild-war-page">
       <section className="page-heading">
@@ -346,12 +360,30 @@ export function GuildWarGoalsPage() {
             </label>
             <label>
               全体目標貢献度
-              <input
-                inputMode="numeric"
-                onChange={(event) => setTargetContribution(sanitizeContribution(event.target.value))}
-                placeholder="15000000000"
-                value={targetContribution}
-              />
+              <div className="contribution-input-group">
+                <input
+                  inputMode="numeric"
+                  onChange={(event) => setTargetContribution(sanitizeContribution(event.target.value))}
+                  placeholder="15,000,000,000"
+                  value={formatContributionInput(targetContribution)}
+                />
+                <div className="contribution-stepper" aria-label="全体目標貢献度を1億単位で調整">
+                  <button
+                    aria-label="全体目標貢献度を1億減らす"
+                    onClick={() => setTargetContribution((current) => shiftContribution(current, -contributionStep))}
+                    type="button"
+                  >
+                    -1億
+                  </button>
+                  <button
+                    aria-label="全体目標貢献度を1億増やす"
+                    onClick={() => setTargetContribution((current) => shiftContribution(current, contributionStep))}
+                    type="button"
+                  >
+                    +1億
+                  </button>
+                </div>
+              </div>
             </label>
           </div>
           <label>
@@ -392,43 +424,75 @@ export function GuildWarGoalsPage() {
                   <tr key={day.sortOrder}>
                     <td>{day.dayLabel}</td>
                     <td>
-                      <input
-                        inputMode="numeric"
-                        onChange={(event) =>
-                          setDays((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, targetContribution: sanitizeContribution(event.target.value) }
-                                : item
-                            )
-                          )
-                        }
-                        value={day.targetContribution}
-                      />
+                      <div className="contribution-input-group compact">
+                        <input
+                          inputMode="numeric"
+                          onChange={(event) => updateDay(index, { targetContribution: sanitizeContribution(event.target.value) })}
+                          value={formatContributionInput(day.targetContribution)}
+                        />
+                        <div className="contribution-stepper" aria-label={`${day.dayLabel}の目標貢献度を1億単位で調整`}>
+                          <button
+                            aria-label={`${day.dayLabel}の目標貢献度を1億減らす`}
+                            onClick={() =>
+                              updateDay(index, {
+                                targetContribution: shiftContribution(day.targetContribution, -contributionStep)
+                              })
+                            }
+                            type="button"
+                          >
+                            -1億
+                          </button>
+                          <button
+                            aria-label={`${day.dayLabel}の目標貢献度を1億増やす`}
+                            onClick={() =>
+                              updateDay(index, {
+                                targetContribution: shiftContribution(day.targetContribution, contributionStep)
+                              })
+                            }
+                            type="button"
+                          >
+                            +1億
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="contribution-input-group compact">
+                        <input
+                          inputMode="numeric"
+                          onChange={(event) => updateDay(index, { currentContribution: sanitizeContribution(event.target.value) })}
+                          value={formatContributionInput(day.currentContribution)}
+                        />
+                        <div className="contribution-stepper" aria-label={`${day.dayLabel}の現在貢献度を1億単位で調整`}>
+                          <button
+                            aria-label={`${day.dayLabel}の現在貢献度を1億減らす`}
+                            onClick={() =>
+                              updateDay(index, {
+                                currentContribution: shiftContribution(day.currentContribution, -contributionStep)
+                              })
+                            }
+                            type="button"
+                          >
+                            -1億
+                          </button>
+                          <button
+                            aria-label={`${day.dayLabel}の現在貢献度を1億増やす`}
+                            onClick={() =>
+                              updateDay(index, {
+                                currentContribution: shiftContribution(day.currentContribution, contributionStep)
+                              })
+                            }
+                            type="button"
+                          >
+                            +1億
+                          </button>
+                        </div>
+                      </div>
                     </td>
                     <td>
                       <input
-                        inputMode="numeric"
                         onChange={(event) =>
-                          setDays((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, currentContribution: sanitizeContribution(event.target.value) }
-                                : item
-                            )
-                          )
-                        }
-                        value={day.currentContribution}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        onChange={(event) =>
-                          setDays((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, memo: event.target.value } : item
-                            )
-                          )
+                          updateDay(index, { memo: event.target.value })
                         }
                         value={day.memo}
                       />
