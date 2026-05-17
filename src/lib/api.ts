@@ -161,6 +161,7 @@ export type GuildWarGoalDay = {
   id: string;
   dayLabel: string;
   targetContribution: string;
+  currentContribution: string;
   sortOrder: number;
   memo: string | null;
 };
@@ -205,6 +206,7 @@ export type GuildWarGoalPayload = {
   days: {
     dayLabel: string;
     targetContribution: string;
+    currentContribution: string;
     sortOrder: number;
     memo?: string;
   }[];

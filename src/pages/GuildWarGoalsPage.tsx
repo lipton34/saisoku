@@ -11,6 +11,7 @@ import {
 type DayDraft = {
   dayLabel: string;
   targetContribution: string;
+  currentContribution: string;
   sortOrder: number;
   memo: string;
 };
@@ -24,6 +25,16 @@ type SpeedDraft = {
 };
 
 const playStyles = ["未指定", "手動", "フルオート", "セミオート"];
+
+const allowedBossLevelsByDay: Record<string, number[]> = {
+  "予選1日目": [90, 95],
+  "予選2日目": [90, 95],
+  インターバル: [90, 95],
+  "本戦1日目": [90, 95, 100, 150],
+  "本戦2日目": [90, 95, 100, 150, 200],
+  "本戦3日目": [90, 95, 100, 150, 200, 250],
+  "本戦4日目": [90, 95, 100, 150, 200, 250]
+};
 
 function sanitizeContribution(value: string) {
   const normalized = value.replace(/[^\d]/g, "");
@@ -77,6 +88,12 @@ function requiredRuns(targetContribution: bigint, bossContribution: bigint) {
   return (targetContribution + bossContribution - 1n) / bossContribution;
 }
 
+function remainingContribution(day: DayDraft) {
+  const target = contributionToBigInt(day.targetContribution);
+  const current = contributionToBigInt(day.currentContribution);
+  return target > current ? target - current : 0n;
+}
+
 function speedSeconds(speed?: SpeedDraft) {
   if (!speed) {
     return null;
@@ -109,6 +126,7 @@ function dayDraftFromApi(day: GuildWarGoalDay): DayDraft {
   return {
     dayLabel: day.dayLabel,
     targetContribution: day.targetContribution === "0" ? "" : day.targetContribution,
+    currentContribution: day.currentContribution === "0" ? "" : day.currentContribution,
     sortOrder: day.sortOrder,
     memo: day.memo ?? ""
   };
@@ -122,6 +140,7 @@ export function GuildWarGoalsPage() {
   const [days, setDays] = useState<DayDraft[]>([]);
   const [bosses, setBosses] = useState<GuildWarBossMaster[]>([]);
   const [speeds, setSpeeds] = useState<Record<number, SpeedDraft>>({});
+  const [activeDaySortOrder, setActiveDaySortOrder] = useState(1);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -132,6 +151,9 @@ export function GuildWarGoalsPage() {
     setTargetContribution(data.plan.targetContribution === "0" ? "" : data.plan.targetContribution);
     setMemo(data.plan.memo ?? "");
     setDays(data.plan.days.map(dayDraftFromApi));
+    setActiveDaySortOrder((current) =>
+      data.plan.days.some((day) => day.sortOrder === current) ? current : data.plan.days[0]?.sortOrder ?? 1
+    );
     setBosses(data.bossMasters);
     setSpeeds(
       Object.fromEntries(
@@ -161,6 +183,14 @@ export function GuildWarGoalsPage() {
 
   const totalTarget = contributionToBigInt(targetContribution);
   const targetDifference = totalTarget - dayTargetTotal;
+  const activeDay = days.find((day) => day.sortOrder === activeDaySortOrder) ?? days[0] ?? null;
+  const activeDayTarget = activeDay ? contributionToBigInt(activeDay.targetContribution) : 0n;
+  const activeDayCurrent = activeDay ? contributionToBigInt(activeDay.currentContribution) : 0n;
+  const activeDayRemaining = activeDay ? remainingContribution(activeDay) : 0n;
+  const activeAllowedBossLevels = activeDay
+    ? (allowedBossLevelsByDay[activeDay.dayLabel] ?? bosses.map((boss) => boss.bossLevel))
+    : [];
+  const activeBosses = bosses.filter((boss) => activeAllowedBossLevels.includes(boss.bossLevel));
 
   const efficiencyRows = useMemo(() => {
     return bosses
@@ -218,6 +248,7 @@ export function GuildWarGoalsPage() {
         days: days.map((day) => ({
           dayLabel: day.dayLabel,
           targetContribution: sanitizeContribution(day.targetContribution),
+          currentContribution: sanitizeContribution(day.currentContribution),
           sortOrder: day.sortOrder,
           memo: day.memo
         })),
@@ -245,7 +276,7 @@ export function GuildWarGoalsPage() {
     try {
       const data = await api.resetGuildWarGoalPlan();
       applyPlan(data);
-      setNotice("全体目標貢献度とメモをリセットしました。");
+      setNotice("全体目標貢献度、メモ、日程別の現在貢献度をリセットしました。");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "古戦場目標の初期化に失敗しました");
     } finally {
@@ -352,6 +383,7 @@ export function GuildWarGoalsPage() {
                 <tr>
                   <th>日程</th>
                   <th>目標貢献度</th>
+                  <th>現在貢献度</th>
                   <th>日別メモ</th>
                 </tr>
               </thead>
@@ -372,6 +404,21 @@ export function GuildWarGoalsPage() {
                           )
                         }
                         value={day.targetContribution}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        inputMode="numeric"
+                        onChange={(event) =>
+                          setDays((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, currentContribution: sanitizeContribution(event.target.value) }
+                                : item
+                            )
+                          )
+                        }
+                        value={day.currentContribution}
                       />
                     </td>
                     <td>
@@ -474,12 +521,60 @@ export function GuildWarGoalsPage() {
             <h2>日程別の計算結果</h2>
           </div>
         </div>
+        <div className="guild-war-tabs" role="tablist" aria-label="日程を選択">
+          {days.map((day) => (
+            <button
+              aria-selected={day.sortOrder === activeDaySortOrder}
+              className={day.sortOrder === activeDaySortOrder ? "active" : ""}
+              key={day.sortOrder}
+              onClick={() => setActiveDaySortOrder(day.sortOrder)}
+              role="tab"
+              type="button"
+            >
+              {day.dayLabel}
+            </button>
+          ))}
+        </div>
+        {activeDay && (
+          <>
+            <div className="active-day-summary">
+              <div>
+                <span>日程</span>
+                <strong>{activeDay.dayLabel}</strong>
+              </div>
+              <div>
+                <span>日程別目標貢献度</span>
+                <strong>{formatBigInt(activeDayTarget)}</strong>
+              </div>
+              <div>
+                <span>現在貢献度</span>
+                <strong>{formatBigInt(activeDayCurrent)}</strong>
+              </div>
+              <div>
+                <span>残り目標貢献度</span>
+                <strong>{formatBigInt(activeDayRemaining)}</strong>
+              </div>
+              <div>
+                <span>使用可能HELL</span>
+                <strong>{activeBosses.map((boss) => boss.name).join(" / ") || "未設定"}</strong>
+              </div>
+            </div>
+            {activeAllowedBossLevels.includes(250) && (
+              <p className="form-notice">
+                250HELLは本戦3日目以降の想定で表示しています。実際の解禁には団内での200HELL討伐数などの条件があります。
+              </p>
+            )}
+          </>
+        )}
         <div className="table-scroll">
           <table className="data-table guild-war-result-table">
             <thead>
               <tr>
                 <th>日程</th>
                 <th>目標貢献度</th>
+                <th>現在貢献度</th>
+                <th>残り目標貢献度</th>
+                <th>使用可能HELL</th>
                 <th>難易度</th>
                 <th>必要討伐数</th>
                 <th>必要通常肉数</th>
@@ -491,17 +586,19 @@ export function GuildWarGoalsPage() {
               </tr>
             </thead>
             <tbody>
-              {days.flatMap((day) => {
-                const dayTarget = contributionToBigInt(day.targetContribution);
-                return bosses.map((boss) => {
+              {activeDay ? (
+                activeBosses.map((boss) => {
                   const bossContribution = BigInt(boss.contribution);
-                  const runs = requiredRuns(dayTarget, bossContribution);
+                  const runs = requiredRuns(activeDayRemaining, bossContribution);
                   const seconds = speedSeconds(speeds[boss.bossLevel]);
                   const contributionPerMinute = seconds ? (Number(boss.contribution) / seconds) * 60 : null;
                   return (
-                    <tr key={`${day.sortOrder}-${boss.bossLevel}`}>
-                      <td>{day.dayLabel}</td>
-                      <td>{formatBigInt(dayTarget)}</td>
+                    <tr key={`${activeDay.sortOrder}-${boss.bossLevel}`}>
+                      <td>{activeDay.dayLabel}</td>
+                      <td>{formatBigInt(activeDayTarget)}</td>
+                      <td>{formatBigInt(activeDayCurrent)}</td>
+                      <td>{formatBigInt(activeDayRemaining)}</td>
+                      <td>{activeBosses.map((allowedBoss) => allowedBoss.name).join(" / ")}</td>
                       <td>{boss.name}</td>
                       <td>{formatBigInt(runs)}</td>
                       <td>{formatBigInt(runs * BigInt(boss.meatCost))}</td>
@@ -512,8 +609,12 @@ export function GuildWarGoalsPage() {
                       <td>{contributionPerMinute ? formatNumber(contributionPerMinute * 60) : "未計算"}</td>
                     </tr>
                   );
-                });
-              })}
+                })
+              ) : (
+                <tr>
+                  <td colSpan={13}>日程データを読み込み中です。</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -581,9 +682,13 @@ export function GuildWarGoalsPage() {
       </section>
 
       <section className="panel guild-war-notes">
+        <p>計算結果は「残り目標貢献度」を基準にしています。</p>
+        <p>現在貢献度が目標を超えている場合、残り目標は0として扱います。</p>
         <p>時間効率は入力された討伐時間のみで計算しています。</p>
         <p>肉集め時間、救援待ち時間、リザルト操作時間、失敗率は含みません。</p>
+        <p>250HELLは本戦3日目以降の想定で表示しています。</p>
         <p>250HELLは通常肉ではなく専用素材で計算しています。</p>
+        <p>250HELLの実際の解禁には、団内での200HELL討伐数などの条件があります。</p>
       </section>
     </div>
   );

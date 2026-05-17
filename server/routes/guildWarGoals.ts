@@ -87,7 +87,14 @@ function serializePlan(plan: {
   ownerId: string;
   createdAt: Date;
   updatedAt: Date;
-  days: { id: string; dayLabel: string; targetContribution: bigint; sortOrder: number; memo: string | null }[];
+  days: {
+    id: string;
+    dayLabel: string;
+    targetContribution: bigint;
+    currentContribution: bigint;
+    sortOrder: number;
+    memo: string | null;
+  }[];
   speeds: {
     id: string;
     bossLevel: number;
@@ -110,6 +117,7 @@ function serializePlan(plan: {
       id: day.id,
       dayLabel: day.dayLabel,
       targetContribution: day.targetContribution.toString(),
+      currentContribution: day.currentContribution.toString(),
       sortOrder: day.sortOrder,
       memo: day.memo
     })),
@@ -214,7 +222,8 @@ async function ensurePlan(ownerId: string) {
           planId: existing.id,
           dayLabel,
           sortOrder: index + 1,
-          targetContribution: 0n
+          targetContribution: 0n,
+          currentContribution: 0n
         }))
       })
     ]);
@@ -230,7 +239,8 @@ async function ensurePlan(ownerId: string) {
         create: defaultDays.map((dayLabel, index) => ({
           dayLabel,
           sortOrder: index + 1,
-          targetContribution: 0n
+          targetContribution: 0n,
+          currentContribution: 0n
         }))
       }
     },
@@ -266,6 +276,7 @@ router.put("/current", async (req, res, next) => {
         dayLabel,
         sortOrder: index + 1,
         targetContribution: parseContribution(source?.targetContribution),
+        currentContribution: parseContribution(source?.currentContribution),
         memo: parseOptionalText(source?.memo)
       };
     });
@@ -323,6 +334,10 @@ router.post("/current/reset", async (req, res, next) => {
           targetContribution: 0n,
           memo: null
         }
+      }),
+      prisma.guildWarGoalDay.updateMany({
+        where: { planId: existing.id },
+        data: { currentContribution: 0n }
       })
     ]);
 

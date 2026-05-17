@@ -279,6 +279,7 @@ model GuildWarGoalDay {
   plan               GuildWarGoalPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   dayLabel           String
   targetContribution BigInt           @default(0)
+  currentContribution BigInt          @default(0)
   sortOrder          Int
   memo               String?
 
