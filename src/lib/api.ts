@@ -87,7 +87,8 @@ export type SharedGoalInput = {
 };
 
 export type GoalProposalInput = {
-  targetUserId: string;
+  targetUserId?: string;
+  targetUserIds?: string[];
   title: string;
   category: GoalCategory;
   description?: string;
@@ -345,8 +346,12 @@ export const api = {
     request<{ goal: SharedGoal }>("/api/shared-goals", { method: "POST", json: goal }),
   updateSharedGoal: (id: string, goal: Partial<SharedGoalInput>) =>
     request<{ goal: SharedGoal }>(`/api/shared-goals/${id}`, { method: "PATCH", json: goal }),
+  deleteSharedGoal: (id: string) => request<void>(`/api/shared-goals/${id}`, { method: "DELETE" }),
   createGoalProposal: (proposal: GoalProposalInput) =>
-    request<{ proposal: GoalProposal }>("/api/shared-goals/proposals", { method: "POST", json: proposal }),
+    request<{ proposal: GoalProposal; proposals?: GoalProposal[] }>("/api/shared-goals/proposals", {
+      method: "POST",
+      json: proposal
+    }),
   goalProposalInbox: (status?: ProposalStatus | "all") => {
     const query = status && status !== "all" ? `?status=${encodeURIComponent(status)}` : "";
     return request<{ proposals: GoalProposal[] }>(`/api/shared-goals/proposals/inbox/list${query}`);

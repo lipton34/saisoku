@@ -2,8 +2,7 @@ import { BookOpen, Boxes, CalendarCheck2, ChevronRight, Flag, Flame, ListChecks,
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { TaskList } from "../components/TaskList";
-import { api, type Task } from "../lib/api";
-import { getTaskStats } from "../lib/taskUtils";
+import { api, type SharedGoal, type Task } from "../lib/api";
 
 const toolCards = [
   { title: "日課管理", description: "島HARD、マグナ、砂箱など毎日見る項目", icon: CalendarCheck2, href: "/tasks" },
@@ -17,6 +16,7 @@ const toolCards = [
 
 export function HomePage() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [goals, setGoals] = useState<SharedGoal[]>([]);
   const [error, setError] = useState("");
 
   async function loadTasks() {
@@ -28,8 +28,18 @@ export function HomePage() {
     }
   }
 
+  async function loadGoals() {
+    try {
+      const data = await api.sharedGoals();
+      setGoals(data.goals);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "団内目標の取得に失敗しました");
+    }
+  }
+
   useEffect(() => {
     void loadTasks();
+    void loadGoals();
   }, []);
 
   async function completeTask(task: Task) {
@@ -42,8 +52,8 @@ export function HomePage() {
     setTasks((current) => current.map((item) => (item.id === task.id ? data.task : item)));
   }
 
-  const stats = getTaskStats(tasks);
   const priorityTasks = tasks.filter((task) => !task.isCompleted).slice(0, 5);
+  const latestGoals = goals.slice(0, 5);
 
   return (
     <div className="page-stack">
@@ -53,35 +63,22 @@ export function HomePage() {
           <h2>今日やることを、迷わず回収。</h2>
           <p>日課・週課を見ながら、次に足す攻略ツールへすぐ移動できます。</p>
         </div>
-        <Link className="primary-button hero-action" to="/tasks">
-          <ListChecks size={18} />
-          タスクを登録
-        </Link>
-      </section>
-
-      <section className="stat-grid">
-        <div className="stat-tile">
-          <span>未完了</span>
-          <strong>{stats.open}</strong>
-        </div>
-        <div className="stat-tile">
-          <span>日課残り</span>
-          <strong>{stats.dailyOpen}</strong>
-        </div>
-        <div className="stat-tile">
-          <span>週課残り</span>
-          <strong>{stats.weeklyOpen}</strong>
-        </div>
-        <div className="stat-tile">
-          <span>完了済み</span>
-          <strong>{stats.completed}</strong>
+        <div className="hero-actions">
+          <Link className="primary-button hero-action" to="/tasks">
+            <ListChecks size={18} />
+            タスクを登録
+          </Link>
+          <Link className="secondary-button hero-action" to="/goals?tab=new">
+            <Flag size={18} />
+            団内目標を登録
+          </Link>
         </div>
       </section>
 
       {error && <p className="form-error">{error}</p>}
 
       <section className="content-grid">
-        <div className="panel wide">
+        <div className="panel">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Open Tasks</p>
@@ -98,19 +95,25 @@ export function HomePage() {
         <div className="panel">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Recent</p>
-              <h2>最近の完了</h2>
+              <p className="eyebrow">Crew Goals</p>
+              <h2>団内目標</h2>
             </div>
+            <Link className="text-link" to="/goals">
+              すべて見る
+              <ChevronRight size={16} />
+            </Link>
           </div>
-          <div className="mini-list">
-            {stats.recentCompleted.length === 0 ? (
-              <div className="empty-state">完了履歴はまだありません。</div>
+          <div className="mini-list goal-mini-list">
+            {latestGoals.length === 0 ? (
+              <div className="empty-state">団内目標はまだありません。</div>
             ) : (
-              stats.recentCompleted.map((task) => (
-                <div className="mini-item" key={task.id}>
-                  <span>{task.title}</span>
-                  <small>{task.category}</small>
-                </div>
+              latestGoals.map((goal) => (
+                <Link className="mini-item goal-mini-item" key={goal.id} to="/goals">
+                  <span>{goal.title}</span>
+                  <small>
+                    {displayGoalOwner(goal)} / {goal.category} / {goalProgress(goal)}
+                  </small>
+                </Link>
               ))
             )}
           </div>
@@ -134,4 +137,24 @@ export function HomePage() {
       </section>
     </div>
   );
+}
+
+function displayGoalOwner(goal: SharedGoal) {
+  return goal.owner.displayName || goal.owner.username || "不明";
+}
+
+function goalProgress(goal: SharedGoal) {
+  if (goal.category === "周回" && goal.targetValue !== null && goal.currentValue !== null) {
+    return `${goal.currentValue}/${goal.targetValue}`;
+  }
+
+  if (goal.category === "編成") {
+    const details = goal.details ?? {};
+    const missingCount = [...(details.characters ?? []), ...(details.weapons ?? []), ...(details.summons ?? [])].filter(
+      (part) => !part.owned
+    ).length;
+    return missingCount > 0 ? `未所持 ${missingCount}件` : "準備OK";
+  }
+
+  return goal.status;
 }

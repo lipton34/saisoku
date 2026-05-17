@@ -8,9 +8,11 @@ import {
   Plus,
   RotateCcw,
   Save,
-  Search
+  Search,
+  Trash2
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { BuildMasterCatalogProvider, useBuildMasterLookup } from "../lib/BuildMasterCatalogContext";
 import {
   api,
@@ -39,6 +41,7 @@ type GoalTab = "goals" | "new" | "proposal" | "inbox";
 
 type GoalFormState = {
   targetUserId: string;
+  targetUserIds: string[];
   title: string;
   category: GoalCategory;
   itemName: string;
@@ -64,6 +67,7 @@ const proposalStatuses: ProposalStatus[] = ["提案中", "受け入れ済み", "
 
 const blankForm: GoalFormState = {
   targetUserId: "",
+  targetUserIds: [],
   title: "",
   category: "周回",
   itemName: "",
@@ -254,6 +258,11 @@ function postParts(post: BuildPost) {
   };
 }
 
+function tabFromSearch(search: string): GoalTab {
+  const tab = new URLSearchParams(search).get("tab");
+  return tab === "new" || tab === "proposal" || tab === "inbox" || tab === "goals" ? tab : "goals";
+}
+
 export function GoalsPage() {
   const { catalog } = useBuildMasterCatalog();
 
@@ -265,8 +274,9 @@ export function GoalsPage() {
 }
 
 function GoalsPageContent() {
+  const location = useLocation();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<GoalTab>("goals");
+  const [activeTab, setActiveTab] = useState<GoalTab>(() => tabFromSearch(location.search));
   const [members, setMembers] = useState<User[]>([]);
   const [goals, setGoals] = useState<SharedGoal[]>([]);
   const [proposals, setProposals] = useState<GoalProposal[]>([]);
@@ -281,11 +291,19 @@ function GoalsPageContent() {
   const [notice, setNotice] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    setActiveTab(tabFromSearch(location.search));
+  }, [location.search]);
+
   async function loadMembers() {
     const data = await api.users();
     setMembers(data.users);
     const firstOtherUserId = data.users.find((member) => member.id !== user?.id)?.id || "";
-    setProposalForm((current) => ({ ...current, targetUserId: current.targetUserId || firstOtherUserId }));
+    setProposalForm((current) => ({
+      ...current,
+      targetUserId: current.targetUserId || firstOtherUserId,
+      targetUserIds: current.targetUserIds.length > 0 ? current.targetUserIds : firstOtherUserId ? [firstOtherUserId] : []
+    }));
   }
 
   async function loadGoals() {
@@ -368,14 +386,27 @@ function GoalsPageContent() {
     setIsSubmitting(true);
 
     try {
-      await api.createGoalProposal({ ...goalPayload(proposalForm), targetUserId: proposalForm.targetUserId, proposalMemo: proposalForm.proposalMemo });
+      const targetUserIds =
+        proposalForm.targetUserIds.length > 0
+          ? proposalForm.targetUserIds
+          : proposalForm.targetUserId
+            ? [proposalForm.targetUserId]
+            : [];
+      const data = await api.createGoalProposal({
+        ...goalPayload(proposalForm),
+        targetUserIds,
+        proposalMemo: proposalForm.proposalMemo
+      });
+      const createdCount = data.proposals?.length ?? 1;
+      const firstOtherUserId = members.find((member) => member.id !== user?.id)?.id || "";
       setProposalForm({
         ...blankForm,
-        targetUserId: members.find((member) => member.id !== user?.id)?.id || "",
+        targetUserId: firstOtherUserId,
+        targetUserIds: firstOtherUserId ? [firstOtherUserId] : [],
         category: proposalForm.category,
         status: "未達成"
       });
-      setNotice("目標を提案しました。相手が受け入れるまで個人目標にはなりません。");
+      setNotice(`${createdCount}人に目標を提案しました。相手が受け入れるまで個人目標にはなりません。`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "目標提案の作成に失敗しました");
     } finally {
@@ -409,6 +440,27 @@ function GoalsPageContent() {
       setNotice("提案を見送りにしました。");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "提案の見送りに失敗しました");
+    }
+  }
+
+  async function deleteGoal(goal: SharedGoal) {
+    if (!window.confirm(`「${goal.title}」を削除しますか？`)) {
+      return;
+    }
+
+    setError("");
+    setNotice("");
+    setIsSubmitting(true);
+
+    try {
+      await api.deleteSharedGoal(goal.id);
+      setGoals((current) => current.filter((item) => item.id !== goal.id));
+      setSelectedGoal((current) => (current?.id === goal.id ? null : current));
+      setNotice("目標を削除しました。");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "目標の削除に失敗しました");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -474,23 +526,13 @@ function GoalsPageContent() {
               <h2>他団員に目標を提案</h2>
             </div>
           </div>
-          <label>
-            提案先
-            <select
-              onChange={(event) => setProposalForm((current) => ({ ...current, targetUserId: event.target.value }))}
-              required
-              value={proposalForm.targetUserId}
-            >
-              <option value="">選択してください</option>
-              {members
-                .filter((member) => member.id !== user?.id)
-                .map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {displayName(member)}
-                  </option>
-                ))}
-            </select>
-          </label>
+          <ProposalTargets
+            members={members.filter((member) => member.id !== user?.id)}
+            onChange={(targetUserIds) =>
+              setProposalForm((current) => ({ ...current, targetUserIds, targetUserId: targetUserIds[0] ?? "" }))
+            }
+            selectedUserIds={proposalForm.targetUserIds}
+          />
           <GoalEditor
             buildPosts={buildPosts}
             form={proposalForm}
@@ -506,7 +548,7 @@ function GoalsPageContent() {
               value={proposalForm.proposalMemo}
             />
           </label>
-          <button className="primary-button" disabled={isSubmitting} type="submit">
+          <button className="primary-button" disabled={isSubmitting || proposalForm.targetUserIds.length === 0} type="submit">
             <MessageSquarePlus size={18} />
             提案を送る
           </button>
@@ -587,6 +629,7 @@ function GoalsPageContent() {
                 canUpdate={canUpdateSelected}
                 goal={selectedGoal}
                 isSubmitting={isSubmitting}
+                onDelete={deleteGoal}
                 onUpdate={handleUpdateGoal}
               />
             ) : (
@@ -656,6 +699,46 @@ function GoalFilters({
   );
 }
 
+function ProposalTargets({
+  members,
+  onChange,
+  selectedUserIds
+}: {
+  members: User[];
+  onChange: (targetUserIds: string[]) => void;
+  selectedUserIds: string[];
+}) {
+  function toggleMember(memberId: string) {
+    onChange(
+      selectedUserIds.includes(memberId)
+        ? selectedUserIds.filter((id) => id !== memberId)
+        : [...selectedUserIds, memberId]
+    );
+  }
+
+  return (
+    <fieldset className="proposal-targets">
+      <legend>提案先</legend>
+      {members.length === 0 ? (
+        <div className="empty-state compact">提案できる団員がまだいません。</div>
+      ) : (
+        <div className="proposal-target-grid">
+          {members.map((member) => (
+            <label key={member.id}>
+              <input
+                checked={selectedUserIds.includes(member.id)}
+                onChange={() => toggleMember(member.id)}
+                type="checkbox"
+              />
+              <span>{displayName(member)}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </fieldset>
+  );
+}
+
 function GoalEditor({
   buildPosts,
   form,
@@ -677,6 +760,7 @@ function GoalEditor({
     onChange({
       ...blankForm,
       targetUserId: form.targetUserId,
+      targetUserIds: form.targetUserIds,
       category,
       status: "未達成",
       proposalMemo: form.proposalMemo
@@ -1042,11 +1126,13 @@ function GoalDetail({
   canUpdate,
   goal,
   isSubmitting,
+  onDelete,
   onUpdate
 }: {
   canUpdate: boolean;
   goal: SharedGoal;
   isSubmitting: boolean;
+  onDelete: (goal: SharedGoal) => Promise<void>;
   onUpdate: (form: GoalFormState) => Promise<void>;
 }) {
   const goalDetails = details(goal);
@@ -1155,6 +1241,10 @@ function GoalDetail({
             <Save size={18} />
             進捗を保存
           </button>
+          <button className="secondary-button danger-button" disabled={isSubmitting} onClick={() => void onDelete(goal)} type="button">
+            <Trash2 size={18} />
+            目標を削除
+          </button>
         </form>
       )}
     </div>
@@ -1198,7 +1288,7 @@ function FarmingDetail({ goal }: { goal: SharedGoal }) {
       <div>
         <dt>必要数 / 現在数</dt>
         <dd>
-          {goal.currentValue ?? 0} / {goal.targetValue ?? "-"}
+          {goal.targetValue ?? "-"} / {goal.currentValue ?? 0}
         </dd>
       </div>
       <div>

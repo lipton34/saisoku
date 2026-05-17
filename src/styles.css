@@ -264,8 +264,20 @@ a {
   font-weight: 800;
 }
 
+.danger-button {
+  color: #a7352c;
+}
+
 .hero-action {
   flex: 0 0 auto;
+}
+
+.hero-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 .stat-grid {
@@ -472,6 +484,7 @@ a {
   padding: 12px;
   border-radius: 8px;
   background: #f4f7fa;
+  color: inherit;
 }
 
 .material-goal-list {
@@ -1249,6 +1262,40 @@ textarea {
 .goal-form {
   display: grid;
   gap: 14px;
+}
+
+.proposal-targets {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+}
+
+.proposal-targets legend {
+  padding: 0 6px;
+  color: #405366;
+  font-weight: 800;
+}
+
+.proposal-target-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.proposal-target-grid label {
+  display: flex;
+  min-height: 38px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #fbfcfd;
+  font-weight: 800;
 }
 
 .goals-layout {

@@ -356,6 +356,25 @@ router.patch("/:id", async (req, res, next) => {
   }
 });
 
+router.delete("/:id", async (req, res, next) => {
+  try {
+    const existing = await prisma.sharedGoal.findFirst({
+      where: { id: req.params.id, ownerId: currentUserId(req) },
+      select: { id: true }
+    });
+
+    if (!existing) {
+      res.status(404).json({ message: "自分の目標が見つかりません" });
+      return;
+    }
+
+    await prisma.sharedGoal.delete({ where: { id: existing.id } });
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/proposals/inbox/list", async (req, res, next) => {
   try {
     const status = parseProposalStatus(req.query.status);
@@ -376,42 +395,54 @@ router.get("/proposals/inbox/list", async (req, res, next) => {
 
 router.post("/proposals", async (req, res, next) => {
   try {
-    const targetUserId = parseText(req.body.targetUserId);
+    const targetUserIds: string[] = Array.isArray(req.body.targetUserIds)
+      ? req.body.targetUserIds
+          .map((value: unknown) => parseText(value))
+          .filter((value: string): value is string => Boolean(value))
+      : [parseText(req.body.targetUserId)].filter(Boolean);
+    const uniqueTargetUserIds: string[] = [...new Set(targetUserIds)];
     const parsed = goalDataFromBody(req.body);
 
-    if (!parsed.title || !targetUserId) {
+    if (!parsed.title || uniqueTargetUserIds.length === 0) {
       res.status(400).json({ message: "提案先と目標タイトルを入力してください" });
       return;
     }
 
-    if (targetUserId === currentUserId(req)) {
+    if (uniqueTargetUserIds.includes(currentUserId(req))) {
       res.status(400).json({ message: "自分以外の団員を選んでください" });
       return;
     }
 
-    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true } });
-    if (!targetUser) {
+    const targetUsers = await prisma.user.findMany({
+      where: { id: { in: uniqueTargetUserIds } },
+      select: { id: true }
+    });
+    if (targetUsers.length !== uniqueTargetUserIds.length) {
       res.status(404).json({ message: "提案先の団員が見つかりません" });
       return;
     }
 
-    const proposal = await prisma.goalProposal.create({
-      data: {
-        proposerUserId: currentUserId(req),
-        targetUserId,
-        title: parsed.title,
-        category: parsed.category,
-        description: parsed.description,
-        targetValue: parsed.targetValue,
-        unit: null,
-        details: parsed.details,
-        dueDate: parsed.dueDate ?? null,
-        proposalMemo: parseOptionalText(req.body.proposalMemo)
-      },
-      include: proposalInclude
-    });
+    const proposals = await prisma.$transaction(
+      uniqueTargetUserIds.map((targetUserId) =>
+        prisma.goalProposal.create({
+          data: {
+            proposerUserId: currentUserId(req),
+            targetUserId,
+            title: parsed.title,
+            category: parsed.category,
+            description: parsed.description,
+            targetValue: parsed.targetValue,
+            unit: null,
+            details: parsed.details,
+            dueDate: parsed.dueDate ?? null,
+            proposalMemo: parseOptionalText(req.body.proposalMemo)
+          },
+          include: proposalInclude
+        })
+      )
+    );
 
-    res.status(201).json({ proposal });
+    res.status(201).json({ proposal: proposals[0], proposals });
   } catch (error) {
     next(error);
   }
