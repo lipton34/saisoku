@@ -615,8 +615,6 @@ export function GuildWarGoalsPage() {
               const targetMeat = BigInt(targetRuns) * BigInt(boss.meatCost);
               const targetSpecialMeat = BigInt(targetRuns) * BigInt(boss.specialMeatCost);
               const clearSeconds = speedSeconds(draft);
-              const targetContributionPerMinute = targetSeconds ? (Number(boss.contribution) / targetSeconds) * 60 : null;
-              const targetContributionPerHour = targetContributionPerMinute ? targetContributionPerMinute * 60 : null;
               const targetRunTotalTime =
                 targetRuns > 0 && clearSeconds ? formatDuration(BigInt(targetRuns) * BigInt(clearSeconds)) : null;
               const targetRunTotalTargetTime =
@@ -690,26 +688,20 @@ export function GuildWarGoalsPage() {
                     <input onChange={(event) => updateSpeed(boss.bossLevel, { memo: event.target.value })} value={draft.memo} />
                   </label>
                   <div className="speed-target-summary">
-                    <span>討伐時間: {clearSeconds ? formatSeconds(clearSeconds) : "未入力"}</span>
-                    <span>目標タイム: {targetSeconds ? formatSeconds(targetSeconds) : "未設定"}</span>
-                    <span>目標討伐数: {targetRuns > 0 ? formatNumber(targetRuns) : "未設定"}</span>
                     <span>
-                      討伐時間ベース総時間:{" "}
+                      討伐時間総時間:{" "}
                       {targetRuns <= 0 ? "未設定" : targetRunTotalTime ?? "未計算"}
                     </span>
                     <span>
-                      目標タイムベース総時間:{" "}
+                      目標タイム総時間:{" "}
                       {targetRuns <= 0 ? "未設定" : targetRunTotalTargetTime ?? "未計算"}
                     </span>
-                    <span>
-                      目標効率:{" "}
-                      {targetContributionPerMinute && targetContributionPerHour
-                        ? `${formatNumber(targetContributionPerMinute)}貢献度/分・${formatNumber(targetContributionPerHour)}貢献度/時`
-                        : "未設定"}
-                    </span>
-                    <span>目標討伐数分の貢献度: {formatBigInt(targetContribution)}</span>
-                    <span>目標討伐数分の通常肉: {formatBigInt(targetMeat)}</span>
-                    <span>目標討伐数分の250専用素材: {formatBigInt(targetSpecialMeat)}</span>
+                    <span>獲得総貢献度: {formatBigInt(targetContribution)}</span>
+                    {boss.specialMeatCost > 0 ? (
+                      <span>必要250素材: {formatBigInt(targetSpecialMeat)}</span>
+                    ) : (
+                      <span>必要肉: {formatBigInt(targetMeat)}</span>
+                    )}
                   </div>
                 </div>
               );
