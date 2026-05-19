@@ -368,7 +368,7 @@ router.post("/current/reset", async (req, res, next) => {
       }),
       prisma.guildWarGoalDay.updateMany({
         where: { planId: existing.id },
-        data: { targetContribution: 0n, currentContribution: 0n, memo: null }
+        data: { currentContribution: 0n }
       }),
       prisma.guildWarBossSpeed.deleteMany({ where: { planId: existing.id } })
     ]);

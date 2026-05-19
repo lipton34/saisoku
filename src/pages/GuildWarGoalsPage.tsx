@@ -341,7 +341,7 @@ export function GuildWarGoalsPage() {
     try {
       const data = await api.resetGuildWarGoalPlan();
       applyPlan(data);
-      setNotice("全日程目標、日程別目標、現在貢献度、討伐速度、目標肉数をリセットしました。");
+      setNotice("全日程目標、現在貢献度、討伐速度、目標肉数をリセットしました。日程別目標は維持しています。");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "古戦場目標の初期化に失敗しました");
     } finally {
