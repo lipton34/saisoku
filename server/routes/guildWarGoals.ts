@@ -79,10 +79,33 @@ function parseClearTimeSeconds(value: unknown) {
   return seconds;
 }
 
+function parseOptionalNonNegativeSeconds(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const seconds = Number(value);
+  if (!Number.isInteger(seconds) || seconds < 0) {
+    return null;
+  }
+
+  return seconds > 0 ? seconds : null;
+}
+
+function parseNonNegativeInt(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return 0;
+  }
+
+  const count = Number(value);
+  return Number.isInteger(count) && count >= 0 ? count : 0;
+}
+
 function serializePlan(plan: {
   id: string;
   title: string;
   targetContribution: bigint;
+  targetMeatCount: bigint;
   memo: string | null;
   ownerId: string;
   createdAt: Date;
@@ -99,6 +122,8 @@ function serializePlan(plan: {
     id: string;
     bossLevel: number;
     clearTimeSeconds: number | null;
+    targetClearTimeSeconds: number | null;
+    targetRuns: number;
     playStyle: string;
     memo: string | null;
     createdAt: Date;
@@ -109,6 +134,7 @@ function serializePlan(plan: {
     id: plan.id,
     title: plan.title,
     targetContribution: plan.targetContribution.toString(),
+    targetMeatCount: plan.targetMeatCount.toString(),
     memo: plan.memo,
     ownerId: plan.ownerId,
     createdAt: plan.createdAt.toISOString(),
@@ -125,6 +151,8 @@ function serializePlan(plan: {
       id: speed.id,
       bossLevel: speed.bossLevel,
       clearTimeSeconds: speed.clearTimeSeconds,
+      targetClearTimeSeconds: speed.targetClearTimeSeconds,
+      targetRuns: speed.targetRuns,
       playStyle: speed.playStyle,
       memo: speed.memo,
       createdAt: speed.createdAt.toISOString(),
@@ -292,7 +320,8 @@ router.put("/current", async (req, res, next) => {
           planId: existing.id,
           bossLevel,
           clearTimeSeconds: parseClearTimeSeconds(record.clearTimeSeconds),
-          playStyle: parseText(record.playStyle) || "未指定",
+          targetClearTimeSeconds: parseOptionalNonNegativeSeconds(record.targetClearTimeSeconds),
+          targetRuns: parseNonNegativeInt(record.targetRuns),
           memo: parseOptionalText(record.memo)
         };
       })
@@ -304,6 +333,7 @@ router.put("/current", async (req, res, next) => {
         data: {
           title,
           targetContribution: parseContribution(req.body.targetContribution),
+          targetMeatCount: parseContribution(req.body.targetMeatCount),
           memo: parseOptionalText(req.body.memo)
         }
       }),
@@ -332,13 +362,15 @@ router.post("/current/reset", async (req, res, next) => {
         where: { id: existing.id },
         data: {
           targetContribution: 0n,
+          targetMeatCount: 0n,
           memo: null
         }
       }),
       prisma.guildWarGoalDay.updateMany({
         where: { planId: existing.id },
-        data: { currentContribution: 0n }
-      })
+        data: { targetContribution: 0n, currentContribution: 0n, memo: null }
+      }),
+      prisma.guildWarBossSpeed.deleteMany({ where: { planId: existing.id } })
     ]);
 
     const [plan, bosses] = await Promise.all([planWithDetails(existing.id), bossMasters()]);

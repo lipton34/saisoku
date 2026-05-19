@@ -261,6 +261,7 @@ model GuildWarGoalPlan {
   id                 String              @id @default(cuid())
   title              String
   targetContribution BigInt              @default(0)
+  targetMeatCount    BigInt              @default(0)
   memo               String?
   ownerId            String
   owner              User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -311,6 +312,8 @@ model GuildWarBossSpeed {
   plan             GuildWarGoalPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   bossLevel        Int
   clearTimeSeconds Int?
+  targetClearTimeSeconds Int?
+  targetRuns       Int              @default(0)
   playStyle        String           @default("未指定")
   memo             String?
   createdAt        DateTime         @default(now())

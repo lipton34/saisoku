@@ -1275,6 +1275,13 @@ textarea {
   font-size: 2rem;
 }
 
+.guild-war-page .form-hint {
+  margin: 0;
+  color: #657688;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .guild-war-page .table-scroll {
   max-width: 100%;
   min-width: 0;
@@ -1298,6 +1305,11 @@ textarea {
 
 .guild-war-day-table {
   min-width: var(--guild-war-day-table-width);
+}
+
+.compact-button {
+  padding: 9px 12px;
+  white-space: nowrap;
 }
 
 .contribution-input-group {
@@ -1382,6 +1394,7 @@ textarea {
 }
 
 .speed-card span,
+.speed-target-summary span,
 .ranking-row small,
 .break-even-row span,
 .guild-war-notes p {
@@ -1392,6 +1405,14 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.speed-target-summary {
+  display: grid;
+  gap: 4px;
+  padding-top: 2px;
+  font-size: 0.86rem;
+  font-weight: 800;
 }
 
 .guild-war-tabs {

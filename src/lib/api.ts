@@ -170,6 +170,8 @@ export type GuildWarBossSpeed = {
   id: string;
   bossLevel: number;
   clearTimeSeconds: number | null;
+  targetClearTimeSeconds: number | null;
+  targetRuns: number;
   playStyle: string;
   memo: string | null;
   createdAt: string;
@@ -180,6 +182,7 @@ export type GuildWarGoalPlan = {
   id: string;
   title: string;
   targetContribution: string;
+  targetMeatCount: string;
   memo: string | null;
   ownerId: string;
   days: GuildWarGoalDay[];
@@ -202,6 +205,7 @@ export type GuildWarBossMaster = {
 export type GuildWarGoalPayload = {
   title: string;
   targetContribution: string;
+  targetMeatCount: string;
   memo?: string;
   days: {
     dayLabel: string;
@@ -213,7 +217,8 @@ export type GuildWarGoalPayload = {
   speeds: {
     bossLevel: number;
     clearTimeSeconds: number | null;
-    playStyle: string;
+    targetClearTimeSeconds: number | null;
+    targetRuns: number;
     memo?: string;
   }[];
 };

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Calculator, RotateCcw, Save, Trophy } from "lucide-react";
+import { Calculator, RotateCcw, Save, Trash2, Trophy } from "lucide-react";
 import {
   api,
   type GuildWarBossMaster,
@@ -20,11 +20,12 @@ type SpeedDraft = {
   bossLevel: number;
   minutes: string;
   seconds: string;
-  playStyle: string;
+  targetMinutes: string;
+  targetSeconds: string;
+  targetRuns: string;
   memo: string;
 };
 
-const playStyles = ["未指定", "手動", "フルオート", "セミオート"];
 const contributionStep = 100000000n;
 
 const allowedBossLevelsByDay: Record<string, number[]> = {
@@ -119,15 +120,37 @@ function speedSeconds(speed?: SpeedDraft) {
   return total > 0 ? total : null;
 }
 
+function targetSpeedSeconds(speed?: SpeedDraft) {
+  if (!speed) {
+    return null;
+  }
+
+  const minutes = Number(speed.targetMinutes || 0);
+  const seconds = Number(speed.targetSeconds || 0);
+  if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+    return null;
+  }
+
+  const total = Math.max(0, Math.floor(minutes)) * 60 + Math.max(0, Math.floor(seconds));
+  return total > 0 ? total : null;
+}
+
+function sanitizeNonNegativeInteger(value: string) {
+  return value.replace(/[^\d]/g, "").replace(/^0+(?=\d)/, "");
+}
+
 function speedDraftFromApi(boss: GuildWarBossMaster, speeds: GuildWarBossSpeed[]): SpeedDraft {
   const saved = speeds.find((speed) => speed.bossLevel === boss.bossLevel);
   const clearTimeSeconds = saved?.clearTimeSeconds ?? null;
+  const targetClearTimeSeconds = saved?.targetClearTimeSeconds ?? null;
 
   return {
     bossLevel: boss.bossLevel,
     minutes: clearTimeSeconds ? String(Math.floor(clearTimeSeconds / 60)) : "",
     seconds: clearTimeSeconds ? String(clearTimeSeconds % 60).padStart(2, "0") : "",
-    playStyle: saved?.playStyle || "未指定",
+    targetMinutes: targetClearTimeSeconds ? String(Math.floor(targetClearTimeSeconds / 60)) : "",
+    targetSeconds: targetClearTimeSeconds ? String(targetClearTimeSeconds % 60).padStart(2, "0") : "",
+    targetRuns: saved?.targetRuns ? String(saved.targetRuns) : "",
     memo: saved?.memo ?? ""
   };
 }
@@ -146,6 +169,7 @@ export function GuildWarGoalsPage() {
   const [planId, setPlanId] = useState("");
   const [title, setTitle] = useState("古戦場目標");
   const [targetContribution, setTargetContribution] = useState("");
+  const [targetMeatCount, setTargetMeatCount] = useState("");
   const [memo, setMemo] = useState("");
   const [days, setDays] = useState<DayDraft[]>([]);
   const [bosses, setBosses] = useState<GuildWarBossMaster[]>([]);
@@ -159,6 +183,7 @@ export function GuildWarGoalsPage() {
     setPlanId(data.plan.id);
     setTitle(data.plan.title);
     setTargetContribution(data.plan.targetContribution === "0" ? "" : data.plan.targetContribution);
+    setTargetMeatCount(data.plan.targetMeatCount === "0" ? "" : data.plan.targetMeatCount);
     setMemo(data.plan.memo ?? "");
     setDays(data.plan.days.map(dayDraftFromApi));
     setActiveDaySortOrder((current) =>
@@ -224,6 +249,34 @@ export function GuildWarGoalsPage() {
       .sort((a, b) => b.contributionPerMinute - a.contributionPerMinute);
   }, [bosses, speeds]);
 
+  const activeResultBosses = useMemo(() => {
+    const rankedBySpeed = activeBosses
+      .map((boss) => {
+        const seconds = speedSeconds(speeds[boss.bossLevel]);
+        if (!seconds) {
+          return null;
+        }
+
+        const contributionPerMinute = (Number(boss.contribution) / seconds) * 60;
+        return { boss, contributionPerMinute };
+      })
+      .filter((row): row is NonNullable<typeof row> => Boolean(row))
+      .sort((a, b) => b.contributionPerMinute - a.contributionPerMinute)
+      .map((row) => row.boss);
+
+    const selected = rankedBySpeed.slice(0, 2);
+    if (selected.length >= 2) {
+      return selected;
+    }
+
+    const selectedLevels = new Set(selected.map((boss) => boss.bossLevel));
+    const highDifficultyBosses = [...activeBosses]
+      .sort((a, b) => b.bossLevel - a.bossLevel)
+      .filter((boss) => !selectedLevels.has(boss.bossLevel));
+
+    return [...selected, ...highDifficultyBosses].slice(0, 2);
+  }, [activeBosses, speeds]);
+
   const breakEvenRows = [
     { base: 150, compare: 200 },
     { base: 150, compare: 250 },
@@ -254,6 +307,7 @@ export function GuildWarGoalsPage() {
       const data = await api.saveGuildWarGoalPlan({
         title,
         targetContribution: sanitizeContribution(targetContribution),
+        targetMeatCount: sanitizeContribution(targetMeatCount),
         memo,
         days: days.map((day) => ({
           dayLabel: day.dayLabel,
@@ -265,7 +319,8 @@ export function GuildWarGoalsPage() {
         speeds: bosses.map((boss) => ({
           bossLevel: boss.bossLevel,
           clearTimeSeconds: speedSeconds(speeds[boss.bossLevel]),
-          playStyle: speeds[boss.bossLevel]?.playStyle || "未指定",
+          targetClearTimeSeconds: targetSpeedSeconds(speeds[boss.bossLevel]),
+          targetRuns: Number(sanitizeNonNegativeInteger(speeds[boss.bossLevel]?.targetRuns ?? "")) || 0,
           memo: speeds[boss.bossLevel]?.memo || ""
         }))
       });
@@ -286,7 +341,7 @@ export function GuildWarGoalsPage() {
     try {
       const data = await api.resetGuildWarGoalPlan();
       applyPlan(data);
-      setNotice("全日程目標貢献度、メモ、日程別の現在貢献度をリセットしました。");
+      setNotice("全日程目標、日程別目標、現在貢献度、討伐速度、目標肉数をリセットしました。");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "古戦場目標の初期化に失敗しました");
     } finally {
@@ -298,7 +353,15 @@ export function GuildWarGoalsPage() {
     setSpeeds((current) => ({
       ...current,
       [bossLevel]: {
-        ...(current[bossLevel] ?? { bossLevel, minutes: "", seconds: "", playStyle: "未指定", memo: "" }),
+        ...(current[bossLevel] ?? {
+          bossLevel,
+          minutes: "",
+          seconds: "",
+          targetMinutes: "",
+          targetSeconds: "",
+          targetRuns: "",
+          memo: ""
+        }),
         ...patch
       }
     }));
@@ -306,6 +369,12 @@ export function GuildWarGoalsPage() {
 
   function updateDay(index: number, patch: Partial<DayDraft>) {
     setDays((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+  }
+
+  function clearDayTargets() {
+    setDays((current) => current.map((day) => ({ ...day, targetContribution: "" })));
+    setNotice("日程別目標を全てクリアしました。保存すると反映されます。");
+    setError("");
   }
 
   return (
@@ -385,7 +454,17 @@ export function GuildWarGoalsPage() {
                 </div>
               </div>
             </label>
+            <label>
+              目標肉数
+              <input
+                inputMode="numeric"
+                onChange={(event) => setTargetMeatCount(sanitizeContribution(event.target.value))}
+                placeholder="20,000"
+                value={formatContributionInput(targetMeatCount)}
+              />
+            </label>
           </div>
+          <p className="form-hint">目標肉数はメモ用途です。肉集め時間の計算はまだ含みません。</p>
           <label>
             メモ
             <textarea onChange={(event) => setMemo(event.target.value)} rows={3} value={memo} />
@@ -408,6 +487,10 @@ export function GuildWarGoalsPage() {
               <p className="eyebrow">Daily Targets</p>
               <h2>日程別目標</h2>
             </div>
+            <button className="secondary-button compact-button" disabled={isSaving} onClick={clearDayTargets} type="button">
+              <Trash2 size={18} />
+              日程別目標を全てクリア
+            </button>
           </div>
           <div className="table-scroll">
             <table className="data-table guild-war-day-table">
@@ -521,9 +604,18 @@ export function GuildWarGoalsPage() {
                 bossLevel: boss.bossLevel,
                 minutes: "",
                 seconds: "",
-                playStyle: "未指定",
+                targetMinutes: "",
+                targetSeconds: "",
+                targetRuns: "",
                 memo: ""
               };
+              const targetSeconds = targetSpeedSeconds(draft);
+              const targetRuns = Number(sanitizeNonNegativeInteger(draft.targetRuns)) || 0;
+              const targetContribution = BigInt(targetRuns) * BigInt(boss.contribution);
+              const targetMeat = BigInt(targetRuns) * BigInt(boss.meatCost);
+              const targetSpecialMeat = BigInt(targetRuns) * BigInt(boss.specialMeatCost);
+              const targetContributionPerMinute = targetSeconds ? (Number(boss.contribution) / targetSeconds) * 60 : null;
+              const targetContributionPerHour = targetContributionPerMinute ? targetContributionPerMinute * 60 : null;
               return (
                 <div className="speed-card" key={boss.bossLevel}>
                   <div>
@@ -555,22 +647,56 @@ export function GuildWarGoalsPage() {
                     </label>
                   </div>
                   <label>
-                    操作タイプ
-                    <select
-                      onChange={(event) => updateSpeed(boss.bossLevel, { playStyle: event.target.value })}
-                      value={draft.playStyle}
-                    >
-                      {playStyles.map((playStyle) => (
-                        <option key={playStyle} value={playStyle}>
-                          {playStyle}
-                        </option>
-                      ))}
-                    </select>
+                    目標タイム
+                    <div className="time-input-row">
+                      <input
+                        aria-label={`${boss.name}の目標タイム 分`}
+                        min={0}
+                        onChange={(event) => updateSpeed(boss.bossLevel, { targetMinutes: event.target.value })}
+                        placeholder="分"
+                        type="number"
+                        value={draft.targetMinutes}
+                      />
+                      <input
+                        aria-label={`${boss.name}の目標タイム 秒`}
+                        min={0}
+                        max={59}
+                        onChange={(event) => updateSpeed(boss.bossLevel, { targetSeconds: event.target.value })}
+                        placeholder="秒"
+                        type="number"
+                        value={draft.targetSeconds}
+                      />
+                    </div>
+                  </label>
+                  <label>
+                    目標討伐数
+                    <input
+                      inputMode="numeric"
+                      min={0}
+                      onChange={(event) =>
+                        updateSpeed(boss.bossLevel, { targetRuns: sanitizeNonNegativeInteger(event.target.value) })
+                      }
+                      type="number"
+                      value={draft.targetRuns}
+                    />
                   </label>
                   <label>
                     メモ
                     <input onChange={(event) => updateSpeed(boss.bossLevel, { memo: event.target.value })} value={draft.memo} />
                   </label>
+                  <div className="speed-target-summary">
+                    <span>目標タイム: {targetSeconds ? formatSeconds(targetSeconds) : "未設定"}</span>
+                    <span>
+                      目標効率:{" "}
+                      {targetContributionPerMinute && targetContributionPerHour
+                        ? `${formatNumber(targetContributionPerMinute)}貢献度/分・${formatNumber(targetContributionPerHour)}貢献度/時`
+                        : "未設定"}
+                    </span>
+                    <span>目標分: {formatBigInt(targetContribution)}貢献度</span>
+                    <span>
+                      必要素材: {formatBigInt(targetMeat)}通常肉 / {formatBigInt(targetSpecialMeat)}専用素材
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -630,38 +756,45 @@ export function GuildWarGoalsPage() {
             )}
           </>
         )}
+        <p className="form-hint">
+          日程別計算結果は、時間効率上位または高難度上位の最大2件を表示しています。すべてのHELLを比較したい場合は、時間効率ランキングを確認してください。
+        </p>
         <div className="table-scroll">
           <table className="data-table guild-war-result-table">
             <thead>
               <tr>
                 <th>難易度</th>
                 <th>必要討伐数</th>
-                <th>必要素材</th>
+                <th>必要通常肉</th>
+                <th>必要250専用素材</th>
                 <th>入力済み討伐時間</th>
+                <th>貢献度/分</th>
+                <th>必要討伐時間</th>
               </tr>
             </thead>
             <tbody>
               {activeDay ? (
-                activeBosses.map((boss) => {
+                activeResultBosses.map((boss) => {
                   const bossContribution = BigInt(boss.contribution);
                   const runs = requiredRuns(activeDayRemaining, bossContribution);
                   const seconds = speedSeconds(speeds[boss.bossLevel]);
-                  const requiredMaterial =
-                    boss.specialMeatCost > 0
-                      ? `${formatBigInt(runs * BigInt(boss.specialMeatCost))} 250専用素材`
-                      : `${formatBigInt(runs * BigInt(boss.meatCost))} 通常肉`;
+                  const contributionPerMinute = seconds ? (Number(boss.contribution) / seconds) * 60 : null;
+                  const requiredBattleTimeSeconds = seconds ? runs * BigInt(seconds) : 0n;
                   return (
                     <tr key={`${activeDay.sortOrder}-${boss.bossLevel}`}>
                       <td>{boss.name}</td>
                       <td>{formatBigInt(runs)}</td>
-                      <td>{requiredMaterial}</td>
+                      <td>{formatBigInt(runs * BigInt(boss.meatCost))}</td>
+                      <td>{formatBigInt(runs * BigInt(boss.specialMeatCost))}</td>
                       <td>{seconds ? formatSeconds(seconds) : "未入力"}</td>
+                      <td>{contributionPerMinute ? formatNumber(contributionPerMinute) : "未計算"}</td>
+                      <td>{seconds ? formatDuration(requiredBattleTimeSeconds) : "未計算"}</td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={4}>日程データを読み込み中です。</td>
+                  <td colSpan={7}>日程データを読み込み中です。</td>
                 </tr>
               )}
             </tbody>
@@ -688,7 +821,7 @@ export function GuildWarGoalsPage() {
                   <div>
                     <strong>{row.boss.name}</strong>
                     <small>
-                      {formatSeconds(row.seconds)} / {row.speed.playStyle}
+                      {formatSeconds(row.seconds)}
                       {row.speed.memo ? ` / ${row.speed.memo}` : ""}
                     </small>
                   </div>
