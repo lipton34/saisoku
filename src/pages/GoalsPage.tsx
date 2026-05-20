@@ -5,11 +5,13 @@ import {
   Eye,
   Inbox,
   MessageSquarePlus,
+  Pencil,
   Plus,
   RotateCcw,
   Save,
   Search,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -362,7 +364,7 @@ function GoalsPageContent() {
   }
 
   async function handleUpdateGoal(form: GoalFormState) {
-    if (!selectedGoal) return;
+    if (!selectedGoal) return false;
     setError("");
     setNotice("");
     setIsSubmitting(true);
@@ -371,9 +373,11 @@ function GoalsPageContent() {
       const data = await api.updateSharedGoal(selectedGoal.id, goalPayload(form));
       setSelectedGoal(data.goal);
       setGoals((current) => current.map((goal) => (goal.id === data.goal.id ? data.goal : goal)));
-      setNotice("進捗を更新しました。");
+      setNotice("目標を保存しました。");
+      return true;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "進捗の更新に失敗しました");
+      setError(caught instanceof Error ? caught.message : "目標の保存に失敗しました");
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -626,9 +630,11 @@ function GoalsPageContent() {
             </div>
             {selectedGoal ? (
               <GoalDetail
+                buildPosts={buildPosts}
                 canUpdate={canUpdateSelected}
                 goal={selectedGoal}
                 isSubmitting={isSubmitting}
+                materialGoals={materialGoals}
                 onDelete={deleteGoal}
                 onUpdate={handleUpdateGoal}
               />
@@ -1123,28 +1129,47 @@ function GoalRow({ goal, isActive, onSelect }: { goal: SharedGoal; isActive: boo
 }
 
 function GoalDetail({
+  buildPosts,
   canUpdate,
   goal,
   isSubmitting,
+  materialGoals,
   onDelete,
   onUpdate
 }: {
+  buildPosts: BuildPost[];
   canUpdate: boolean;
   goal: SharedGoal;
   isSubmitting: boolean;
+  materialGoals: MaterialGoal[];
   onDelete: (goal: SharedGoal) => Promise<void>;
-  onUpdate: (form: GoalFormState) => Promise<void>;
+  onUpdate: (form: GoalFormState) => Promise<boolean>;
 }) {
   const goalDetails = details(goal);
   const [form, setForm] = useState<GoalFormState>(() => formFromGoal(goal));
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     setForm(formFromGoal(goal));
+    setIsEditing(false);
   }, [goal]);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submitProgress(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void onUpdate(form);
+    await onUpdate(form);
+  }
+
+  async function submitEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const didSave = await onUpdate(form);
+    if (didSave) {
+      setIsEditing(false);
+    }
+  }
+
+  function cancelEdit() {
+    setForm(formFromGoal(goal));
+    setIsEditing(false);
   }
 
   return (
@@ -1154,6 +1179,18 @@ function GoalDetail({
         <span className="pill">{goal.status}</span>
         <span className="pill muted">{goal.category}</span>
       </div>
+      {canUpdate && !isEditing && (
+        <div className="goal-detail-actions">
+          <button className="secondary-button" onClick={() => setIsEditing(true)} type="button">
+            <Pencil size={17} />
+            編集
+          </button>
+          <button className="secondary-button danger-button" disabled={isSubmitting} onClick={() => void onDelete(goal)} type="button">
+            <Trash2 size={17} />
+            目標を削除
+          </button>
+        </div>
+      )}
       <dl className="goal-detail-list">
         <div>
           <dt>団員</dt>
@@ -1180,8 +1217,36 @@ function GoalDetail({
       {goal.memo && <p className="goal-note">{goal.memo}</p>}
       {goal.proposedByUser && <p className="goal-note">提案者: {displayName(goal.proposedByUser)}</p>}
 
-      {canUpdate && (
-        <form className="progress-form" onSubmit={submit}>
+      {canUpdate && isEditing && (
+        <form className="progress-form goal-edit-form" onSubmit={submitEdit}>
+          <div className="section-heading compact-heading">
+            <div>
+              <p className="eyebrow">Edit</p>
+              <h2>目標を編集</h2>
+            </div>
+          </div>
+          <GoalEditor
+            buildPosts={buildPosts}
+            form={form}
+            materialGoals={materialGoals}
+            mode="goal"
+            onChange={setForm}
+          />
+          <div className="goal-detail-actions">
+            <button className="primary-button" disabled={isSubmitting} type="submit">
+              <Save size={18} />
+              保存
+            </button>
+            <button className="secondary-button" disabled={isSubmitting} onClick={cancelEdit} type="button">
+              <X size={18} />
+              キャンセル
+            </button>
+          </div>
+        </form>
+      )}
+
+      {canUpdate && !isEditing && (
+        <form className="progress-form" onSubmit={submitProgress}>
           <div className="section-heading compact-heading">
             <div>
               <p className="eyebrow">Update</p>
@@ -1207,8 +1272,39 @@ function GoalDetail({
             </div>
           )}
           {goal.category === "編成" && (
-            <>
-              <FormationGoalFields buildPosts={[]} form={form} onApplyBuildPost={() => undefined} onChange={setForm} />
+            <div className="goal-part-list">
+              {[...(form.characters ?? []), ...(form.weapons ?? []), ...(form.summons ?? [])].length === 0 ? (
+                <div className="empty-state compact">編成パーツは未設定です。編集から追加できます。</div>
+              ) : (
+                <>
+                  {[...(form.characters ?? []), ...(form.weapons ?? []), ...(form.summons ?? [])].map((part, index) => (
+                    <div className="goal-part-row compact" key={`${part.kind}-${part.name}-${index}`}>
+                      <PartThumbnail kind={part.kind} masterId={part.masterId} name={part.name} />
+                      <span>
+                        <strong>{part.name}</strong>
+                        <small>{partKindLabel(part.kind)}</small>
+                      </span>
+                      <select
+                        onChange={(event) => {
+                          const key = partsKey(part.kind);
+                          let seen = -1;
+                          setForm((current) => ({
+                            ...current,
+                            [key]: (current[key] ?? []).map((item) => {
+                              seen += 1;
+                              return seen === indexInKind(form, part, index) ? { ...item, owned: event.target.value === "owned" } : item;
+                            })
+                          }));
+                        }}
+                        value={part.owned ? "owned" : "missing"}
+                      >
+                        <option value="owned">所持</option>
+                        <option value="missing">未所持</option>
+                      </select>
+                    </div>
+                  ))}
+                </>
+              )}
               <label>
                 状態
                 <select onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as GoalStatus }))} value={form.status}>
@@ -1219,7 +1315,7 @@ function GoalDetail({
                   ))}
                 </select>
               </label>
-            </>
+            </div>
           )}
           {goal.category === "その他" && (
             <label>
@@ -1241,14 +1337,17 @@ function GoalDetail({
             <Save size={18} />
             進捗を保存
           </button>
-          <button className="secondary-button danger-button" disabled={isSubmitting} onClick={() => void onDelete(goal)} type="button">
-            <Trash2 size={18} />
-            目標を削除
-          </button>
         </form>
       )}
     </div>
   );
+}
+
+function indexInKind(form: GoalFormState, part: GoalFormationPart, flatIndex: number) {
+  const sameKindBefore = [...(form.characters ?? []), ...(form.weapons ?? []), ...(form.summons ?? [])]
+    .slice(0, flatIndex)
+    .filter((item) => item.kind === part.kind).length;
+  return sameKindBefore;
 }
 
 function formFromGoal(goal: SharedGoal): GoalFormState {
