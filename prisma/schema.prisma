@@ -23,6 +23,58 @@ enum GbfMasterKind {
   quest
 }
 
+enum SourceArticleStatus {
+  active
+  archived
+  fetch_error
+}
+
+enum SourceArticleType {
+  monthly_plan
+  event
+  campaign
+  update
+  gacha
+  character
+  media
+  maintenance
+  other
+}
+
+enum ExtractedNewsItemType {
+  event
+  campaign
+  update
+  monthly_plan_item
+  gacha
+  character
+  maintenance
+  other
+}
+
+enum ExtractedNewsEventType {
+  scenario_event
+  rerun_event
+  collaboration_event
+  guild_war
+  dread_barrage
+  rotb
+  xeno_clash
+  proving_grounds
+  tower_of_babyl
+  arcarum_event
+  side_story
+  special_event
+  unknown
+}
+
+enum ExtractedNewsInfoStatus {
+  confirmed
+  scheduled
+  tentative
+  unknown
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -322,4 +374,91 @@ model GuildWarBossSpeed {
   @@unique([planId, bossLevel])
   @@index([planId])
   @@map("guild_war_boss_speeds")
+}
+
+model SourceArticle {
+  id              String                @id @default(cuid())
+  source          String
+  sourceArticleId String                @map("source_article_id")
+  slug            String?
+  title           String
+  officialUrl     String                @map("official_url")
+  publishedAt     DateTime?             @map("published_at")
+  categoryIds     Int[]                 @default([]) @map("category_ids")
+  categorySlugs   String[]              @default([]) @map("category_slugs")
+  articleType     SourceArticleType     @default(other) @map("article_type")
+  fetchedAt       DateTime              @default(now()) @map("fetched_at")
+  lastCheckedAt   DateTime              @default(now()) @map("last_checked_at")
+  contentHash     String?               @map("content_hash")
+  status          SourceArticleStatus   @default(active)
+  extractedItems  ExtractedNewsItem[]
+
+  @@unique([source, sourceArticleId])
+  @@index([source, publishedAt])
+  @@index([source, articleType])
+  @@index([source, status])
+  @@index([contentHash])
+  @@map("source_articles")
+}
+
+model OfficialNewsCategory {
+  id               String   @id @default(cuid())
+  source           String
+  sourceCategoryId Int      @map("source_category_id")
+  slug             String
+  name             String
+  sortOrder        Int      @default(0) @map("sort_order")
+  fetchedAt        DateTime @default(now()) @map("fetched_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@unique([source, sourceCategoryId])
+  @@unique([source, slug])
+  @@index([source, sortOrder])
+  @@map("official_news_categories")
+}
+
+model ExtractedNewsItem {
+  id                   String                  @id @default(cuid())
+  sourceArticleId      String                  @map("source_article_id")
+  sourceArticle        SourceArticle           @relation(fields: [sourceArticleId], references: [id], onDelete: Cascade)
+  itemType             ExtractedNewsItemType   @default(other) @map("item_type")
+  title                String?
+  eventType            ExtractedNewsEventType  @default(unknown) @map("event_type")
+  startsAt             DateTime?               @map("starts_at")
+  endsAt               DateTime?               @map("ends_at")
+  updateAtCandidate    DateTime?               @map("update_at_candidate")
+  rawDateText          String?                 @map("raw_date_text")
+  summary              String?
+  infoStatus           ExtractedNewsInfoStatus @default(unknown) @map("info_status")
+  extractionConfidence Float                   @default(0) @map("extraction_confidence")
+  tags                 String[]                @default([])
+  relatedKey           String?                 @map("related_key")
+  displayPriority      Int                     @default(0) @map("display_priority")
+  isVisible            Boolean                 @default(true) @map("is_visible")
+  createdAt            DateTime                @default(now()) @map("created_at")
+  updatedAt            DateTime                @updatedAt @map("updated_at")
+
+  @@index([sourceArticleId])
+  @@index([itemType])
+  @@index([eventType])
+  @@index([infoStatus])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@map("extracted_news_items")
+}
+
+model NewsFetchLog {
+  id            String    @id @default(cuid())
+  runType       String    @map("run_type")
+  targetPeriod  String?   @map("target_period")
+  fetchedCount  Int       @default(0) @map("fetched_count")
+  insertedCount Int       @default(0) @map("inserted_count")
+  updatedCount  Int       @default(0) @map("updated_count")
+  failedCount   Int       @default(0) @map("failed_count")
+  errorMessage  String?   @map("error_message")
+  startedAt     DateTime  @default(now()) @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+
+  @@index([runType, startedAt])
+  @@map("news_fetch_logs")
 }

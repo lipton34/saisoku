@@ -15,6 +15,10 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
+    "news:fetch:latest": "TMPDIR=/tmp tsx server/scripts/fetchOfficialNews.ts latest",
+    "news:fetch:month": "TMPDIR=/tmp tsx server/scripts/fetchOfficialNews.ts month",
+    "news:reanalyze": "TMPDIR=/tmp tsx server/scripts/fetchOfficialNews.ts reanalyze",
+    "news:debug:summary": "TMPDIR=/tmp tsx server/scripts/debugOfficialNewsSummary.ts",
     "prisma:studio": "prisma studio"
   },
   "prisma": {

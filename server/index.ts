@@ -10,6 +10,12 @@ import { buildMastersRouter } from "./routes/buildMasters.js";
 import { buildsRouter } from "./routes/builds.js";
 import { guildWarGoalsRouter } from "./routes/guildWarGoals.js";
 import { materialGoalsRouter } from "./routes/materialGoals.js";
+import {
+  newsFetchLogsRouter,
+  newsItemsRouter,
+  officialNewsRouter,
+  sourceArticlesRouter
+} from "./routes/officialNews.js";
 import { sharedGoalsRouter } from "./routes/sharedGoals.js";
 import { tasksRouter } from "./routes/tasks.js";
 
@@ -41,6 +47,10 @@ app.use("/api/build-masters", buildMastersRouter);
 app.use("/api/builds", buildsRouter);
 app.use("/api/guild-war-goals", guildWarGoalsRouter);
 app.use("/api/material-goals", materialGoalsRouter);
+app.use("/api/news", officialNewsRouter);
+app.use("/api/news-fetch-logs", newsFetchLogsRouter);
+app.use("/api/news-items", newsItemsRouter);
+app.use("/api/source-articles", sourceArticlesRouter);
 app.use("/api/shared-goals", sharedGoalsRouter);
 app.use("/api/tasks", tasksRouter);
 

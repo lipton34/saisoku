@@ -5,6 +5,7 @@ import {
   Flame,
   LogOut,
   Map,
+  Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
   ScrollText,
@@ -70,6 +71,10 @@ export function AppShell() {
           <NavLink to="/guild-war-goals">
             <Flame size={18} />
             <span className="sidebar-label">古戦場計算</span>
+          </NavLink>
+          <NavLink to="/official-news">
+            <Newspaper size={18} />
+            <span className="sidebar-label">公式NEWS</span>
           </NavLink>
           <NavLink to="/builds/search">
             <Swords size={18} />

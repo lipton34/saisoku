@@ -223,6 +223,115 @@ export type GuildWarGoalPayload = {
   }[];
 };
 
+export type SourceArticleType =
+  | "monthly_plan"
+  | "event"
+  | "campaign"
+  | "update"
+  | "gacha"
+  | "character"
+  | "media"
+  | "maintenance"
+  | "other";
+
+export type ExtractedNewsItemType =
+  | "event"
+  | "campaign"
+  | "update"
+  | "monthly_plan_item"
+  | "gacha"
+  | "character"
+  | "maintenance"
+  | "other";
+
+export type ExtractedNewsEventType =
+  | "scenario_event"
+  | "rerun_event"
+  | "collaboration_event"
+  | "guild_war"
+  | "dread_barrage"
+  | "rotb"
+  | "xeno_clash"
+  | "proving_grounds"
+  | "tower_of_babyl"
+  | "arcarum_event"
+  | "side_story"
+  | "special_event"
+  | "unknown";
+
+export type ExtractedNewsInfoStatus = "confirmed" | "scheduled" | "tentative" | "unknown";
+
+export type ExtractedNewsItem = {
+  id: string;
+  itemType: ExtractedNewsItemType;
+  title: string | null;
+  eventType: ExtractedNewsEventType;
+  startsAt: string | null;
+  endsAt: string | null;
+  updateAtCandidate: string | null;
+  rawDateText: string | null;
+  summary: string | null;
+  infoStatus: ExtractedNewsInfoStatus;
+  extractionConfidence: number;
+  tags: string[];
+  relatedKey: string | null;
+  displayPriority: number;
+  isVisible: boolean;
+  article: {
+    sourceArticleId: string;
+    title: string;
+    officialUrl: string;
+    publishedAt: string | null;
+    articleType: SourceArticleType;
+  };
+};
+
+export type SourceArticle = {
+  id: string;
+  sourceArticleId: string;
+  title: string;
+  officialUrl: string;
+  publishedAt: string | null;
+  articleType: SourceArticleType;
+  fetchStatus: string;
+  parseStatus: string;
+  contentHash: string | null;
+  lastFetchedAt: string;
+  lastParsedAt: string;
+  categories: { sourceCategoryId?: number; slug: string; name: string }[];
+};
+
+export type NewsFetchLog = {
+  id: string;
+  runType: string;
+  status: "success" | "error" | "running";
+  targetMonth: string | null;
+  targetStartDate: string | null;
+  targetEndDate: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+  fetchedCount: number;
+  newCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  errorCount: number;
+  errorMessage: string | null;
+};
+
+export type OfficialNewsListParams = {
+  itemType?: string;
+  eventType?: string;
+  articleType?: string;
+  runType?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  keyword?: string;
+  includeHidden?: boolean;
+  limit?: number;
+  offset?: number;
+};
+
 export type BuildReferenceUrl = {
   type: string;
   title: string;
@@ -380,6 +489,19 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return response.json() as Promise<T>;
 }
 
+function toQuery(params?: OfficialNewsListParams) {
+  const search = new URLSearchParams();
+  Object.entries(params ?? {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "" || value === false) {
+      return;
+    }
+    search.set(key, String(value));
+  });
+
+  const query = search.toString();
+  return query ? `?${query}` : "";
+}
+
 export const api = {
   me: () => request<{ user: User | null }>("/api/auth/me"),
   login: (username: string, password: string) =>
@@ -489,6 +611,18 @@ export const api = {
     request<{ plan: GuildWarGoalPlan; bossMasters: GuildWarBossMaster[] }>("/api/guild-war-goals/current/reset", {
       method: "POST"
     }),
+  newsItems: (params?: OfficialNewsListParams) =>
+    request<{ items: ExtractedNewsItem[]; total: number; limit: number; offset: number }>(
+      `/api/news-items${toQuery(params)}`
+    ),
+  sourceArticles: (params?: OfficialNewsListParams) =>
+    request<{ articles: SourceArticle[]; total: number; limit: number; offset: number }>(
+      `/api/source-articles${toQuery(params)}`
+    ),
+  newsFetchLogs: (params?: OfficialNewsListParams) =>
+    request<{ logs: NewsFetchLog[]; total: number; limit: number; offset: number }>(
+      `/api/news-fetch-logs${toQuery(params)}`
+    ),
   buildPresets: (filters?: { category?: string; questName?: string; element?: string }) => {
     const params = new URLSearchParams();
     if (filters?.category) params.set("category", filters.category);
