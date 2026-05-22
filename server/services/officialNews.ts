@@ -475,6 +475,10 @@ function classifyArticle(title: string, categorySlugs: string[]): SourceArticleT
 }
 
 function extractNewsItems(article: NormalizedArticle): ExtractedNewsItemCandidate[] {
+  if (article.articleType === "media") {
+    return [];
+  }
+
   const text = normalizeText(article.content);
   const rawDateText = findDateRangeText(text);
   const parsedRange = rawDateText ? parseDateRange(rawDateText, article.publishedAt) : { startsAt: null, endsAt: null };

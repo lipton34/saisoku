@@ -21,6 +21,15 @@ newsFetchLogsRouter.use(requireAuth);
 const itemTypes = new Set<string>(Object.values(ExtractedNewsItemType));
 const eventTypes = new Set<string>(Object.values(ExtractedNewsEventType));
 const articleTypes = new Set<string>(Object.values(SourceArticleType));
+const gameItemTypes = new Set<string>([
+  "event",
+  "campaign",
+  "update",
+  "monthly_plan_item",
+  "gacha",
+  "character",
+  "maintenance"
+]);
 
 function textQuery(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -54,6 +63,14 @@ function parseBoolean(value: unknown) {
   return value === "true" || value === "1";
 }
 
+function parseBooleanWithDefault(value: unknown, fallback: boolean) {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  return parseBoolean(value);
+}
+
 function normalizeFetchLogStatus(log: { finishedAt: Date | null; failedCount: number; errorMessage: string | null }) {
   if (!log.finishedAt) {
     return "running";
@@ -71,6 +88,152 @@ async function categoryNameMap() {
   return new Map(categories.map((category) => [category.slug, category]));
 }
 
+type NewsItemWithArticle = Prisma.ExtractedNewsItemGetPayload<{
+  include: {
+    sourceArticle: {
+      select: {
+        sourceArticleId: true;
+        title: true;
+        officialUrl: true;
+        publishedAt: true;
+        articleType: true;
+      };
+    };
+  };
+}>;
+
+type NewsItemPayload = ReturnType<typeof toNewsItemPayload>;
+
+function toNewsItemPayload(item: NewsItemWithArticle) {
+  return {
+    id: item.id,
+    itemType: item.itemType,
+    title: item.title,
+    eventType: item.eventType,
+    startsAt: item.startsAt,
+    endsAt: item.endsAt,
+    updateAtCandidate: item.updateAtCandidate,
+    rawDateText: item.rawDateText,
+    summary: item.summary,
+    infoStatus: item.infoStatus,
+    extractionConfidence: item.extractionConfidence,
+    tags: item.tags,
+    relatedKey: item.relatedKey,
+    displayPriority: item.displayPriority,
+    isVisible: item.isVisible,
+    groupKey: buildGroupKey(item),
+    article: item.sourceArticle
+  };
+}
+
+function groupNewsItems(items: NewsItemPayload[], includeRelated: boolean) {
+  const groups = new Map<string, NewsItemPayload[]>();
+  for (const item of items) {
+    const group = groups.get(item.groupKey) ?? [];
+    group.push(item);
+    groups.set(item.groupKey, group);
+  }
+
+  return [...groups.values()]
+    .map((group) => {
+      const representative = [...group].sort(compareRepresentative)[0];
+      const related = group
+        .filter((item) => item.id !== representative.id)
+        .map(toRelatedNewsItem);
+
+      return {
+        ...representative,
+        groupSize: group.length,
+        relatedItems: includeRelated ? related : undefined
+      };
+    })
+    .sort(compareDisplayOrder);
+}
+
+function toRelatedNewsItem(item: NewsItemPayload) {
+  return {
+    id: item.id,
+    itemType: item.itemType,
+    title: item.title,
+    startsAt: item.startsAt,
+    endsAt: item.endsAt,
+    extractionConfidence: item.extractionConfidence,
+    article: item.article
+  };
+}
+
+function compareRepresentative(a: NewsItemPayload, b: NewsItemPayload) {
+  const aHasPeriod = Number(Boolean(a.startsAt || a.endsAt));
+  const bHasPeriod = Number(Boolean(b.startsAt || b.endsAt));
+  if (aHasPeriod !== bHasPeriod) return bHasPeriod - aHasPeriod;
+
+  const publishedDiff = dateTime(b.article.publishedAt) - dateTime(a.article.publishedAt);
+  if (publishedDiff !== 0) return publishedDiff;
+
+  if (a.extractionConfidence !== b.extractionConfidence) return b.extractionConfidence - a.extractionConfidence;
+
+  const typeDiff = representativeTypeScore(b.itemType) - representativeTypeScore(a.itemType);
+  if (typeDiff !== 0) return typeDiff;
+
+  return Number(a.itemType === "monthly_plan_item") - Number(b.itemType === "monthly_plan_item");
+}
+
+function compareDisplayOrder(a: NewsItemPayload, b: NewsItemPayload) {
+  const startA = a.startsAt ? dateTime(a.startsAt) : Number.POSITIVE_INFINITY;
+  const startB = b.startsAt ? dateTime(b.startsAt) : Number.POSITIVE_INFINITY;
+  if (startA !== startB) return startA - startB;
+
+  const publishedDiff = dateTime(b.article.publishedAt) - dateTime(a.article.publishedAt);
+  if (publishedDiff !== 0) return publishedDiff;
+
+  return a.displayPriority - b.displayPriority;
+}
+
+function representativeTypeScore(itemType: string) {
+  if (itemType === "event") return 4;
+  if (itemType === "campaign") return 3;
+  if (itemType === "update") return 2;
+  if (itemType === "monthly_plan_item") return 0;
+  return 1;
+}
+
+function buildGroupKey(item: NewsItemWithArticle) {
+  const title = normalizeGroupTitle(item.title ?? item.sourceArticle.title);
+  const start = dateKey(item.startsAt);
+  const end = dateKey(item.endsAt);
+  if (item.relatedKey) {
+    return normalizeGroupTitle(item.relatedKey);
+  }
+
+  return [item.itemType, item.eventType, title, start, end].join(":");
+}
+
+function normalizeGroupTitle(value: string) {
+  return value
+    .replace(/^\d+:/, "")
+    .replace(/これからの[『「]グランブルーファンタジー[』」]/g, "")
+    .replace(/【グランブルーファンタジー】/g, "")
+    .replace(/キャンペーン開催のお知らせ/g, "")
+    .replace(/開催のお知らせ/g, "")
+    .replace(/開催予定/g, "")
+    .replace(/後編追加/g, "")
+    .replace(/更新のお知らせ/g, "")
+    .replace(/New!/gi, "")
+    .replace(/[「『」』"'“”]/g, "")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+}
+
+function dateKey(value: Date | string | null) {
+  if (!value) return "";
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function dateTime(value: Date | string | null) {
+  if (!value) return 0;
+  return new Date(value).getTime();
+}
+
 const listNewsItems: RequestHandler = async (req, res, next) => {
   try {
     const limit = parseLimit(req.query.limit);
@@ -81,6 +244,9 @@ const listNewsItems: RequestHandler = async (req, res, next) => {
     const from = parseDate(req.query.from);
     const to = parseDate(req.query.to);
     const includeHidden = parseBoolean(req.query.includeHidden);
+    const grouped = parseBooleanWithDefault(req.query.grouped, true);
+    const includeRelated = parseBooleanWithDefault(req.query.includeRelated, true);
+    const includeNonGame = parseBooleanWithDefault(req.query.includeNonGame, false);
 
     const and: Prisma.ExtractedNewsItemWhereInput[] = [];
     if (from || to) {
@@ -105,12 +271,13 @@ const listNewsItems: RequestHandler = async (req, res, next) => {
 
     const where: Prisma.ExtractedNewsItemWhereInput = {
       ...(includeHidden ? {} : { isVisible: true }),
+      ...(includeNonGame ? {} : { itemType: { in: [...gameItemTypes] as ExtractedNewsItemType[] } }),
       ...(itemTypes.has(itemType) ? { itemType: itemType as ExtractedNewsItemType } : {}),
       ...(eventTypes.has(eventType) ? { eventType: eventType as ExtractedNewsEventType } : {}),
       ...(and.length > 0 ? { AND: and } : {})
     };
 
-    const [total, items] = await Promise.all([
+    const [rawTotal, items] = await Promise.all([
       prisma.extractedNewsItem.count({ where }),
       prisma.extractedNewsItem.findMany({
         where,
@@ -130,33 +297,23 @@ const listNewsItems: RequestHandler = async (req, res, next) => {
           { sourceArticle: { publishedAt: { sort: "desc", nulls: "last" } } },
           { displayPriority: "asc" }
         ],
-        skip: offset,
-        take: limit
+        ...(grouped ? {} : { skip: offset, take: limit })
       })
     ]);
 
+    const payloadItems = items.map(toNewsItemPayload);
+    const groupedItems = grouped ? groupNewsItems(payloadItems, includeRelated) : payloadItems;
+    const pageItems = grouped ? groupedItems.slice(offset, offset + limit) : groupedItems;
+    const total = grouped ? groupedItems.length : rawTotal;
+
     res.json({
-      items: items.map((item) => ({
-        id: item.id,
-        itemType: item.itemType,
-        title: item.title,
-        eventType: item.eventType,
-        startsAt: item.startsAt,
-        endsAt: item.endsAt,
-        updateAtCandidate: item.updateAtCandidate,
-        rawDateText: item.rawDateText,
-        summary: item.summary,
-        infoStatus: item.infoStatus,
-        extractionConfidence: item.extractionConfidence,
-        tags: item.tags,
-        relatedKey: item.relatedKey,
-        displayPriority: item.displayPriority,
-        isVisible: item.isVisible,
-        article: item.sourceArticle
-      })),
+      items: pageItems,
       total,
       limit,
-      offset
+      offset,
+      grouped,
+      includeRelated,
+      includeNonGame
     });
   } catch (error) {
     next(error);

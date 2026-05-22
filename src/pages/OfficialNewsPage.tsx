@@ -108,6 +108,8 @@ export function OfficialNewsPage() {
   const [to, setTo] = useState("");
   const [keyword, setKeyword] = useState("");
   const [includeHidden, setIncludeHidden] = useState(false);
+  const [includeNonGame, setIncludeNonGame] = useState(false);
+  const [disableGrouping, setDisableGrouping] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -127,7 +129,15 @@ export function OfficialNewsPage() {
         limit: 80
       };
       const [itemData, articleData, logData] = await Promise.all([
-        api.newsItems({ ...common, itemType, eventType, includeHidden }),
+        api.newsItems({
+          ...common,
+          itemType,
+          eventType,
+          includeHidden,
+          includeNonGame,
+          grouped: !disableGrouping,
+          includeRelated: true
+        }),
         api.sourceArticles({ ...common, articleType }),
         api.newsFetchLogs({ runType, status: logStatus, limit: 40 })
       ]);
@@ -240,6 +250,22 @@ export function OfficialNewsPage() {
                 />
                 非表示も含める
               </label>
+              <label className="checkbox-field official-news-checkbox">
+                <input
+                  checked={includeNonGame}
+                  onChange={(event) => setIncludeNonGame(event.target.checked)}
+                  type="checkbox"
+                />
+                メディア等も含める
+              </label>
+              <label className="checkbox-field official-news-checkbox">
+                <input
+                  checked={disableGrouping}
+                  onChange={(event) => setDisableGrouping(event.target.checked)}
+                  type="checkbox"
+                />
+                グルーピング解除
+              </label>
             </>
           )}
 
@@ -331,6 +357,7 @@ function NewsItemsTable({ items }: { items: ExtractedNewsItem[] }) {
               <span className="pill muted">{labelFor(eventTypeOptions, item.eventType)}</span>
               <span className="pill muted">{item.infoStatus}</span>
               <span className="pill muted">信頼度 {confidenceLabel(item.extractionConfidence)}</span>
+              {item.groupSize && item.groupSize > 1 ? <span className="pill muted">関連 {item.groupSize - 1}</span> : null}
             </div>
             <h3>{item.title || item.article.title}</h3>
             <dl className="official-news-facts">
@@ -353,6 +380,23 @@ function NewsItemsTable({ items }: { items: ExtractedNewsItem[] }) {
                 <p>{item.rawDateText}</p>
               </details>
             )}
+            {item.relatedItems && item.relatedItems.length > 0 ? (
+              <details className="official-news-related">
+                <summary>関連NEWS {item.relatedItems.length}件</summary>
+                <div className="official-news-related-list">
+                  {item.relatedItems.map((related) => (
+                    <a href={related.article.officialUrl} key={related.id} rel="noreferrer" target="_blank">
+                      <span className="pill muted">{labelFor(itemTypeOptions, related.itemType)}</span>
+                      <strong>{related.title || related.article.title}</strong>
+                      <small>
+                        {formatDateTime(related.article.publishedAt)} / 信頼度{" "}
+                        {confidenceLabel(related.extractionConfidence)}
+                      </small>
+                    </a>
+                  ))}
+                </div>
+              </details>
+            ) : null}
           </div>
           <a className="secondary-button compact-action" href={item.article.officialUrl} rel="noreferrer" target="_blank">
             <ExternalLink size={16} />

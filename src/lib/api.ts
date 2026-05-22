@@ -277,6 +277,23 @@ export type ExtractedNewsItem = {
   relatedKey: string | null;
   displayPriority: number;
   isVisible: boolean;
+  groupKey?: string;
+  groupSize?: number;
+  relatedItems?: {
+    id: string;
+    itemType: ExtractedNewsItemType;
+    title: string | null;
+    startsAt: string | null;
+    endsAt: string | null;
+    extractionConfidence: number;
+    article: {
+      sourceArticleId: string;
+      title: string;
+      officialUrl: string;
+      publishedAt: string | null;
+      articleType: SourceArticleType;
+    };
+  }[];
   article: {
     sourceArticleId: string;
     title: string;
@@ -328,6 +345,9 @@ export type OfficialNewsListParams = {
   to?: string;
   keyword?: string;
   includeHidden?: boolean;
+  grouped?: boolean;
+  includeRelated?: boolean;
+  includeNonGame?: boolean;
   limit?: number;
   offset?: number;
 };
