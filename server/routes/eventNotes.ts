@@ -85,6 +85,21 @@ const noteInclude = {
       },
     },
   },
+  eventOccurrence: {
+    include: {
+      eventSeries: true,
+      newsItem: {
+        include: {
+          sourceArticle: {
+            select: {
+              title: true,
+              officialUrl: true,
+            },
+          },
+        },
+      },
+    },
+  },
 };
 
 async function findNewsItem(newsItemId: string) {
@@ -94,11 +109,23 @@ async function findNewsItem(newsItemId: string) {
   });
 }
 
+async function findEventOccurrence(eventOccurrenceId: string) {
+  return prisma.eventOccurrence.findUnique({
+    where: { id: eventOccurrenceId },
+    include: {
+      eventSeries: true,
+      newsItem: { include: { sourceArticle: true } },
+    },
+  });
+}
+
 function toNotePayload(note: Prisma.EventNoteGetPayload<{ include: typeof noteInclude }>) {
   return {
     id: note.id,
     eventKey: note.eventKey,
     newsItemId: note.newsItemId,
+    eventOccurrenceId: note.eventOccurrenceId,
+    eventSeriesId: note.eventSeriesId,
     title: note.title,
     minimumGoals: note.minimumGoals,
     targetWeapons: note.targetWeapons,
@@ -118,11 +145,11 @@ function toCandidatePayload(note: Prisma.EventNoteGetPayload<{ include: typeof n
   return {
     ...toNotePayload(note),
     sourceNewsItem: {
-      title: note.newsItem.title,
-      startsAt: note.newsItem.startsAt,
-      endsAt: note.newsItem.endsAt,
-      articleTitle: note.newsItem.sourceArticle.title,
-      officialUrl: note.newsItem.sourceArticle.officialUrl,
+      title: note.eventOccurrence?.title ?? note.newsItem?.title ?? null,
+      startsAt: note.eventOccurrence?.startAt ?? note.newsItem?.startsAt ?? null,
+      endsAt: note.eventOccurrence?.endAt ?? note.newsItem?.endsAt ?? null,
+      articleTitle: note.eventOccurrence?.newsItem?.sourceArticle.title ?? note.newsItem?.sourceArticle.title ?? note.eventOccurrence?.eventSeries.name ?? note.title,
+      officialUrl: note.eventOccurrence?.officialUrl ?? note.eventOccurrence?.newsItem?.sourceArticle.officialUrl ?? note.newsItem?.sourceArticle.officialUrl ?? "",
     },
   };
 }
@@ -148,12 +175,31 @@ async function resolveEventKey(newsItemId?: string, explicitEventKey?: string) {
   return buildEventKey(newsItem);
 }
 
+async function resolveEventKeyForTarget(params: {
+  newsItemId?: string;
+  eventOccurrenceId?: string;
+  explicitEventKey?: string;
+}) {
+  const cleanKey = text(params.explicitEventKey);
+  if (cleanKey) return normalizeEventKey(cleanKey);
+  if (params.eventOccurrenceId) {
+    const occurrence = await findEventOccurrence(params.eventOccurrenceId);
+    if (!occurrence) throw new Error("イベント開催情報が見つかりません");
+    return occurrence.eventSeries.eventKey;
+  }
+  return resolveEventKey(params.newsItemId);
+}
+
 router.get("/", async (req, res, next) => {
   try {
     const newsItemId = text(req.query.newsItemId);
+    const eventOccurrenceId = text(req.query.eventOccurrenceId);
+    const eventSeriesId = text(req.query.eventSeriesId);
     const eventKey = text(req.query.eventKey);
     const where: Prisma.EventNoteWhereInput = {
       ...(newsItemId ? { newsItemId } : {}),
+      ...(eventOccurrenceId ? { eventOccurrenceId } : {}),
+      ...(eventSeriesId ? { eventSeriesId } : {}),
       ...(eventKey ? { eventKey: normalizeEventKey(eventKey) } : {}),
     };
 
@@ -172,7 +218,12 @@ router.get("/", async (req, res, next) => {
 router.get("/candidates", async (req, res, next) => {
   try {
     const newsItemId = text(req.query.newsItemId);
-    const eventKey = await resolveEventKey(newsItemId, text(req.query.eventKey));
+    const eventOccurrenceId = text(req.query.eventOccurrenceId);
+    const eventKey = await resolveEventKeyForTarget({
+      newsItemId,
+      eventOccurrenceId,
+      explicitEventKey: text(req.query.eventKey),
+    });
     if (!eventKey) {
       res.json({ eventKey: "", candidates: [] });
       return;
@@ -181,6 +232,7 @@ router.get("/candidates", async (req, res, next) => {
     const exact = await prisma.eventNote.findMany({
       where: {
         eventKey,
+        ...(eventOccurrenceId ? { eventOccurrenceId: { not: eventOccurrenceId } } : {}),
         ...(newsItemId ? { newsItemId: { not: newsItemId } } : {}),
       },
       include: noteInclude,
@@ -193,7 +245,10 @@ router.get("/candidates", async (req, res, next) => {
         ? exact
         : (
             await prisma.eventNote.findMany({
-              where: newsItemId ? { newsItemId: { not: newsItemId } } : {},
+              where: {
+                ...(eventOccurrenceId ? { eventOccurrenceId: { not: eventOccurrenceId } } : {}),
+                ...(newsItemId ? { newsItemId: { not: newsItemId } } : {}),
+              },
               include: noteInclude,
               orderBy: { updatedAt: "desc" },
               take: 50,
@@ -212,14 +267,22 @@ router.post("/", async (req, res, next) => {
   try {
     const body = req.body as Record<string, unknown>;
     const newsItemId = text(body.newsItemId);
-    if (!newsItemId) {
-      res.status(400).json({ message: "newsItemId が必要です" });
+    const eventOccurrenceId = text(body.eventOccurrenceId);
+    if (!newsItemId && !eventOccurrenceId) {
+      res.status(400).json({ message: "newsItemId または eventOccurrenceId が必要です" });
       return;
     }
 
-    const newsItem = await findNewsItem(newsItemId);
-    if (!newsItem) {
+    const [newsItem, eventOccurrence] = await Promise.all([
+      newsItemId ? findNewsItem(newsItemId) : null,
+      eventOccurrenceId ? findEventOccurrence(eventOccurrenceId) : null,
+    ]);
+    if (newsItemId && !newsItem) {
       res.status(404).json({ message: "NEWS項目が見つかりません" });
+      return;
+    }
+    if (eventOccurrenceId && !eventOccurrence) {
+      res.status(404).json({ message: "イベント開催情報が見つかりません" });
       return;
     }
 
@@ -230,12 +293,16 @@ router.post("/", async (req, res, next) => {
     }
 
     const links = parseLinks(body.links);
-    const eventKey = text(body.eventKey) ? normalizeEventKey(text(body.eventKey)) : buildEventKey(newsItem);
+    const eventKey = text(body.eventKey)
+      ? normalizeEventKey(text(body.eventKey))
+      : eventOccurrence?.eventSeries.eventKey ?? (newsItem ? buildEventKey(newsItem) : "");
     const note = await prisma.eventNote.create({
       data: {
         ...data,
         eventKey,
-        newsItemId,
+        newsItemId: newsItemId || eventOccurrence?.newsItemId || undefined,
+        eventOccurrenceId: eventOccurrenceId || undefined,
+        eventSeriesId: text(body.eventSeriesId) || eventOccurrence?.eventSeriesId || undefined,
         links: links.length > 0 ? { create: links } : undefined,
       },
       include: noteInclude,
@@ -301,32 +368,40 @@ router.delete("/:id", async (req, res, next) => {
 router.post("/:id/copy", async (req, res, next) => {
   try {
     const newsItemId = text(req.body.newsItemId);
-    if (!newsItemId) {
-      res.status(400).json({ message: "newsItemId が必要です" });
+    const eventOccurrenceId = text(req.body.eventOccurrenceId);
+    if (!newsItemId && !eventOccurrenceId) {
+      res.status(400).json({ message: "newsItemId または eventOccurrenceId が必要です" });
       return;
     }
 
-    const [sourceNote, newsItem] = await Promise.all([
+    const [sourceNote, newsItem, eventOccurrence] = await Promise.all([
       prisma.eventNote.findUnique({
         where: { id: req.params.id },
         include: { links: true },
       }),
-      findNewsItem(newsItemId),
+      newsItemId ? findNewsItem(newsItemId) : null,
+      eventOccurrenceId ? findEventOccurrence(eventOccurrenceId) : null,
     ]);
 
     if (!sourceNote) {
       res.status(404).json({ message: "コピー元メモが見つかりません" });
       return;
     }
-    if (!newsItem) {
+    if (newsItemId && !newsItem) {
       res.status(404).json({ message: "コピー先NEWS項目が見つかりません" });
+      return;
+    }
+    if (eventOccurrenceId && !eventOccurrence) {
+      res.status(404).json({ message: "コピー先イベント開催情報が見つかりません" });
       return;
     }
 
     const note = await prisma.eventNote.create({
       data: {
-        eventKey: buildEventKey(newsItem),
-        newsItemId,
+        eventKey: eventOccurrence?.eventSeries.eventKey ?? (newsItem ? buildEventKey(newsItem) : sourceNote.eventKey),
+        newsItemId: newsItemId || eventOccurrence?.newsItemId || null,
+        eventOccurrenceId: eventOccurrenceId || null,
+        eventSeriesId: eventOccurrence?.eventSeriesId ?? null,
         title: sourceNote.title,
         minimumGoals: sourceNote.minimumGoals,
         targetWeapons: sourceNote.targetWeapons,

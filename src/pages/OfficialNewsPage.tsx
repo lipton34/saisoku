@@ -6,6 +6,8 @@ import {
   type EventNoteCandidate,
   type EventNoteInput,
   type EventNoteLinkInput,
+  type EventOccurrenceInput,
+  type EventSeries,
   type ExtractedNewsEventType,
   type ExtractedNewsItem,
   type ExtractedNewsItemType,
@@ -100,6 +102,7 @@ export function OfficialNewsPage() {
   const [items, setItems] = useState<ExtractedNewsItem[]>([]);
   const [articles, setArticles] = useState<SourceArticle[]>([]);
   const [logs, setLogs] = useState<NewsFetchLog[]>([]);
+  const [eventSeries, setEventSeries] = useState<EventSeries[]>([]);
   const [itemTotal, setItemTotal] = useState(0);
   const [articleTotal, setArticleTotal] = useState(0);
   const [logTotal, setLogTotal] = useState(0);
@@ -132,7 +135,7 @@ export function OfficialNewsPage() {
         keyword,
         limit: 80
       };
-      const [itemData, articleData, logData] = await Promise.all([
+      const [itemData, articleData, logData, seriesData] = await Promise.all([
         api.newsItems({
           ...common,
           itemType,
@@ -143,7 +146,8 @@ export function OfficialNewsPage() {
           includeRelated: true
         }),
         api.sourceArticles({ ...common, articleType }),
-        api.newsFetchLogs({ runType, status: logStatus, limit: 40 })
+        api.newsFetchLogs({ runType, status: logStatus, limit: 40 }),
+        api.eventSeries()
       ]);
 
       setItems(itemData.items);
@@ -152,6 +156,7 @@ export function OfficialNewsPage() {
       setArticleTotal(articleData.total);
       setLogs(logData.logs);
       setLogTotal(logData.total);
+      setEventSeries(seriesData.series);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "公式NEWS情報の取得に失敗しました");
     } finally {
@@ -338,7 +343,7 @@ export function OfficialNewsPage() {
 
         {error && <p className="form-error">{error}</p>}
 
-        {activeTab === "items" && <NewsItemsTable items={items} />}
+        {activeTab === "items" && <NewsItemsTable eventSeries={eventSeries} items={items} />}
         {activeTab === "articles" && <SourceArticlesTable articles={articles} />}
         {activeTab === "logs" && <FetchLogsTable logs={logs} />}
       </section>
@@ -346,7 +351,7 @@ export function OfficialNewsPage() {
   );
 }
 
-function NewsItemsTable({ items }: { items: ExtractedNewsItem[] }) {
+function NewsItemsTable({ eventSeries, items }: { eventSeries: EventSeries[]; items: ExtractedNewsItem[] }) {
   if (items.length === 0) {
     return <p className="muted-text">抽出済み項目はありません。</p>;
   }
@@ -395,6 +400,7 @@ function NewsItemsTable({ items }: { items: ExtractedNewsItem[] }) {
                 </div>
               </details>
             ) : null}
+            <EventOccurrenceRegister item={item} series={eventSeries} />
             <EventNoteSection item={item} />
           </div>
           <a className="secondary-button compact-action" href={item.article.officialUrl} rel="noreferrer" target="_blank">
@@ -419,6 +425,136 @@ const emptyNoteForm = (item: ExtractedNewsItem): EventNoteInput => ({
   freeMemo: "",
   links: []
 });
+
+function inferSeriesId(item: ExtractedNewsItem, series: EventSeries[]) {
+  const text = `${item.title ?? ""} ${item.article.title}`.toLowerCase();
+  const matchKey =
+    /古戦場|決戦/.test(text) ? "guild_war" :
+    /ドレッドバラージュ/.test(text) ? "dread_barrage" :
+    /四象/.test(text) ? "rotb" :
+    /十天衆戦記/.test(text) ? "tenju_senki" :
+    /アーカルム|外伝/.test(text) ? "arcarum_event" :
+    /ブレイブグラウンド/.test(text) ? "proving_grounds" :
+    /ゼノ/.test(text) ? "xeno_clash" :
+    /コラボ|collab|fullmetal/.test(text) || item.eventType === "collaboration_event" ? "collaboration_event" :
+    item.eventType === "scenario_event" ? "scenario_event" :
+    "other";
+  return series.find((entry) => entry.eventKey === matchKey)?.id ?? series[0]?.id ?? "";
+}
+
+function EventOccurrenceRegister({ item, series }: { item: ExtractedNewsItem; series: EventSeries[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState<EventOccurrenceInput>(() => ({
+    eventSeriesId: inferSeriesId(item, series),
+    newsItemId: item.id,
+    title: item.title || item.article.title,
+    startAt: item.startsAt,
+    endAt: item.endsAt,
+    sourceType: item.itemType === "monthly_plan_item" ? "monthly_plan" : "official_news",
+    officialUrl: item.article.officialUrl,
+    confidence: item.infoStatus,
+    isVisible: true
+  }));
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      eventSeriesId: current.eventSeriesId || inferSeriesId(item, series)
+    }));
+  }, [item.id, series]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    try {
+      await api.createEventOccurrenceFromNewsItem({
+        ...form,
+        newsItemId: item.id
+      });
+      setIsOpen(false);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "イベント予定の登録に失敗しました");
+    }
+  }
+
+  return (
+    <>
+      <button className="secondary-button compact-action event-occurrence-register-button" onClick={() => setIsOpen(true)} type="button">
+        イベント予定に登録
+      </button>
+      {isOpen ? (
+        <div className="event-note-modal-backdrop" onMouseDown={() => setIsOpen(false)}>
+          <div className="event-note-modal" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="inline-section-heading">
+              <div>
+                <p className="eyebrow">Event Schedule</p>
+                <h3>イベント予定に登録</h3>
+              </div>
+              <button className="secondary-button compact-action" onClick={() => setIsOpen(false)} type="button">
+                キャンセル
+              </button>
+            </div>
+            <form className="event-note-form" onSubmit={submit}>
+              <label>
+                イベントシリーズ
+                <select
+                  onChange={(event) => setForm((current) => ({ ...current, eventSeriesId: event.target.value }))}
+                  required
+                  value={form.eventSeriesId}
+                >
+                  {series.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                イベント名
+                <input onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} required value={form.title} />
+              </label>
+              <div className="form-row">
+                <label>
+                  開始
+                  <input
+                    onChange={(event) => setForm((current) => ({ ...current, startAt: event.target.value ? new Date(event.target.value).toISOString() : null }))}
+                    type="datetime-local"
+                  />
+                </label>
+                <label>
+                  終了
+                  <input
+                    onChange={(event) => setForm((current) => ({ ...current, endAt: event.target.value ? new Date(event.target.value).toISOString() : null }))}
+                    type="datetime-local"
+                  />
+                </label>
+              </div>
+              <div className="form-row">
+                <label>
+                  属性
+                  <input onChange={(event) => setForm((current) => ({ ...current, element: event.target.value }))} value={form.element ?? ""} />
+                </label>
+                <label>
+                  有利属性
+                  <input onChange={(event) => setForm((current) => ({ ...current, advantageElement: event.target.value }))} value={form.advantageElement ?? ""} />
+                </label>
+              </div>
+              <label>
+                メモ
+                <textarea onChange={(event) => setForm((current) => ({ ...current, memo: event.target.value }))} rows={3} value={form.memo ?? ""} />
+              </label>
+              {error ? <p className="form-error">{error}</p> : null}
+              <button className="primary-button compact-action" type="submit">
+                登録
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
 
 function EventNoteSection({ item }: { item: ExtractedNewsItem }) {
   const [notes, setNotes] = useState<EventNote[]>([]);
@@ -495,7 +631,7 @@ function EventNoteSection({ item }: { item: ExtractedNewsItem }) {
   async function copyCandidate(candidate: EventNoteCandidate) {
     setError("");
     try {
-      const result = await api.copyEventNote(candidate.id, item.id);
+      const result = await api.copyEventNote(candidate.id, { newsItemId: item.id });
       setNotes([result.note]);
       setForm(noteToForm(result.note, item.id));
       setEditingId(result.note.id);

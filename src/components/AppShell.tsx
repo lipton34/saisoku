@@ -76,6 +76,10 @@ export function AppShell() {
             <Newspaper size={18} />
             <span className="sidebar-label">公式NEWS</span>
           </NavLink>
+          <NavLink to="/event-schedule">
+            <Map size={18} />
+            <span className="sidebar-label">イベント予定</span>
+          </NavLink>
           <NavLink to="/builds/search">
             <Swords size={18} />
             <span className="sidebar-label">編成一覧・検索</span>

@@ -350,7 +350,9 @@ export type EventNoteLink = EventNoteLinkInput & {
 };
 
 export type EventNoteInput = {
-  newsItemId: string;
+  newsItemId?: string | null;
+  eventOccurrenceId?: string | null;
+  eventSeriesId?: string | null;
   eventKey?: string;
   title: string;
   minimumGoals?: string | null;
@@ -366,7 +368,9 @@ export type EventNoteInput = {
 export type EventNote = {
   id: string;
   eventKey: string;
-  newsItemId: string;
+  newsItemId: string | null;
+  eventOccurrenceId: string | null;
+  eventSeriesId: string | null;
   title: string;
   minimumGoals: string | null;
   targetWeapons: string | null;
@@ -389,6 +393,64 @@ export type EventNoteCandidate = EventNote & {
     articleTitle: string;
     officialUrl: string;
   };
+};
+
+export type EventSeries = {
+  id: string;
+  eventKey: string;
+  name: string;
+  eventType: string;
+  description: string | null;
+  defaultMemoTemplate: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EventOccurrenceInput = {
+  eventSeriesId: string;
+  newsItemId?: string | null;
+  title: string;
+  startAt?: string | null;
+  endAt?: string | null;
+  element?: string | null;
+  enemyElement?: string | null;
+  advantageElement?: string | null;
+  sourceType?: string;
+  sourceArticleId?: string | null;
+  officialUrl?: string | null;
+  confidence?: string;
+  memo?: string | null;
+  isVisible?: boolean;
+};
+
+export type EventOccurrence = {
+  id: string;
+  eventSeries: EventSeries;
+  newsItem: (ExtractedNewsItem & {
+    sourceArticle: {
+      sourceArticleId: string;
+      title: string;
+      officialUrl: string;
+      publishedAt: string | null;
+      articleType: SourceArticleType;
+    };
+  }) | null;
+  title: string;
+  startAt: string | null;
+  endAt: string | null;
+  element: string | null;
+  enemyElement: string | null;
+  advantageElement: string | null;
+  sourceType: string;
+  sourceArticleId: string | null;
+  officialUrl: string | null;
+  confidence: string;
+  memo: string | null;
+  isVisible: boolean;
+  eventNotes: EventNote[];
+  relatedNewsItems: unknown[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type OfficialNewsListParams = {
@@ -699,17 +761,47 @@ export const api = {
     request<{ logs: NewsFetchLog[]; total: number; limit: number; offset: number }>(
       `/api/news-fetch-logs${toQuery(params)}`
     ),
-  eventNotes: (params?: { newsItemId?: string; eventKey?: string }) =>
+  eventSeries: () => request<{ series: EventSeries[] }>("/api/event-series"),
+  createEventSeries: (series: {
+    eventKey: string;
+    name: string;
+    eventType: string;
+    description?: string | null;
+    defaultMemoTemplate?: string | null;
+  }) => request<{ series: EventSeries }>("/api/event-series", { method: "POST", json: series }),
+  updateEventSeries: (id: string, series: Partial<EventSeries>) =>
+    request<{ series: EventSeries }>(`/api/event-series/${id}`, { method: "PATCH", json: series }),
+  eventOccurrences: (params?: {
+    eventSeriesId?: string;
+    eventType?: string;
+    from?: string;
+    to?: string;
+    keyword?: string;
+    includeHidden?: boolean;
+  }) => request<{ occurrences: EventOccurrence[] }>(`/api/event-occurrences${toQuery(params)}`),
+  createEventOccurrence: (occurrence: EventOccurrenceInput) =>
+    request<{ occurrence: EventOccurrence }>("/api/event-occurrences", { method: "POST", json: occurrence }),
+  updateEventOccurrence: (id: string, occurrence: EventOccurrenceInput) =>
+    request<{ occurrence: EventOccurrence }>(`/api/event-occurrences/${id}`, {
+      method: "PATCH",
+      json: occurrence
+    }),
+  createEventOccurrenceFromNewsItem: (payload: Partial<EventOccurrenceInput> & { newsItemId: string }) =>
+    request<{ occurrence: EventOccurrence }>("/api/event-occurrences/from-news-item", {
+      method: "POST",
+      json: payload
+    }),
+  eventNotes: (params?: { newsItemId?: string; eventOccurrenceId?: string; eventSeriesId?: string; eventKey?: string }) =>
     request<{ notes: EventNote[] }>(`/api/event-notes${toQuery(params)}`),
-  eventNoteCandidates: (params: { newsItemId?: string; eventKey?: string }) =>
+  eventNoteCandidates: (params: { newsItemId?: string; eventOccurrenceId?: string; eventKey?: string }) =>
     request<{ eventKey: string; candidates: EventNoteCandidate[] }>(`/api/event-notes/candidates${toQuery(params)}`),
   createEventNote: (note: EventNoteInput) =>
     request<{ note: EventNote }>("/api/event-notes", { method: "POST", json: note }),
   updateEventNote: (id: string, note: EventNoteInput) =>
     request<{ note: EventNote }>(`/api/event-notes/${id}`, { method: "PATCH", json: note }),
   deleteEventNote: (id: string) => request<void>(`/api/event-notes/${id}`, { method: "DELETE" }),
-  copyEventNote: (id: string, newsItemId: string) =>
-    request<{ note: EventNote }>(`/api/event-notes/${id}/copy`, { method: "POST", json: { newsItemId } }),
+  copyEventNote: (id: string, target: { newsItemId?: string; eventOccurrenceId?: string }) =>
+    request<{ note: EventNote }>(`/api/event-notes/${id}/copy`, { method: "POST", json: target }),
   buildPresets: (filters?: { category?: string; questName?: string; element?: string }) => {
     const params = new URLSearchParams();
     if (filters?.category) params.set("category", filters.category);

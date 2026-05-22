@@ -8,7 +8,9 @@ import { attachUser } from "./middleware/requireAuth.js";
 import { authRouter } from "./routes/auth.js";
 import { buildMastersRouter } from "./routes/buildMasters.js";
 import { buildsRouter } from "./routes/builds.js";
+import { eventOccurrencesRouter } from "./routes/eventOccurrences.js";
 import { eventNotesRouter } from "./routes/eventNotes.js";
+import { eventSeriesRouter } from "./routes/eventSeries.js";
 import { guildWarGoalsRouter } from "./routes/guildWarGoals.js";
 import { materialGoalsRouter } from "./routes/materialGoals.js";
 import {
@@ -47,6 +49,8 @@ app.use("/api/auth", authRouter);
 app.use("/api/build-masters", buildMastersRouter);
 app.use("/api/builds", buildsRouter);
 app.use("/api/event-notes", eventNotesRouter);
+app.use("/api/event-occurrences", eventOccurrencesRouter);
+app.use("/api/event-series", eventSeriesRouter);
 app.use("/api/guild-war-goals", guildWarGoalsRouter);
 app.use("/api/material-goals", materialGoalsRouter);
 app.use("/api/news", officialNewsRouter);

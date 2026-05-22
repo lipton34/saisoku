@@ -436,6 +436,7 @@ model ExtractedNewsItem {
   displayPriority      Int                     @default(0) @map("display_priority")
   isVisible            Boolean                 @default(true) @map("is_visible")
   eventNotes           EventNote[]
+  eventOccurrences     EventOccurrence[]
   createdAt            DateTime                @default(now()) @map("created_at")
   updatedAt            DateTime                @updatedAt @map("updated_at")
 
@@ -448,11 +449,63 @@ model ExtractedNewsItem {
   @@map("extracted_news_items")
 }
 
+model EventSeries {
+  id                  String            @id @default(cuid())
+  eventKey            String            @unique @map("event_key")
+  name                String
+  eventType           String            @map("event_type")
+  description         String?
+  defaultMemoTemplate String?           @map("default_memo_template")
+  occurrences         EventOccurrence[]
+  eventNotes          EventNote[]
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  @@index([eventType])
+  @@map("event_series")
+}
+
+model EventOccurrence {
+  id               String             @id @default(cuid())
+  eventSeriesId    String             @map("event_series_id")
+  eventSeries      EventSeries        @relation(fields: [eventSeriesId], references: [id], onDelete: Cascade)
+  newsItemId       String?            @map("news_item_id")
+  newsItem         ExtractedNewsItem? @relation(fields: [newsItemId], references: [id], onDelete: SetNull)
+  title            String
+  startAt          DateTime?          @map("start_at")
+  endAt            DateTime?          @map("end_at")
+  element          String?
+  enemyElement     String?            @map("enemy_element")
+  advantageElement String?            @map("advantage_element")
+  sourceType       String             @default("unknown") @map("source_type")
+  sourceArticleId  String?            @map("source_article_id")
+  officialUrl      String?            @map("official_url")
+  confidence       String             @default("unknown")
+  memo             String?
+  isVisible        Boolean            @default(true) @map("is_visible")
+  eventNotes       EventNote[]
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  @@index([eventSeriesId])
+  @@index([newsItemId])
+  @@index([startAt])
+  @@index([endAt])
+  @@index([sourceType])
+  @@index([confidence])
+  @@index([isVisible])
+  @@map("event_occurrences")
+}
+
 model EventNote {
   id              String             @id @default(cuid())
   eventKey        String             @map("event_key")
-  newsItemId      String             @map("news_item_id")
-  newsItem        ExtractedNewsItem  @relation(fields: [newsItemId], references: [id], onDelete: Cascade)
+  newsItemId      String?            @map("news_item_id")
+  newsItem        ExtractedNewsItem? @relation(fields: [newsItemId], references: [id], onDelete: SetNull)
+  eventOccurrenceId String?          @map("event_occurrence_id")
+  eventOccurrence EventOccurrence?   @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  eventSeriesId   String?            @map("event_series_id")
+  eventSeries     EventSeries?       @relation(fields: [eventSeriesId], references: [id], onDelete: SetNull)
   title           String
   minimumGoals    String?            @map("minimum_goals")
   targetWeapons   String?            @map("target_weapons")
@@ -469,6 +522,8 @@ model EventNote {
   updatedAt       DateTime           @updatedAt @map("updated_at")
 
   @@index([newsItemId])
+  @@index([eventOccurrenceId])
+  @@index([eventSeriesId])
   @@index([eventKey])
   @@index([sourceNoteId])
   @@map("event_notes")
