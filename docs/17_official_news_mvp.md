@@ -13,6 +13,24 @@
 - `content` は分類、期間抽出、`contentHash` 生成にのみ使う。
 - DBに保存するのは公式URL、記事ID、タイトル、公開日時、カテゴリ、分類、本文ハッシュ、抽出した開催期間候補などに限定する。
 - APIアクセスは手動実行コマンドによる少数リクエストに限定する。
+- 通常運用では最新NEWSと当月周辺だけを軽く取得し、全期間の過去記事を自動巡回しない。
+- 過去記事は必要な月を指定した場合のみ手動バックフィルする。
+
+## 取得範囲とページネーション
+
+- `latest`
+  - 最新確認用の軽量取得。
+  - デフォルトは1ページのみ。
+  - `--max-pages` 指定時も最大2ページまでに抑える。
+  - 全ページ取得には使わない。
+- `month`
+  - 指定月のみを対象にする。
+  - `pageInfo.totalPageCnt` を見て、指定月内の全ページを取得できる。
+  - `--max-pages` 指定時はそのページ数で停止する。
+  - 指定月以外へ範囲を広げない。
+- `range`
+  - MVPでは作らない。
+  - 必要になったら複数月の手動バックフィルとして別途追加する。
 
 ## 利用API
 
@@ -91,10 +109,14 @@
 
 ```bash
 npm run news:fetch:latest
+npm run news:fetch:latest -- --max-pages 2
 npm run news:fetch:month -- 202605
 npm run news:fetch:month -- 2026-05
+npm run news:fetch:month -- 2026-05 --max-pages 2
 npm run news:reanalyze -- 9690
 ```
+
+CLI出力には `fetchedPages`, `totalPageCnt`, `maxPages`, `targetMonth` を含める。
 
 ## 本実装で使う主な保存項目
 

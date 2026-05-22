@@ -3,25 +3,25 @@ import { prisma } from "../prisma.js";
 
 const usage = `
 Usage:
-  tsx server/scripts/fetchOfficialNews.ts latest
-  tsx server/scripts/fetchOfficialNews.ts month YYYYMM
-  tsx server/scripts/fetchOfficialNews.ts month YYYY-MM
+  tsx server/scripts/fetchOfficialNews.ts latest [--max-pages N]
+  tsx server/scripts/fetchOfficialNews.ts month YYYYMM [--max-pages N]
+  tsx server/scripts/fetchOfficialNews.ts month YYYY-MM [--max-pages N]
   tsx server/scripts/fetchOfficialNews.ts reanalyze ARTICLE_ID
 `;
 
 async function main() {
-  const [, , command, value] = process.argv;
+  const [, , command, value, ...rest] = process.argv;
   const service = new OfficialNewsService();
 
   if (command === "latest") {
-    const summary = await service.syncLatestNews();
+    const summary = await service.syncLatestNews({ maxPages: parseMaxPages([value, ...rest]) });
     printSummary("latest", summary);
     return;
   }
 
   if (command === "month") {
     if (!value) throw new Error(`month requires YYYYMM or YYYY-MM.\n${usage}`);
-    const summary = await service.syncMonthlyArchive(value);
+    const summary = await service.syncMonthlyArchive(value, { maxPages: parseMaxPages(rest) });
     printSummary(`month ${value}`, summary);
     return;
   }
@@ -45,12 +45,32 @@ function printSummary(label: string, summary: Awaited<ReturnType<OfficialNewsSer
         insertedCount: summary.insertedCount,
         updatedCount: summary.updatedCount,
         failedCount: summary.failedCount,
+        fetchedPages: summary.fetchedPages,
+        totalPageCnt: summary.totalPageCnt,
+        maxPages: summary.maxPages,
+        targetMonth: summary.targetMonth,
         errors: summary.errors,
       },
       null,
       2,
     ),
   );
+}
+
+function parseMaxPages(args: (string | undefined)[]) {
+  const compact = args.filter((arg): arg is string => Boolean(arg));
+  const flagIndex = compact.findIndex((arg) => arg === "--max-pages");
+  if (flagIndex === -1) {
+    return undefined;
+  }
+
+  const value = compact[flagIndex + 1];
+  const numberValue = Number(value);
+  if (!Number.isInteger(numberValue) || numberValue <= 0) {
+    throw new Error(`--max-pages requires a positive integer.\n${usage}`);
+  }
+
+  return numberValue;
 }
 
 main()

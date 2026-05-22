@@ -17,6 +17,8 @@ const CATEGORY_ORDER = ["update", "character", "event", "media"];
 const LATEST_NEWS_COUNT = 10;
 const CATEGORY_NEWS_COUNT = 30;
 const ARCHIVE_NEWS_COUNT = 30;
+const DEFAULT_LATEST_MAX_PAGES = 1;
+const HARD_LATEST_MAX_PAGES = 2;
 
 type FetchRunType = "latest" | "month" | "reanalyze";
 
@@ -105,6 +107,10 @@ type ImportSummary = {
   insertedCount: number;
   updatedCount: number;
   failedCount: number;
+  fetchedPages: number;
+  totalPageCnt: number | null;
+  maxPages: number | null;
+  targetMonth: string | null;
   errors: string[];
 };
 
@@ -119,10 +125,10 @@ export class OfficialNewsService {
     this.db = options.client ?? prisma;
   }
 
-  async fetchLatestNews() {
+  async fetchLatestNews(pageID = 1) {
     return this.fetchNewsList("news", {
       cnt: LATEST_NEWS_COUNT,
-      pageID: 1,
+      pageID,
       _lang: "ja",
     });
   }
@@ -142,13 +148,13 @@ export class OfficialNewsService {
     });
   }
 
-  async fetchMonthlyArchive(yearMonth: string) {
+  async fetchMonthlyArchive(yearMonth: string, pageID = 1) {
     const { year, month } = parseYearMonth(yearMonth);
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
     const endDate = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth(year, month)).padStart(2, "0")}`;
     return this.fetchNewsList("news-archive", {
       cnt: ARCHIVE_NEWS_COUNT,
-      pageID: 1,
+      pageID,
       filter: `(ymd >= "${startDate}" AND ymd <= "${endDate}")`,
       _lang: "ja",
     });
@@ -161,16 +167,21 @@ export class OfficialNewsService {
     });
   }
 
-  async syncLatestNews() {
+  async syncLatestNews(options: { maxPages?: number } = {}) {
     const startedAt = new Date();
     const summary = emptySummary();
+    const maxPages = normalizeMaxPages(options.maxPages, DEFAULT_LATEST_MAX_PAGES, HARD_LATEST_MAX_PAGES) ?? DEFAULT_LATEST_MAX_PAGES;
+    summary.maxPages = maxPages;
     let logError: string | null = null;
 
     try {
       const nav = await this.fetchCategoryNav();
       await this.upsertCategories(nav.categories ?? []);
-      const latest = await this.fetchLatestNews();
-      await this.importArticles(latest.list ?? [], nav.categories ?? [], summary, { fetchDetails: true });
+      const pages = await this.fetchLatestNewsPages(maxPages);
+      applyPageInfo(summary, pages);
+      for (const page of pages) {
+        await this.importArticles(page.list ?? [], nav.categories ?? [], summary, { fetchDetails: true });
+      }
     } catch (error) {
       summary.failedCount += 1;
       logError = toErrorMessage(error);
@@ -181,16 +192,21 @@ export class OfficialNewsService {
     return summary;
   }
 
-  async syncMonthlyArchive(yearMonth: string) {
+  async syncMonthlyArchive(yearMonth: string, options: { maxPages?: number } = {}) {
     const startedAt = new Date();
     const summary = emptySummary();
+    summary.maxPages = normalizeMaxPages(options.maxPages, null, null);
+    summary.targetMonth = yearMonth;
     let logError: string | null = null;
 
     try {
       const nav = await this.fetchCategoryNav();
       await this.upsertCategories(nav.categories ?? []);
-      const archive = await this.fetchMonthlyArchive(yearMonth);
-      await this.importArticles(archive.list ?? [], nav.categories ?? [], summary, { fetchDetails: true });
+      const pages = await this.fetchMonthlyArchivePages(yearMonth, summary.maxPages);
+      applyPageInfo(summary, pages);
+      for (const page of pages) {
+        await this.importArticles(page.list ?? [], nav.categories ?? [], summary, { fetchDetails: true });
+      }
     } catch (error) {
       summary.failedCount += 1;
       logError = toErrorMessage(error);
@@ -222,6 +238,34 @@ export class OfficialNewsService {
 
     await this.writeFetchLog("reanalyze", articleId, startedAt, summary, logError);
     return summary;
+  }
+
+  private async fetchLatestNewsPages(maxPages: number) {
+    const pages: RcmsListResponse[] = [];
+    for (let pageID = 1; pageID <= maxPages; pageID += 1) {
+      const page = await this.fetchLatestNews(pageID);
+      pages.push(page);
+      const totalPageCnt = page.pageInfo?.totalPageCnt;
+      if (!totalPageCnt || pageID >= totalPageCnt) {
+        break;
+      }
+    }
+    return pages;
+  }
+
+  private async fetchMonthlyArchivePages(yearMonth: string, maxPages: number | null) {
+    const pages: RcmsListResponse[] = [];
+    for (let pageID = 1; ; pageID += 1) {
+      const page = await this.fetchMonthlyArchive(yearMonth, pageID);
+      pages.push(page);
+      const totalPageCnt = page.pageInfo?.totalPageCnt ?? pageID;
+      const reachedTotal = pageID >= totalPageCnt;
+      const reachedMax = maxPages !== null && pageID >= maxPages;
+      if (reachedTotal || reachedMax) {
+        break;
+      }
+    }
+    return pages;
   }
 
   private async importArticles(
@@ -640,8 +684,29 @@ function emptySummary(): ImportSummary {
     insertedCount: 0,
     updatedCount: 0,
     failedCount: 0,
+    fetchedPages: 0,
+    totalPageCnt: null,
+    maxPages: null,
+    targetMonth: null,
     errors: [],
   };
+}
+
+function normalizeMaxPages(value: number | undefined, fallback: number | null, hardMax: number | null) {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`maxPages must be a positive integer: ${value}`);
+  }
+
+  return hardMax === null ? value : Math.min(value, hardMax);
+}
+
+function applyPageInfo(summary: ImportSummary, pages: RcmsListResponse[]) {
+  summary.fetchedPages = pages.length;
+  summary.totalPageCnt = pages[0]?.pageInfo?.totalPageCnt ?? null;
 }
 
 function toErrorMessage(error: unknown) {
