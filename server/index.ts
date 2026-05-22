@@ -8,6 +8,7 @@ import { attachUser } from "./middleware/requireAuth.js";
 import { authRouter } from "./routes/auth.js";
 import { buildMastersRouter } from "./routes/buildMasters.js";
 import { buildsRouter } from "./routes/builds.js";
+import { eventNotesRouter } from "./routes/eventNotes.js";
 import { guildWarGoalsRouter } from "./routes/guildWarGoals.js";
 import { materialGoalsRouter } from "./routes/materialGoals.js";
 import {
@@ -45,6 +46,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/build-masters", buildMastersRouter);
 app.use("/api/builds", buildsRouter);
+app.use("/api/event-notes", eventNotesRouter);
 app.use("/api/guild-war-goals", guildWarGoalsRouter);
 app.use("/api/material-goals", materialGoalsRouter);
 app.use("/api/news", officialNewsRouter);

@@ -435,6 +435,7 @@ model ExtractedNewsItem {
   relatedKey           String?                 @map("related_key")
   displayPriority      Int                     @default(0) @map("display_priority")
   isVisible            Boolean                 @default(true) @map("is_visible")
+  eventNotes           EventNote[]
   createdAt            DateTime                @default(now()) @map("created_at")
   updatedAt            DateTime                @updatedAt @map("updated_at")
 
@@ -445,6 +446,48 @@ model ExtractedNewsItem {
   @@index([startsAt])
   @@index([endsAt])
   @@map("extracted_news_items")
+}
+
+model EventNote {
+  id              String             @id @default(cuid())
+  eventKey        String             @map("event_key")
+  newsItemId      String             @map("news_item_id")
+  newsItem        ExtractedNewsItem  @relation(fields: [newsItemId], references: [id], onDelete: Cascade)
+  title           String
+  minimumGoals    String?            @map("minimum_goals")
+  targetWeapons   String?            @map("target_weapons")
+  targetSummons   String?            @map("target_summons")
+  targetItems     String?            @map("target_items")
+  farmingNotes    String?            @map("farming_notes")
+  cautionNotes    String?            @map("caution_notes")
+  freeMemo        String?            @map("free_memo")
+  sourceNoteId    String?            @map("source_note_id")
+  sourceNote      EventNote?         @relation("EventNoteCopies", fields: [sourceNoteId], references: [id], onDelete: SetNull)
+  copiedNotes     EventNote[]        @relation("EventNoteCopies")
+  links           EventNoteLink[]
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  @@index([newsItemId])
+  @@index([eventKey])
+  @@index([sourceNoteId])
+  @@map("event_notes")
+}
+
+model EventNoteLink {
+  id          String    @id @default(cuid())
+  eventNoteId String    @map("event_note_id")
+  eventNote   EventNote @relation(fields: [eventNoteId], references: [id], onDelete: Cascade)
+  url         String
+  title       String?
+  siteName    String?   @map("site_name")
+  memo        String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([eventNoteId, url])
+  @@index([eventNoteId])
+  @@map("event_note_links")
 }
 
 model NewsFetchLog {

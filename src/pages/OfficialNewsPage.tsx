@@ -2,6 +2,10 @@ import { ExternalLink, RefreshCcw, Search } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   api,
+  type EventNote,
+  type EventNoteCandidate,
+  type EventNoteInput,
+  type EventNoteLinkInput,
   type ExtractedNewsEventType,
   type ExtractedNewsItem,
   type ExtractedNewsItemType,
@@ -397,6 +401,7 @@ function NewsItemsTable({ items }: { items: ExtractedNewsItem[] }) {
                 </div>
               </details>
             ) : null}
+            <EventNoteSection item={item} />
           </div>
           <a className="secondary-button compact-action" href={item.article.officialUrl} rel="noreferrer" target="_blank">
             <ExternalLink size={16} />
@@ -406,6 +411,273 @@ function NewsItemsTable({ items }: { items: ExtractedNewsItem[] }) {
       ))}
     </div>
   );
+}
+
+const emptyNoteForm = (item: ExtractedNewsItem): EventNoteInput => ({
+  newsItemId: item.id,
+  title: item.title || item.article.title,
+  minimumGoals: "",
+  targetWeapons: "",
+  targetSummons: "",
+  targetItems: "",
+  farmingNotes: "",
+  cautionNotes: "",
+  freeMemo: "",
+  links: []
+});
+
+function EventNoteSection({ item }: { item: ExtractedNewsItem }) {
+  const [notes, setNotes] = useState<EventNote[]>([]);
+  const [candidates, setCandidates] = useState<EventNoteCandidate[]>([]);
+  const [eventKey, setEventKey] = useState("");
+  const [form, setForm] = useState<EventNoteInput>(() => emptyNoteForm(item));
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function loadNotes() {
+    setError("");
+    setIsLoading(true);
+    try {
+      const [noteData, candidateData] = await Promise.all([
+        api.eventNotes({ newsItemId: item.id }),
+        api.eventNoteCandidates({ newsItemId: item.id })
+      ]);
+      setNotes(noteData.notes);
+      setCandidates(candidateData.candidates);
+      setEventKey(candidateData.eventKey);
+      if (noteData.notes[0]) {
+        setForm(noteToForm(noteData.notes[0], item.id));
+        setEditingId(noteData.notes[0].id);
+      } else {
+        setForm({ ...emptyNoteForm(item), eventKey: candidateData.eventKey });
+        setEditingId(null);
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "攻略メモの取得に失敗しました");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadNotes();
+  }, [item.id]);
+
+  function updateField(field: keyof EventNoteInput, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateLink(index: number, field: keyof EventNoteLinkInput, value: string) {
+    setForm((current) => {
+      const links = [...(current.links ?? [])];
+      links[index] = { ...links[index], [field]: value };
+      return { ...current, links };
+    });
+  }
+
+  async function saveNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    try {
+      const payload = {
+        ...form,
+        newsItemId: item.id,
+        eventKey,
+        links: (form.links ?? []).filter((link) => link.url.trim())
+      };
+      const result = editingId ? await api.updateEventNote(editingId, payload) : await api.createEventNote(payload);
+      setNotes([result.note]);
+      setForm(noteToForm(result.note, item.id));
+      setEditingId(result.note.id);
+      setIsOpen(false);
+      void loadNotes();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "攻略メモの保存に失敗しました");
+    }
+  }
+
+  async function copyCandidate(candidate: EventNoteCandidate) {
+    setError("");
+    try {
+      const result = await api.copyEventNote(candidate.id, item.id);
+      setNotes([result.note]);
+      setForm(noteToForm(result.note, item.id));
+      setEditingId(result.note.id);
+      setIsOpen(true);
+      void loadNotes();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "過去メモのコピーに失敗しました");
+    }
+  }
+
+  const currentNote = notes[0] ?? null;
+
+  return (
+    <section className="event-note-box">
+      <div className="inline-section-heading">
+        <div>
+          <p className="eyebrow">Event Note</p>
+          <h4>攻略メモ</h4>
+        </div>
+        <button className="secondary-button compact-action" onClick={() => setIsOpen((current) => !current)} type="button">
+          {currentNote ? "編集" : "作成"}
+        </button>
+      </div>
+
+      {isLoading ? <p className="muted-text">攻略メモを確認中...</p> : null}
+      {error ? <p className="form-error">{error}</p> : null}
+
+      {currentNote ? <EventNoteSummary note={currentNote} /> : <p className="muted-text">このNEWS項目の攻略メモはまだありません。</p>}
+
+      {candidates.length > 0 ? (
+        <details className="event-note-candidates">
+          <summary>過去メモ候補 {candidates.length}件</summary>
+          <div className="event-note-candidate-list">
+            {candidates.map((candidate) => (
+              <article key={candidate.id}>
+                <strong>{candidate.title}</strong>
+                <small>
+                  {formatDateTime(candidate.createdAt)} / {candidate.sourceNewsItem.title || candidate.sourceNewsItem.articleTitle}
+                </small>
+                <p>{previewText(candidate.minimumGoals)}</p>
+                <button className="secondary-button compact-action" onClick={() => copyCandidate(candidate)} type="button">
+                  このメモを今回にコピー
+                </button>
+              </article>
+            ))}
+          </div>
+        </details>
+      ) : null}
+
+      {isOpen ? (
+        <form className="event-note-form" onSubmit={saveNote}>
+          <label>
+            メモタイトル
+            <input onChange={(event) => updateField("title", event.target.value)} required value={form.title} />
+          </label>
+          <div className="event-note-form-grid">
+            <NoteTextarea label="最低限やること" field="minimumGoals" form={form} updateField={updateField} />
+            <NoteTextarea label="集める武器" field="targetWeapons" form={form} updateField={updateField} />
+            <NoteTextarea label="集める召喚石" field="targetSummons" form={form} updateField={updateField} />
+            <NoteTextarea label="重要アイテム" field="targetItems" form={form} updateField={updateField} />
+            <NoteTextarea label="周回メモ" field="farmingNotes" form={form} updateField={updateField} />
+            <NoteTextarea label="注意点" field="cautionNotes" form={form} updateField={updateField} />
+            <NoteTextarea label="その他メモ" field="freeMemo" form={form} updateField={updateField} />
+          </div>
+          <div className="event-note-link-editor">
+            <div className="inline-section-heading">
+              <h4>参考リンク</h4>
+              <button
+                className="secondary-button compact-action"
+                onClick={() =>
+                  setForm((current) => ({ ...current, links: [...(current.links ?? []), { url: "", title: "", siteName: "", memo: "" }] }))
+                }
+                type="button"
+              >
+                リンク追加
+              </button>
+            </div>
+            {(form.links ?? []).map((link, index) => (
+              <div className="event-note-link-row" key={index}>
+                <input onChange={(event) => updateLink(index, "url", event.target.value)} placeholder="URL" value={link.url} />
+                <input onChange={(event) => updateLink(index, "title", event.target.value)} placeholder="タイトル" value={link.title ?? ""} />
+                <input onChange={(event) => updateLink(index, "siteName", event.target.value)} placeholder="サイト名" value={link.siteName ?? ""} />
+                <input onChange={(event) => updateLink(index, "memo", event.target.value)} placeholder="自分用メモ" value={link.memo ?? ""} />
+              </div>
+            ))}
+          </div>
+          <button className="primary-button compact-action" type="submit">
+            攻略メモを保存
+          </button>
+        </form>
+      ) : null}
+    </section>
+  );
+}
+
+function NoteTextarea({
+  label,
+  field,
+  form,
+  updateField
+}: {
+  label: string;
+  field: keyof EventNoteInput;
+  form: EventNoteInput;
+  updateField: (field: keyof EventNoteInput, value: string) => void;
+}) {
+  return (
+    <label>
+      {label}
+      <textarea onChange={(event) => updateField(field, event.target.value)} rows={3} value={String(form[field] ?? "")} />
+    </label>
+  );
+}
+
+function EventNoteSummary({ note }: { note: EventNote }) {
+  const fields = [
+    ["最低限", note.minimumGoals],
+    ["武器", note.targetWeapons],
+    ["召喚石", note.targetSummons],
+    ["重要アイテム", note.targetItems],
+    ["周回", note.farmingNotes],
+    ["注意", note.cautionNotes],
+    ["その他", note.freeMemo]
+  ];
+
+  return (
+    <div className="event-note-summary">
+      <strong>{note.title}</strong>
+      <dl>
+        {fields
+          .filter(([, value]) => value)
+          .map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+      </dl>
+      {note.links.length > 0 ? (
+        <div className="reference-list">
+          {note.links.map((link) => (
+            <a href={link.url} key={link.id} rel="noreferrer" target="_blank">
+              <ExternalLink size={14} />
+              {link.title || link.siteName || link.url}
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function noteToForm(note: EventNote, newsItemId: string): EventNoteInput {
+  return {
+    newsItemId,
+    eventKey: note.eventKey,
+    title: note.title,
+    minimumGoals: note.minimumGoals ?? "",
+    targetWeapons: note.targetWeapons ?? "",
+    targetSummons: note.targetSummons ?? "",
+    targetItems: note.targetItems ?? "",
+    farmingNotes: note.farmingNotes ?? "",
+    cautionNotes: note.cautionNotes ?? "",
+    freeMemo: note.freeMemo ?? "",
+    links: note.links.map((link) => ({
+      url: link.url,
+      title: link.title ?? "",
+      siteName: link.siteName ?? "",
+      memo: link.memo ?? ""
+    }))
+  };
+}
+
+function previewText(value: string | null) {
+  if (!value) return "最低限やることは未入力です。";
+  return value.length > 80 ? `${value.slice(0, 80)}...` : value;
 }
 
 function SourceArticlesTable({ articles }: { articles: SourceArticle[] }) {

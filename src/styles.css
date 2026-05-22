@@ -748,6 +748,102 @@ a {
   font-size: 0.8rem;
 }
 
+.event-note-box {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.event-note-box h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.event-note-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.event-note-summary dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.event-note-summary div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f4f7fa;
+}
+
+.event-note-summary dt {
+  color: #607184;
+  font-weight: 900;
+}
+
+.event-note-summary dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.event-note-candidates {
+  padding: 10px 12px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #f7fafc;
+}
+
+.event-note-candidates summary {
+  cursor: pointer;
+  color: #24566a;
+  font-weight: 900;
+}
+
+.event-note-candidate-list,
+.event-note-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.event-note-candidate-list article {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.event-note-candidate-list small,
+.event-note-candidate-list p {
+  margin: 0;
+  color: #657688;
+}
+
+.event-note-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.event-note-link-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.event-note-link-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) repeat(3, minmax(120px, 0.7fr));
+  gap: 8px;
+}
+
 .official-news-table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -3752,7 +3848,9 @@ html,
 @media (max-width: 640px) {
   .official-news-filter-grid,
   .official-news-facts,
-  .official-news-card {
+  .official-news-card,
+  .event-note-form-grid,
+  .event-note-link-row {
     grid-template-columns: 1fr;
   }
 

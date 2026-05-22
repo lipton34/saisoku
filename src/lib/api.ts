@@ -335,6 +335,62 @@ export type NewsFetchLog = {
   errorMessage: string | null;
 };
 
+export type EventNoteLinkInput = {
+  url: string;
+  title?: string | null;
+  siteName?: string | null;
+  memo?: string | null;
+};
+
+export type EventNoteLink = EventNoteLinkInput & {
+  id: string;
+  title: string | null;
+  siteName: string | null;
+  memo: string | null;
+};
+
+export type EventNoteInput = {
+  newsItemId: string;
+  eventKey?: string;
+  title: string;
+  minimumGoals?: string | null;
+  targetWeapons?: string | null;
+  targetSummons?: string | null;
+  targetItems?: string | null;
+  farmingNotes?: string | null;
+  cautionNotes?: string | null;
+  freeMemo?: string | null;
+  links?: EventNoteLinkInput[];
+};
+
+export type EventNote = {
+  id: string;
+  eventKey: string;
+  newsItemId: string;
+  title: string;
+  minimumGoals: string | null;
+  targetWeapons: string | null;
+  targetSummons: string | null;
+  targetItems: string | null;
+  farmingNotes: string | null;
+  cautionNotes: string | null;
+  freeMemo: string | null;
+  sourceNoteId: string | null;
+  links: EventNoteLink[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EventNoteCandidate = EventNote & {
+  sourceNewsItem: {
+    title: string | null;
+    startsAt: string | null;
+    endsAt: string | null;
+    articleTitle: string;
+    officialUrl: string;
+  };
+};
+
 export type OfficialNewsListParams = {
   itemType?: string;
   eventType?: string;
@@ -509,7 +565,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return response.json() as Promise<T>;
 }
 
-function toQuery(params?: OfficialNewsListParams) {
+function toQuery(params?: Record<string, string | number | boolean | undefined>) {
   const search = new URLSearchParams();
   Object.entries(params ?? {}).forEach(([key, value]) => {
     if (value === undefined || value === null || value === "" || value === false) {
@@ -643,6 +699,16 @@ export const api = {
     request<{ logs: NewsFetchLog[]; total: number; limit: number; offset: number }>(
       `/api/news-fetch-logs${toQuery(params)}`
     ),
+  eventNotes: (params?: { newsItemId?: string; eventKey?: string }) =>
+    request<{ notes: EventNote[] }>(`/api/event-notes${toQuery(params)}`),
+  eventNoteCandidates: (params: { newsItemId?: string; eventKey?: string }) =>
+    request<{ eventKey: string; candidates: EventNoteCandidate[] }>(`/api/event-notes/candidates${toQuery(params)}`),
+  createEventNote: (note: EventNoteInput) =>
+    request<{ note: EventNote }>("/api/event-notes", { method: "POST", json: note }),
+  updateEventNote: (id: string, note: EventNoteInput) =>
+    request<{ note: EventNote }>(`/api/event-notes/${id}`, { method: "PATCH", json: note }),
+  copyEventNote: (id: string, newsItemId: string) =>
+    request<{ note: EventNote }>(`/api/event-notes/${id}/copy`, { method: "POST", json: { newsItemId } }),
   buildPresets: (filters?: { category?: string; questName?: string; element?: string }) => {
     const params = new URLSearchParams();
     if (filters?.category) params.set("category", filters.category);
