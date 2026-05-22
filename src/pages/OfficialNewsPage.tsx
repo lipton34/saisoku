@@ -12,6 +12,7 @@ import {
   type ExtractedNewsItem,
   type ExtractedNewsItemType,
   type NewsFetchLog,
+  type OfficialNewsFetchResult,
   type SourceArticle,
   type SourceArticleType
 } from "../lib/api";
@@ -95,6 +96,17 @@ function periodText(item: ExtractedNewsItem) {
   return "-";
 }
 
+function currentYearMonthJst() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    month: "2-digit",
+    timeZone: "Asia/Tokyo",
+    year: "numeric"
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  return `${year}-${month}`;
+}
+
 type TabKey = "items" | "articles" | "logs";
 
 export function OfficialNewsPage() {
@@ -119,6 +131,10 @@ export function OfficialNewsPage() {
   const [disableGrouping, setDisableGrouping] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchMonth, setFetchMonth] = useState(() => currentYearMonthJst());
+  const [reanalyzeArticleId, setReanalyzeArticleId] = useState("");
+  const [fetchResult, setFetchResult] = useState<OfficialNewsFetchResult | null>(null);
+  const [isFetchingNews, setIsFetchingNews] = useState(false);
 
   const itemCounts = useMemo(() => {
     const dated = items.filter((item) => item.startsAt || item.endsAt || item.updateAtCandidate).length;
@@ -173,6 +189,20 @@ export function OfficialNewsPage() {
     void loadAll();
   }
 
+  async function runOfficialNewsFetch(action: () => Promise<OfficialNewsFetchResult>) {
+    setError("");
+    setIsFetchingNews(true);
+    try {
+      const result = await action();
+      setFetchResult(result);
+      await loadAll();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "公式NEWS取得処理に失敗しました");
+    } finally {
+      setIsFetchingNews(false);
+    }
+  }
+
   return (
     <div className="page-stack">
       <section className="page-heading official-news-heading">
@@ -185,6 +215,71 @@ export function OfficialNewsPage() {
           <RefreshCcw size={16} />
           再読込
         </button>
+      </section>
+
+      <section className="panel official-news-panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Manual Fetch</p>
+            <h3>公式NEWS取得</h3>
+          </div>
+          <span className="muted-text">{isFetchingNews ? "取得中..." : "画面ボタンから手動更新"}</span>
+        </div>
+        <div className="official-news-filter-grid">
+          <button
+            className="primary-button"
+            disabled={isFetchingNews}
+            onClick={() => void runOfficialNewsFetch(() => api.fetchLatestOfficialNews())}
+            type="button"
+          >
+            最新NEWSを取得
+          </button>
+          <button
+            className="secondary-button"
+            disabled={isFetchingNews}
+            onClick={() => void runOfficialNewsFetch(() => api.fetchMonthlyOfficialNews({ targetMonth: currentYearMonthJst() }))}
+            type="button"
+          >
+            今月のNEWSを取得
+          </button>
+          <label>
+            指定年月
+            <input
+              disabled={isFetchingNews}
+              onChange={(event) => setFetchMonth(event.target.value)}
+              placeholder="2026-05"
+              value={fetchMonth}
+            />
+          </label>
+          <button
+            className="secondary-button"
+            disabled={isFetchingNews || !fetchMonth.trim()}
+            onClick={() => void runOfficialNewsFetch(() => api.fetchMonthlyOfficialNews({ targetMonth: fetchMonth.trim() }))}
+            type="button"
+          >
+            指定月NEWSを取得
+          </button>
+          <label>
+            sourceArticleId
+            <input
+              disabled={isFetchingNews}
+              onChange={(event) => setReanalyzeArticleId(event.target.value)}
+              placeholder="9690"
+              value={reanalyzeArticleId}
+            />
+          </label>
+          <button
+            className="secondary-button"
+            disabled={isFetchingNews || !reanalyzeArticleId.trim()}
+            onClick={() =>
+              void runOfficialNewsFetch(() => api.reanalyzeOfficialNews({ sourceArticleId: reanalyzeArticleId.trim() }))
+            }
+            type="button"
+          >
+            指定記事を再解析
+          </button>
+        </div>
+        {fetchResult ? <OfficialNewsFetchResultPanel result={fetchResult} /> : null}
       </section>
 
       <section className="stat-grid official-news-stats">
@@ -409,6 +504,51 @@ function NewsItemsTable({ eventSeries, items }: { eventSeries: EventSeries[]; it
           </a>
         </article>
       ))}
+    </div>
+  );
+}
+
+function OfficialNewsFetchResultPanel({ result }: { result: OfficialNewsFetchResult }) {
+  return (
+    <div className={result.ok ? "form-notice" : "form-error"}>
+      <strong>{result.message}</strong>
+      <dl className="official-news-facts">
+        <div>
+          <dt>runType</dt>
+          <dd>{result.runType}</dd>
+        </div>
+        <div>
+          <dt>targetMonth</dt>
+          <dd>{result.targetMonth ?? "-"}</dd>
+        </div>
+        <div>
+          <dt>取得</dt>
+          <dd>{result.fetchedCount ?? 0}件</dd>
+        </div>
+        <div>
+          <dt>新規</dt>
+          <dd>{result.insertedCount ?? 0}件</dd>
+        </div>
+        <div>
+          <dt>更新</dt>
+          <dd>{result.updatedCount ?? 0}件</dd>
+        </div>
+        <div>
+          <dt>失敗</dt>
+          <dd>{result.failedCount ?? 0}件</dd>
+        </div>
+        <div>
+          <dt>ページ</dt>
+          <dd>
+            {result.fetchedPages ?? "-"} / {result.totalPageCnt ?? "-"}
+          </dd>
+        </div>
+        <div>
+          <dt>maxPages</dt>
+          <dd>{result.maxPages ?? "-"}</dd>
+        </div>
+      </dl>
+      {result.errors && result.errors.length > 0 ? <p>{result.errors.slice(0, 3).join(" / ")}</p> : null}
     </div>
   );
 }

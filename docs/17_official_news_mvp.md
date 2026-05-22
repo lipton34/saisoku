@@ -107,6 +107,21 @@
 
 ## 手動実行
 
+通常運用では cron や Render Cron Job は使わず、画面ボタンから手動で取得する。
+
+- `/official-news`
+  - 最新NEWS取得
+  - 指定月NEWS取得
+  - 指定記事の再解析
+- `/event-schedule`
+  - 簡易操作として最新NEWS取得のみ
+
+取得したNEWSは自動的に `event_occurrences` へ登録しない。必要な抽出項目だけを `/official-news` から「イベント予定に登録」する。
+
+全期間取得は行わない。過去記事は必要な月だけ指定して取得する。
+
+CLIコマンドは開発・確認用として残す。
+
 ```bash
 npm run news:fetch:latest
 npm run news:fetch:latest -- --max-pages 2

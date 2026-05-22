@@ -335,6 +335,21 @@ export type NewsFetchLog = {
   errorMessage: string | null;
 };
 
+export type OfficialNewsFetchResult = {
+  ok: boolean;
+  runType: string;
+  targetMonth?: string | null;
+  fetchedCount?: number;
+  insertedCount?: number;
+  updatedCount?: number;
+  failedCount?: number;
+  fetchedPages?: number;
+  totalPageCnt?: number;
+  maxPages?: number | null;
+  message: string;
+  errors?: string[];
+};
+
 export type EventNoteLinkInput = {
   url: string;
   title?: string | null;
@@ -761,6 +776,21 @@ export const api = {
     request<{ logs: NewsFetchLog[]; total: number; limit: number; offset: number }>(
       `/api/news-fetch-logs${toQuery(params)}`
     ),
+  fetchLatestOfficialNews: (payload?: { maxPages?: number }) =>
+    request<OfficialNewsFetchResult>("/api/official-news/fetch/latest", {
+      method: "POST",
+      json: payload ?? {}
+    }),
+  fetchMonthlyOfficialNews: (payload: { targetMonth: string; maxPages?: number }) =>
+    request<OfficialNewsFetchResult>("/api/official-news/fetch/month", {
+      method: "POST",
+      json: payload
+    }),
+  reanalyzeOfficialNews: (payload: { sourceArticleId: string }) =>
+    request<OfficialNewsFetchResult>("/api/official-news/reanalyze", {
+      method: "POST",
+      json: payload
+    }),
   eventSeries: () => request<{ series: EventSeries[] }>("/api/event-series"),
   createEventSeries: (series: {
     eventKey: string;

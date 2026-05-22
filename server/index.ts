@@ -19,6 +19,7 @@ import {
   officialNewsRouter,
   sourceArticlesRouter
 } from "./routes/officialNews.js";
+import { officialNewsFetchRouter } from "./routes/officialNewsFetch.js";
 import { sharedGoalsRouter } from "./routes/sharedGoals.js";
 import { tasksRouter } from "./routes/tasks.js";
 
@@ -56,6 +57,7 @@ app.use("/api/material-goals", materialGoalsRouter);
 app.use("/api/news", officialNewsRouter);
 app.use("/api/news-fetch-logs", newsFetchLogsRouter);
 app.use("/api/news-items", newsItemsRouter);
+app.use("/api/official-news", officialNewsFetchRouter);
 app.use("/api/source-articles", sourceArticlesRouter);
 app.use("/api/shared-goals", sharedGoalsRouter);
 app.use("/api/tasks", tasksRouter);
