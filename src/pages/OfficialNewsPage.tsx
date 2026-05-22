@@ -378,12 +378,6 @@ function NewsItemsTable({ items }: { items: ExtractedNewsItem[] }) {
                 <dd>{item.article.title}</dd>
               </div>
             </dl>
-            {item.rawDateText && (
-              <details className="official-news-raw">
-                <summary>rawDateText</summary>
-                <p>{item.rawDateText}</p>
-              </details>
-            )}
             {item.relatedItems && item.relatedItems.length > 0 ? (
               <details className="official-news-related">
                 <summary>関連NEWS {item.relatedItems.length}件</summary>
@@ -512,88 +506,120 @@ function EventNoteSection({ item }: { item: ExtractedNewsItem }) {
     }
   }
 
+  async function deleteNote() {
+    if (!editingId) return;
+    setError("");
+    try {
+      await api.deleteEventNote(editingId);
+      setNotes([]);
+      setForm({ ...emptyNoteForm(item), eventKey });
+      setEditingId(null);
+      setIsOpen(false);
+      void loadNotes();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "攻略メモの削除に失敗しました");
+    }
+  }
+
   const currentNote = notes[0] ?? null;
 
   return (
-    <section className="event-note-box">
-      <div className="inline-section-heading">
-        <div>
-          <p className="eyebrow">Event Note</p>
-          <h4>攻略メモ</h4>
-        </div>
-        <button className="secondary-button compact-action" onClick={() => setIsOpen((current) => !current)} type="button">
-          {currentNote ? "編集" : "作成"}
-        </button>
-      </div>
+    <details className="event-note-box">
+      <summary>
+        <span>
+          <span className="eyebrow">Event Note</span>
+          <strong>攻略メモ</strong>
+        </span>
+        <span className="muted-text">{currentNote ? currentNote.title : "未作成"}</span>
+      </summary>
 
-      {isLoading ? <p className="muted-text">攻略メモを確認中...</p> : null}
-      {error ? <p className="form-error">{error}</p> : null}
-
-      {currentNote ? <EventNoteSummary note={currentNote} /> : <p className="muted-text">このNEWS項目の攻略メモはまだありません。</p>}
-
-      {candidates.length > 0 ? (
-        <details className="event-note-candidates">
-          <summary>過去メモ候補 {candidates.length}件</summary>
-          <div className="event-note-candidate-list">
-            {candidates.map((candidate) => (
-              <article key={candidate.id}>
-                <strong>{candidate.title}</strong>
-                <small>
-                  {formatDateTime(candidate.createdAt)} / {candidate.sourceNewsItem.title || candidate.sourceNewsItem.articleTitle}
-                </small>
-                <p>{previewText(candidate.minimumGoals)}</p>
-                <button className="secondary-button compact-action" onClick={() => copyCandidate(candidate)} type="button">
-                  このメモを今回にコピー
-                </button>
-              </article>
-            ))}
+      <div className="event-note-body">
+        <div className="inline-section-heading">
+          <div>
+            <p className="eyebrow">Memo</p>
+            <h4>{currentNote ? "攻略メモ確認" : "攻略メモ作成"}</h4>
           </div>
-        </details>
-      ) : null}
-
-      {isOpen ? (
-        <form className="event-note-form" onSubmit={saveNote}>
-          <label>
-            メモタイトル
-            <input onChange={(event) => updateField("title", event.target.value)} required value={form.title} />
-          </label>
-          <div className="event-note-form-grid">
-            <NoteTextarea label="最低限やること" field="minimumGoals" form={form} updateField={updateField} />
-            <NoteTextarea label="集める武器" field="targetWeapons" form={form} updateField={updateField} />
-            <NoteTextarea label="集める召喚石" field="targetSummons" form={form} updateField={updateField} />
-            <NoteTextarea label="重要アイテム" field="targetItems" form={form} updateField={updateField} />
-            <NoteTextarea label="周回メモ" field="farmingNotes" form={form} updateField={updateField} />
-            <NoteTextarea label="注意点" field="cautionNotes" form={form} updateField={updateField} />
-            <NoteTextarea label="その他メモ" field="freeMemo" form={form} updateField={updateField} />
-          </div>
-          <div className="event-note-link-editor">
-            <div className="inline-section-heading">
-              <h4>参考リンク</h4>
-              <button
-                className="secondary-button compact-action"
-                onClick={() =>
-                  setForm((current) => ({ ...current, links: [...(current.links ?? []), { url: "", title: "", siteName: "", memo: "" }] }))
-                }
-                type="button"
-              >
-                リンク追加
-              </button>
-            </div>
-            {(form.links ?? []).map((link, index) => (
-              <div className="event-note-link-row" key={index}>
-                <input onChange={(event) => updateLink(index, "url", event.target.value)} placeholder="URL" value={link.url} />
-                <input onChange={(event) => updateLink(index, "title", event.target.value)} placeholder="タイトル" value={link.title ?? ""} />
-                <input onChange={(event) => updateLink(index, "siteName", event.target.value)} placeholder="サイト名" value={link.siteName ?? ""} />
-                <input onChange={(event) => updateLink(index, "memo", event.target.value)} placeholder="自分用メモ" value={link.memo ?? ""} />
-              </div>
-            ))}
-          </div>
-          <button className="primary-button compact-action" type="submit">
-            攻略メモを保存
+          <button className="secondary-button compact-action" onClick={() => setIsOpen((current) => !current)} type="button">
+            {isOpen ? "キャンセル" : currentNote ? "編集" : "作成"}
           </button>
-        </form>
-      ) : null}
-    </section>
+        </div>
+
+        {isLoading ? <p className="muted-text">攻略メモを確認中...</p> : null}
+        {error ? <p className="form-error">{error}</p> : null}
+
+        {currentNote ? <EventNoteSummary note={currentNote} /> : <p className="muted-text">このNEWS項目の攻略メモはまだありません。</p>}
+
+        {candidates.length > 0 ? (
+          <details className="event-note-candidates">
+            <summary>過去メモ候補 {candidates.length}件</summary>
+            <div className="event-note-candidate-list">
+              {candidates.map((candidate) => (
+                <article key={candidate.id}>
+                  <strong>{candidate.title}</strong>
+                  <small>
+                    {formatDateTime(candidate.createdAt)} / {candidate.sourceNewsItem.title || candidate.sourceNewsItem.articleTitle}
+                  </small>
+                  <p>{previewText(candidate.minimumGoals)}</p>
+                  <button className="secondary-button compact-action" onClick={() => copyCandidate(candidate)} type="button">
+                    このメモを今回にコピー
+                  </button>
+                </article>
+              ))}
+            </div>
+          </details>
+        ) : null}
+
+        {isOpen ? (
+          <form className="event-note-form" onSubmit={saveNote}>
+            <label>
+              メモタイトル
+              <input onChange={(event) => updateField("title", event.target.value)} required value={form.title} />
+            </label>
+            <div className="event-note-form-grid">
+              <NoteTextarea label="最低限やること" field="minimumGoals" form={form} updateField={updateField} />
+              <NoteTextarea label="集める武器" field="targetWeapons" form={form} updateField={updateField} />
+              <NoteTextarea label="集める召喚石" field="targetSummons" form={form} updateField={updateField} />
+              <NoteTextarea label="重要アイテム" field="targetItems" form={form} updateField={updateField} />
+              <NoteTextarea label="周回メモ" field="farmingNotes" form={form} updateField={updateField} />
+              <NoteTextarea label="注意点" field="cautionNotes" form={form} updateField={updateField} />
+              <NoteTextarea label="その他メモ" field="freeMemo" form={form} updateField={updateField} />
+            </div>
+            <div className="event-note-link-editor">
+              <div className="inline-section-heading">
+                <h4>参考リンク</h4>
+                <button
+                  className="secondary-button compact-action"
+                  onClick={() =>
+                    setForm((current) => ({ ...current, links: [...(current.links ?? []), { url: "", title: "", siteName: "", memo: "" }] }))
+                  }
+                  type="button"
+                >
+                  リンク追加
+                </button>
+              </div>
+              {(form.links ?? []).map((link, index) => (
+                <div className="event-note-link-row" key={index}>
+                  <input onChange={(event) => updateLink(index, "url", event.target.value)} placeholder="URL" value={link.url} />
+                  <input onChange={(event) => updateLink(index, "title", event.target.value)} placeholder="タイトル" value={link.title ?? ""} />
+                  <input onChange={(event) => updateLink(index, "siteName", event.target.value)} placeholder="サイト名" value={link.siteName ?? ""} />
+                  <input onChange={(event) => updateLink(index, "memo", event.target.value)} placeholder="自分用メモ" value={link.memo ?? ""} />
+                </div>
+              ))}
+            </div>
+            <div className="button-row">
+              <button className="primary-button compact-action" type="submit">
+                攻略メモを保存
+              </button>
+              {editingId ? (
+                <button className="secondary-button danger-button compact-action" onClick={deleteNote} type="button">
+                  攻略メモを削除
+                </button>
+              ) : null}
+            </div>
+          </form>
+        ) : null}
+      </div>
+    </details>
   );
 }
 

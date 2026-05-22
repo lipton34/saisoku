@@ -281,6 +281,23 @@ router.patch("/:id", async (req, res, next) => {
   }
 });
 
+router.delete("/:id", async (req, res, next) => {
+  try {
+    const deleted = await prisma.eventNote.deleteMany({
+      where: { id: req.params.id },
+    });
+
+    if (deleted.count === 0) {
+      res.status(404).json({ message: "攻略メモが見つかりません" });
+      return;
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post("/:id/copy", async (req, res, next) => {
   try {
     const newsItemId = text(req.body.newsItemId);

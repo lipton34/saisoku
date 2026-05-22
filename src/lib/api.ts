@@ -707,6 +707,7 @@ export const api = {
     request<{ note: EventNote }>("/api/event-notes", { method: "POST", json: note }),
   updateEventNote: (id: string, note: EventNoteInput) =>
     request<{ note: EventNote }>(`/api/event-notes/${id}`, { method: "PATCH", json: note }),
+  deleteEventNote: (id: string) => request<void>(`/api/event-notes/${id}`, { method: "DELETE" }),
   copyEventNote: (id: string, newsItemId: string) =>
     request<{ note: EventNote }>(`/api/event-notes/${id}/copy`, { method: "POST", json: { newsItemId } }),
   buildPresets: (filters?: { category?: string; questName?: string; element?: string }) => {

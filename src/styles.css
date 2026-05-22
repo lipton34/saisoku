@@ -757,6 +757,29 @@ a {
   background: #ffffff;
 }
 
+.event-note-box > summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.event-note-box > summary span:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.event-note-box > summary strong {
+  font-size: 1rem;
+}
+
+.event-note-body {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .event-note-box h4 {
   margin: 0;
   font-size: 1rem;
