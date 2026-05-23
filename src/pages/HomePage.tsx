@@ -1,18 +1,19 @@
-import { BookOpen, Boxes, CalendarCheck2, ChevronRight, Flag, Flame, ListChecks, Map, Swords } from "lucide-react";
+import { Boxes, CalendarCheck2, ChevronRight, FilePlus2, Flag, Flame, ListChecks, Map, Newspaper, Swords } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { TaskList } from "../components/TaskList";
 import { api, type SharedGoal, type Task } from "../lib/api";
 
 const toolCards = [
-  { title: "日課管理", description: "島HARD、マグナ、砂箱など毎日見る項目", icon: CalendarCheck2, href: "/tasks" },
-  { title: "素材メモ", description: "必要数と所持数を追う素材集めの進捗表", icon: Boxes, href: "/materials" },
-  { title: "目標共有", description: "団員の個人目標と進捗、届いた提案を確認", icon: Flag, href: "/goals" },
-  { title: "古戦場計算", description: "日程別目標からHELL討伐数と時間効率を計算", icon: Flame, href: "/guild-war-goals" },
-  { title: "編成メモ", description: "プリセットから高難易度・周回向け編成を投稿", icon: Swords, href: "/builds" },
-  { title: "イベント進捗", description: "箱数、貢献度、交換残りの確認", icon: Flame, href: "/tools/events" },
-  { title: "マルチ救援メモ", description: "参加条件や自発素材の備忘録", icon: BookOpen, href: "/tools/raids" },
-  { title: "ロードマップ", description: "これから作る機能と実装順の確認", icon: Map, href: "/roadmap" }
+  { title: "タスク", description: "日課や週課を登録し、完了・未完了を切り替えて管理", icon: CalendarCheck2, href: "/tasks" },
+  { title: "素材メモ", description: "素材ごとの必要数・所持数・優先度を記録して進捗確認", icon: Boxes, href: "/materials" },
+  { title: "目標共有", description: "団員の周回・編成目標を共有し、提案や準備状況を確認", icon: Flag, href: "/goals" },
+  { title: "古戦場計算", description: "日別の目標貢献度からHELL討伐数や必要時間を計算", icon: Flame, href: "/guild-war-goals" },
+  { title: "公式NEWS", description: "取り込んだ公式お知らせの表示、表示切替、メモ登録", icon: Newspaper, href: "/official-news" },
+  { title: "イベント予定", description: "公式NEWS由来のイベント日程と自分用メモを確認", icon: Map, href: "/event-schedule" },
+  { title: "編成一覧・検索", description: "投稿済みの高難易度・周回向け編成を検索して詳細確認", icon: Swords, href: "/builds/search" },
+  { title: "編成投稿", description: "プリセットや候補リストを使って編成メモを登録", icon: FilePlus2, href: "/builds/post" },
+  { title: "ロードマップ", description: "実装済み・開発中・今後追加予定の機能を確認", icon: Map, href: "/roadmap" }
 ];
 
 export function HomePage() {
