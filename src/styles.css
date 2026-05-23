@@ -170,6 +170,7 @@ a {
 
 .nav-list a {
   justify-content: flex-start;
+  flex: 0 0 auto;
   min-height: 38px;
   padding: 0 10px;
   border-radius: 8px;
@@ -433,6 +434,7 @@ a {
 
 .icon-button {
   display: grid;
+  flex: 0 0 auto;
   width: 34px;
   height: 34px;
   place-items: center;
@@ -2360,8 +2362,11 @@ textarea {
     top: 0;
     z-index: 10;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
     align-items: center;
+    gap: 12px;
+    min-width: 0;
+    overflow: hidden;
     padding: 12px;
   }
 
@@ -2384,12 +2389,23 @@ textarea {
   .nav-list {
     display: flex;
     justify-content: center;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
   }
 
   .sidebar-user {
+    min-width: 0;
     margin-top: 0;
     padding-top: 0;
     border-top: 0;
+    justify-self: end;
+  }
+
+  .sidebar-user .icon-text-button {
+    min-height: 34px;
   }
 
   .content-grid,
@@ -2563,13 +2579,19 @@ textarea {
 
   .sidebar {
     grid-template-columns: 1fr;
+    overflow: visible;
   }
 
   .nav-list {
     justify-content: stretch;
   }
 
-  .sidebar-collapsed .nav-list,
+  .sidebar-collapsed .nav-list {
+    display: flex;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
   .sidebar-collapsed .sidebar-user {
     display: none;
   }
