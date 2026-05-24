@@ -14,6 +14,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   api,
   type BuildCharacterDetail,
+  type BuildMastersQuery,
   type BuildPost,
   type BuildPostInput,
   type BuildPreset,
@@ -1160,7 +1161,6 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { sourceType, buildId } = useParams();
-  const { catalog: buildMasterCatalog } = useBuildMasterCatalog();
   const [presets, setPresets] = useState<BuildPreset[]>([]);
   const [posts, setPosts] = useState<BuildPost[]>([]);
   const [form, setForm] = useState<BuildPostInput>(emptyForm);
@@ -1170,6 +1170,14 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
     useState<BuildListFilters>(emptyListFilters);
   const [error, setError] = useState("");
   const activeBuildTab: BuildTab = buildId ? "search" : mode;
+  const initialMasterScope = useMemo<BuildMastersQuery | "all">(
+    () => (activeBuildTab === "form" ? { kind: "job" } : "all"),
+    [activeBuildTab],
+  );
+  const {
+    catalog: buildMasterCatalog,
+    loadBuildMasters,
+  } = useBuildMasterCatalog(initialMasterScope);
 
   const visiblePurposeOptions =
     listFilters.category === "高難度攻略用"
@@ -1691,6 +1699,7 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
             form={form}
             isSubmitting={false}
             onApplyPreset={applyPreset}
+            onLoadMasterCandidates={loadBuildMasters}
             onCancel={() => {
               setForm(emptyForm);
               setEditingPostId(null);

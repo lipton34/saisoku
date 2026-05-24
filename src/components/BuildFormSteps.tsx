@@ -10,6 +10,7 @@ import {
 import { ArrowLeft, Check, Plus, Search, Trash2, X } from "lucide-react";
 import {
   type BuildCharacterDetail,
+  type BuildMastersQuery,
   type BuildPostInput,
   type BuildPreset,
   type BuildReferenceUrl,
@@ -205,6 +206,7 @@ interface BuildFormStepsProps {
   onSubmit: (form: BuildPostInput) => Promise<void>;
   onCancel: () => void;
   onApplyPreset: (preset: BuildPreset) => void;
+  onLoadMasterCandidates?: (params?: BuildMastersQuery) => Promise<unknown>;
   isSubmitting?: boolean;
   error?: string;
   presets?: BuildPreset[];
@@ -280,6 +282,22 @@ function itemTags(item: BuildMasterItem) {
 
 function hasTag(item: BuildMasterItem, tag: string) {
   return itemTags(item).includes(tag);
+}
+
+function useDebouncedValue<T>(value: T, delayMs: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delayMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [delayMs, value]);
+
+  return debouncedValue;
 }
 
 function candidateElement(item: BuildMasterItem) {
@@ -770,6 +788,7 @@ function PartCandidateBrowser({
   kind,
   activeName,
   filters,
+  onLoadCandidates,
   onFilterChange,
   onClose,
   onSelect,
@@ -777,6 +796,7 @@ function PartCandidateBrowser({
   kind: PartBrowserKind;
   activeName: string;
   filters: CandidateFilters;
+  onLoadCandidates?: (params?: BuildMastersQuery) => Promise<unknown>;
   onFilterChange: (filters: CandidateFilters) => void;
   onClose?: () => void;
   onSelect: (item: BuildMasterItem) => void;
@@ -787,13 +807,29 @@ function PartCandidateBrowser({
   const elementFilter = filters.element;
   const categoryFilter = filters.category;
   const queryFilter = filters.query;
+  const debouncedQueryFilter = useDebouncedValue(queryFilter.trim(), 250);
   const hasFilters = Boolean(elementFilter || categoryFilter || queryFilter);
+
+  useEffect(() => {
+    if (!onLoadCandidates) {
+      return;
+    }
+
+    const requestedElement = debouncedQueryFilter ? "" : elementFilter;
+    void onLoadCandidates({
+      kind,
+      element: requestedElement,
+      query: debouncedQueryFilter,
+      limit: debouncedQueryFilter || !requestedElement ? 60 : undefined,
+    });
+  }, [debouncedQueryFilter, elementFilter, kind, onLoadCandidates]);
+
   const candidates = useMemo(() => {
     return sortCandidates(
       kind,
       options.filter((item) => {
         const matchesElement =
-          !elementFilter || candidateElement(item) === elementFilter;
+          queryFilter || !elementFilter || candidateElement(item) === elementFilter;
         const matchesCategory = matchesCandidateCategory(item, categoryFilter);
         const matchesQuery = matchesCandidateQuery(item, queryFilter);
         return matchesCategory && matchesElement && matchesQuery;
@@ -952,6 +988,7 @@ export function BuildFormSteps({
   onSubmit,
   onCancel,
   onApplyPreset,
+  onLoadMasterCandidates,
   isSubmitting = false,
   error = "",
   presets = [],
@@ -1047,6 +1084,22 @@ export function BuildFormSteps({
   useEffect(() => {
     setOpenPartBrowser(browserKindForStep(currentStep));
   }, [currentStep]);
+
+  useEffect(() => {
+    if (!form.element) {
+      return;
+    }
+
+    setCharacterFilters((current) =>
+      current.element === form.element ? current : { ...current, element: form.element },
+    );
+    setWeaponFilters((current) =>
+      current.element === form.element ? current : { ...current, element: form.element },
+    );
+    setSummonFilters((current) =>
+      current.element === form.element ? current : { ...current, element: form.element },
+    );
+  }, [form.element]);
 
   function goToStep(step: FormStep) {
     setCurrentStep(step);
@@ -1762,6 +1815,7 @@ export function BuildFormSteps({
                     activeName={activeCharacter?.name ?? ""}
                     filters={characterFilters}
                     kind="character"
+                    onLoadCandidates={onLoadMasterCandidates}
                     onClose={() => setOpenPartBrowser(null)}
                     onFilterChange={setCharacterFilters}
                     onSelect={selectCharacterCandidate}
@@ -1945,6 +1999,7 @@ export function BuildFormSteps({
                     activeName={activeWeapon?.name ?? ""}
                     filters={weaponFilters}
                     kind="weapon"
+                    onLoadCandidates={onLoadMasterCandidates}
                     onClose={() => setOpenPartBrowser(null)}
                     onFilterChange={setWeaponFilters}
                     onSelect={selectWeaponCandidate}
@@ -2126,6 +2181,7 @@ export function BuildFormSteps({
                     activeName={activeSummon?.name ?? ""}
                     filters={summonFilters}
                     kind="summon"
+                    onLoadCandidates={onLoadMasterCandidates}
                     onClose={() => setOpenPartBrowser(null)}
                     onFilterChange={setSummonFilters}
                     onSelect={selectSummonCandidate}

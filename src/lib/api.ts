@@ -608,6 +608,13 @@ export type BuildMastersResponse = {
   aliases: GbfMasterAlias[];
 };
 
+export type BuildMastersQuery = {
+  kind?: GbfMasterKind | GbfMasterKind[];
+  element?: string;
+  query?: string;
+  limit?: number;
+};
+
 type RequestOptions = RequestInit & {
   json?: unknown;
 };
@@ -840,7 +847,17 @@ export const api = {
     const query = params.toString();
     return request<{ presets: BuildPreset[] }>(`/api/builds/presets${query ? `?${query}` : ""}`);
   },
-  getBuildMasters: () => request<BuildMastersResponse>("/api/build-masters"),
+  getBuildMasters: (params?: BuildMastersQuery) => {
+    const kind = Array.isArray(params?.kind) ? params.kind.join(",") : params?.kind;
+    return request<BuildMastersResponse>(
+      `/api/build-masters${toQuery({
+        kind,
+        element: params?.element,
+        query: params?.query,
+        limit: params?.limit,
+      })}`,
+    );
+  },
   buildPosts: () => request<{ posts: BuildPost[] }>("/api/builds"),
   createBuildPost: (post: BuildPostInput) =>
     request<{ post: BuildPost }>("/api/builds", {
