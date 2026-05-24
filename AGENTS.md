@@ -81,4 +81,5 @@ If a requested implementation seems to conflict with the requirements, stop and 
 - The app is built with npm and TypeScript; `typecheck` runs both client and server TS projects.
 - `server/index.ts` uses `dotenv`, CORS, cookie parsing, and routes under `/api`.
 - Do not commit `.env`.
+- Do not read `.env` or `.env.local` contents. Use `.env.example`, documentation, or ask the user for non-secret configuration details instead. If an environment value is needed for debugging, ask the user to confirm or provide a redacted value.
 - Refer to `README.md` and `HANDOFF.md` for deployment, environment variables, and project background.
