@@ -1679,7 +1679,7 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "weapon-regalia-staff-of-brahman",
     kind: GbfMasterKind.weapon,
-    name: "ブラフマンスタッフ",
+    name: "ニーラカンタ",
     element: "火",
     rarity: "SSR",
     category: "マグナ2武器",
@@ -2339,12 +2339,12 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "weapon-revans-mortality-bow-mk2",
     kind: GbfMasterKind.weapon,
-    name: "滅尽弓・再誕",
+    name: "必滅弓",
     element: "火",
     rarity: "SSR",
     category: "レヴァンス武器",
     thumbnailPath: "weapons/revans-mortality-bow-mk2.webp",
-    aliases: ["滅尽弓Mk II", "ムゲン弓2"],
+    aliases: ["必滅弓Mk II", "ムゲン弓2"],
     tags: ["火", "レヴァンス", "Mk II"],
     metadata: {
       series: "Revans",
@@ -2353,7 +2353,7 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "weapon-revans-extinction-blade-mk2",
     kind: GbfMasterKind.weapon,
-    name: "滅尽剣・再誕",
+    name: "滅尽剣",
     element: "火",
     rarity: "SSR",
     category: "レヴァンス武器",
