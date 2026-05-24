@@ -1121,7 +1121,9 @@ a {
   width: 42px;
   height: 42px;
   border-radius: 8px;
-  object-fit: cover;
+  box-sizing: border-box;
+  object-fit: contain;
+  object-position: center;
   background: #eef3f7;
 }
 
@@ -2779,7 +2781,9 @@ textarea {
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  object-fit: cover;
+  box-sizing: border-box;
+  object-fit: contain;
+  object-position: center;
   background: #eef3f7;
 }
 
