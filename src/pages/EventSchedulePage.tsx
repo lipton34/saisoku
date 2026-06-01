@@ -20,6 +20,26 @@ function formatDateTime(value: string | null) {
   }).format(new Date(value));
 }
 
+const jstDateKeyFormatter = new Intl.DateTimeFormat("sv-SE", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "Asia/Tokyo",
+  year: "numeric"
+});
+
+function getJstDateKey(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return jstDateKeyFormatter.format(date);
+}
+
+function isEndedBeforeToday(occurrence: EventOccurrence) {
+  if (!occurrence.endAt) return false;
+  const endDateKey = getJstDateKey(occurrence.endAt);
+  const todayDateKey = getJstDateKey(new Date());
+  return Boolean(endDateKey && todayDateKey && endDateKey < todayDateKey);
+}
+
 function toDatetimeLocal(value: string | null) {
   if (!value) return "";
   const date = new Date(value);
@@ -66,6 +86,10 @@ export function EventSchedulePage() {
   const [isUpdatingNews, setIsUpdatingNews] = useState(false);
 
   const eventTypes = useMemo(() => [...new Set(series.map((item) => item.eventType))], [series]);
+  const visibleOccurrences = useMemo(
+    () => occurrences.filter((occurrence) => !isEndedBeforeToday(occurrence)),
+    [occurrences]
+  );
 
   async function load() {
     setError("");
@@ -230,7 +254,7 @@ export function EventSchedulePage() {
       </section>
 
       <section className="event-schedule-list">
-        {occurrences.map((occurrence) => (
+        {visibleOccurrences.map((occurrence) => (
           <article className="event-occurrence-card" key={occurrence.id}>
             <div className="event-occurrence-header">
               <div>
@@ -275,7 +299,7 @@ export function EventSchedulePage() {
             <OccurrenceNoteSection occurrence={occurrence} />
           </article>
         ))}
-        {occurrences.length === 0 ? <p className="empty-state">イベント予定はまだありません。</p> : null}
+        {visibleOccurrences.length === 0 ? <p className="empty-state">イベント予定はまだありません。</p> : null}
       </section>
 
       {isEditorOpen ? (
