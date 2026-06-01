@@ -109,14 +109,13 @@ const buildPresets: BuildPreset[] = [
     ],
     weaponDetails: [
       { name: "終末武器", importance: "必須", count: "1本", usageMemo: "耐久と火力の軸", substituteMemo: "" },
-      { name: "オメガ刀", importance: "推奨", count: "1本", usageMemo: "奥義寄せ", substituteMemo: "オメガ武器の得意武器違い" },
-      { name: "水属性の奥義寄せ武器", importance: "自由枠", count: "数本", usageMemo: "手持ちに合わせて調整", substituteMemo: "" }
+      { name: "オメガ武器", importance: "推奨", count: "1本", usageMemo: "奥義寄せ", substituteMemo: "得意武器に合わせて調整" }
     ],
     characters: ["ハーゼリーラ", "ガブリエル", "ワムデュス"],
     summons: ["ヴァルナ", "ベルゼバブ", "ヤチマ"],
-    weapons: ["終末武器", "オメガ刀", "水属性の奥義寄せ武器"],
+    weapons: ["終末武器", "オメガ武器"],
     requiredParts: ["奥義回転役", "弱体・ディスペル手段", "終末武器"],
-    recommendedParts: ["高難度向けサブ加護石", "HPを確保できる武器"],
+    recommendedParts: ["高難度向けサブ加護石"],
     substitutableParts: ["防御寄せキャラ", "奥義支援召喚石"],
     freeSlots: ["手持ちに合わせた耐久枠"],
     substituteNotes: "キャラ1枠は団内運用に合わせて耐久・弱体・火力のどれを優先するかで調整。",
@@ -156,12 +155,11 @@ const buildPresets: BuildPreset[] = [
     ],
     weaponDetails: [
       { name: "終末武器", importance: "必須", count: "1本", usageMemo: "耐久と火力の軸", substituteMemo: "" },
-      { name: "オメガ武器", importance: "推奨", count: "1本", usageMemo: "予兆解除支援", substituteMemo: "" },
-      { name: "HPを確保できる武器", importance: "自由枠", count: "複数", usageMemo: "耐久調整", substituteMemo: "" }
+      { name: "オメガ武器", importance: "推奨", count: "1本", usageMemo: "予兆解除支援", substituteMemo: "" }
     ],
     characters: ["サテュロス", "オクトー", "カイム"],
     summons: ["ティターン", "ルシフェル", "ゴッドガード・ブローディア"],
-    weapons: ["終末武器", "オメガ武器", "HPを確保できる武器"],
+    weapons: ["終末武器", "オメガ武器"],
     requiredParts: ["耐久手段", "ディスペル", "予兆解除用の奥義・アビリティ"],
     recommendedParts: ["サブ加護枠", "ダメージ軽減石"],
     substitutableParts: ["防御寄せキャラ", "弱体補助キャラ"],
@@ -199,13 +197,12 @@ const buildPresets: BuildPreset[] = [
       { position: "サブ", name: "サン", importance: "推奨", usageMemo: "与ダメ補助", substituteMemo: "" }
     ],
     weaponDetails: [
-      { name: "火リミ武器", importance: "推奨", count: "複数", usageMemo: "火力確保", substituteMemo: "火力が足りる範囲で調整" },
       { name: "終末武器", importance: "必須", count: "1本", usageMemo: "上限・火力", substituteMemo: "" },
       { name: "極星器", importance: "代用可", count: "1本", usageMemo: "火力補助", substituteMemo: "" }
     ],
     characters: ["パーシヴァル", "ミカエル", "ウィルナス"],
     summons: ["アグニス", "ベルゼバブ", "サン"],
-    weapons: ["火リミ武器", "終末武器", "極星器"],
+    weapons: ["終末武器", "極星器"],
     requiredParts: ["火力役", "追撃・上限補助", "必要HP"],
     recommendedParts: ["時短用召喚石", "連撃補助"],
     substitutableParts: ["火力枠の代用キャラ"],
