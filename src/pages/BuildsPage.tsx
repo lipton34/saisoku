@@ -517,7 +517,10 @@ function PartThumbnail({
   name: string;
 }) {
   const masterCatalog = useBuildMasterLookup();
-  const master = findBuildMasterInCatalog(masterCatalog, kind, name, masterId);
+  const master =
+    kind === "weapon"
+      ? findBuildMasterInCatalog(masterCatalog, kind, name, masterId)
+      : undefined;
   const thumbnailUrl = master ? resolveBuildMasterThumbnailUrl(master) : "";
   const [hasImageError, setHasImageError] = useState(false);
   const label = name.trim().slice(0, 2) || "?";
