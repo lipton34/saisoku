@@ -266,7 +266,7 @@ function tabFromSearch(search: string): GoalTab {
 }
 
 export function GoalsPage() {
-  const { catalog } = useBuildMasterCatalog();
+  const { catalog } = useBuildMasterCatalog(false);
 
   return (
     <BuildMasterCatalogProvider catalog={catalog}>

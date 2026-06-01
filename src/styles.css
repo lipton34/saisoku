@@ -3604,6 +3604,30 @@ textarea {
   padding: 16px;
 }
 
+.part-browser-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.part-browser-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 33, 43, 0.42);
+}
+
+.part-browser--modal {
+  position: relative;
+  z-index: 1;
+  width: min(980px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  box-shadow: 0 24px 70px rgba(20, 33, 43, 0.24);
+}
+
 .part-browser-header {
   grid-template-columns: minmax(0, 0.75fr) auto minmax(260px, 1fr);
 }
@@ -3917,6 +3941,14 @@ html,
 }
 
 @media (max-width: 1180px) {
+  .part-browser-modal {
+    padding: 12px;
+  }
+
+  .part-browser--modal {
+    max-height: calc(100vh - 24px);
+  }
+
   .part-candidate-grid {
     min-height: 320px;
   }

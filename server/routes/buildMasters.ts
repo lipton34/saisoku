@@ -44,12 +44,26 @@ function parseLimit(value: unknown) {
   return Math.min(limit, 100);
 }
 
+function parseOffset(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+
+  const offset = Number(value);
+  if (!Number.isInteger(offset) || offset < 0) {
+    return undefined;
+  }
+
+  return offset;
+}
+
 router.get("/", async (req, res, next) => {
   try {
     const kinds = parseKinds(req.query.kind);
     const element = optionalQueryText(req.query.element);
     const query = optionalQueryText(req.query.query);
     const limit = parseLimit(req.query.limit);
+    const offset = parseOffset(req.query.offset);
     const and: Prisma.GbfMasterItemWhereInput[] = [];
 
     if (kinds.length > 0) {
@@ -96,6 +110,7 @@ router.get("/", async (req, res, next) => {
       where,
       orderBy: [{ kind: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
       ...(limit ? { take: limit } : {}),
+      ...(offset ? { skip: offset } : {}),
       select: {
         id: true,
         kind: true,

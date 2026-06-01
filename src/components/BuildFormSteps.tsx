@@ -11,6 +11,7 @@ import { ArrowLeft, Check, Plus, Search, Trash2, X } from "lucide-react";
 import {
   type BuildCharacterDetail,
   type BuildMastersQuery,
+  type BuildMastersResponse,
   type BuildPostInput,
   type BuildPreset,
   type BuildReferenceUrl,
@@ -20,7 +21,6 @@ import {
 import {
   findBuildMasterInCatalog,
   resolveBuildMasterThumbnailUrl,
-  type BuildMasterCatalog,
   type BuildMasterKind,
   type BuildMasterItem,
 } from "../lib/buildMasters";
@@ -95,7 +95,7 @@ const referenceTypeOptions = [
   "その他",
 ];
 const raidRoleOptions = ["自発", "救援", "どちらでも"];
-const candidatePageSize = 10;
+const candidateFetchLimit = 30;
 const emptyCandidateFilters: CandidateFilters = {
   element: "",
   category: "",
@@ -206,7 +206,7 @@ interface BuildFormStepsProps {
   onSubmit: (form: BuildPostInput) => Promise<void>;
   onCancel: () => void;
   onApplyPreset: (preset: BuildPreset) => void;
-  onLoadMasterCandidates?: (params?: BuildMastersQuery) => Promise<unknown>;
+  onLoadMasterCandidates?: (params?: BuildMastersQuery) => Promise<BuildMastersResponse>;
   isSubmitting?: boolean;
   error?: string;
   presets?: BuildPreset[];
@@ -238,19 +238,6 @@ function candidateMeta(item: BuildMasterItem) {
   ]
     .filter(Boolean)
     .join(" / ");
-}
-
-function partOptions(
-  kind: Exclude<BuildMasterKind, "job">,
-  catalog: BuildMasterCatalog,
-) {
-  if (kind === "character") {
-    return catalog.options.characters;
-  }
-  if (kind === "summon") {
-    return catalog.options.summons;
-  }
-  return catalog.options.weapons;
 }
 
 function partKindLabel(kind: Exclude<BuildMasterKind, "job">) {
@@ -514,19 +501,6 @@ function linesToArray(value: string) {
     .filter(Boolean);
 }
 
-function browserKindForStep(step: FormStep): PartBrowserKind | null {
-  if (step === 2) {
-    return "character";
-  }
-  if (step === 3) {
-    return "weapon";
-  }
-  if (step === 4) {
-    return "summon";
-  }
-  return null;
-}
-
 function sameItems<T extends Record<string, unknown>>(first: T[], second: T[]) {
   if (first.length !== second.length) {
     return false;
@@ -787,6 +761,52 @@ const PartCandidateCard = memo(function PartCandidateCard({
   );
 });
 
+function browserCandidatesFromResponse(
+  response: BuildMastersResponse,
+  kind: PartBrowserKind,
+): BuildMasterItem[] {
+  const aliasesByMasterId = new Map<string, string[]>();
+
+  for (const alias of response.aliases) {
+    const text = alias.alias.trim();
+    if (!text) {
+      continue;
+    }
+    aliasesByMasterId.set(alias.masterItemId, [
+      ...(aliasesByMasterId.get(alias.masterItemId) ?? []),
+      text,
+    ]);
+  }
+
+  return response.items
+    .filter((item) => item.isActive && item.kind === kind)
+    .map((item) => {
+      const weaponType = item.metadata?.weaponType;
+      const series = item.metadata?.series;
+
+      return {
+        id: item.id,
+        kind,
+        name: item.name,
+        displayName: item.displayName ?? undefined,
+        element: item.element ?? undefined,
+        category: item.category ?? undefined,
+        rarity: item.rarity ?? undefined,
+        weaponType: typeof weaponType === "string" ? weaponType : undefined,
+        series: typeof series === "string" ? series : undefined,
+        tags: item.tags,
+        aliases: aliasesByMasterId.get(item.id) ?? [],
+        metadata: item.metadata,
+        sortOrder: item.sortOrder,
+        isActive: item.isActive,
+        thumbnailUrl: item.thumbnailUrl ?? undefined,
+        thumbnailPath: item.thumbnailPath ?? undefined,
+        description: item.description ?? undefined,
+        note: item.note ?? undefined,
+      };
+    });
+}
+
 function PartCandidateBrowser({
   kind,
   activeName,
@@ -799,63 +819,93 @@ function PartCandidateBrowser({
   kind: PartBrowserKind;
   activeName: string;
   filters: CandidateFilters;
-  onLoadCandidates?: (params?: BuildMastersQuery) => Promise<unknown>;
+  onLoadCandidates?: (params?: BuildMastersQuery) => Promise<BuildMastersResponse>;
   onFilterChange: (filters: CandidateFilters) => void;
   onClose?: () => void;
   onSelect: (item: BuildMasterItem) => void;
 }) {
-  const [page, setPage] = useState(1);
-  const masterCatalog = useBuildMasterLookup();
-  const options = partOptions(kind, masterCatalog);
+  const [candidates, setCandidates] = useState<BuildMasterItem[]>([]);
+  const [loadedCount, setLoadedCount] = useState(0);
+  const [hasMoreCandidates, setHasMoreCandidates] = useState(false);
+  const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
+  const [candidateError, setCandidateError] = useState("");
+  const candidateRequestRef = useRef(0);
   const elementFilter = filters.element;
   const categoryFilter = filters.category;
   const queryFilter = filters.query;
   const debouncedQueryFilter = useDebouncedValue(queryFilter.trim(), 250);
   const hasFilters = Boolean(elementFilter || categoryFilter || queryFilter);
 
-  useEffect(() => {
+  const loadCandidates = useCallback(async (offset: number) => {
     if (!onLoadCandidates) {
       return;
     }
 
+    setIsLoadingCandidates(true);
+    setCandidateError("");
+    const requestId = candidateRequestRef.current + 1;
+    candidateRequestRef.current = requestId;
     const requestedElement = debouncedQueryFilter ? "" : elementFilter;
-    void onLoadCandidates({
-      kind,
-      element: requestedElement,
-      query: debouncedQueryFilter,
-      limit: debouncedQueryFilter || !requestedElement ? 60 : undefined,
-    });
+    try {
+      const response = await onLoadCandidates({
+        kind,
+        element: requestedElement,
+        query: debouncedQueryFilter,
+        limit: candidateFetchLimit,
+        offset,
+      });
+      const nextCandidates = browserCandidatesFromResponse(response, kind);
+      if (candidateRequestRef.current !== requestId) {
+        return;
+      }
+
+      setCandidates((current) =>
+        offset === 0
+          ? nextCandidates
+          : [
+              ...current,
+              ...nextCandidates.filter(
+                (item) => !current.some((currentItem) => currentItem.id === item.id),
+              ),
+            ],
+      );
+      setLoadedCount(offset + nextCandidates.length);
+      setHasMoreCandidates(nextCandidates.length === candidateFetchLimit);
+    } catch (caught) {
+      if (candidateRequestRef.current !== requestId) {
+        return;
+      }
+      setCandidateError(
+        caught instanceof Error ? caught.message : "候補の取得に失敗しました",
+      );
+    } finally {
+      if (candidateRequestRef.current === requestId) {
+        setIsLoadingCandidates(false);
+      }
+    }
   }, [debouncedQueryFilter, elementFilter, kind, onLoadCandidates]);
 
-  const candidates = useMemo(() => {
+  useEffect(() => {
+    setCandidates([]);
+    setLoadedCount(0);
+    setHasMoreCandidates(false);
+    void loadCandidates(0);
+  }, [loadCandidates]);
+
+  const visibleCandidates = useMemo(() => {
     return sortCandidates(
       kind,
-      options.filter((item) => {
-        const matchesElement =
-          queryFilter || !elementFilter || candidateElement(item) === elementFilter;
+      candidates.filter((item) => {
         const matchesCategory = matchesCandidateCategory(item, categoryFilter);
-        const matchesQuery = matchesCandidateQuery(item, queryFilter);
-        return matchesCategory && matchesElement && matchesQuery;
+        return matchesCategory;
       }),
     );
-  }, [categoryFilter, elementFilter, kind, options, queryFilter]);
-  const pageCount = Math.max(1, Math.ceil(candidates.length / candidatePageSize));
-  const currentPage = Math.min(page, pageCount);
-  const pagedCandidates = useMemo(
-    () =>
-      candidates.slice(
-        (currentPage - 1) * candidatePageSize,
-        currentPage * candidatePageSize,
-      ),
-    [candidates, currentPage],
-  );
-
-  useEffect(() => {
-    setPage(1);
-  }, [categoryFilter, elementFilter, kind, queryFilter]);
+  }, [candidates, categoryFilter, kind]);
 
   return (
-    <div className="part-browser">
+    <div className="part-browser-modal" role="dialog" aria-modal="true">
+      <div className="part-browser-modal-backdrop" onClick={onClose} />
+      <div className="part-browser part-browser--modal">
       <div className="part-browser-header">
         <div>
           <p className="eyebrow">{partKindLabel(kind)}候補</p>
@@ -938,11 +988,14 @@ function PartCandidateBrowser({
       >
         <span className="active">候補一覧</span>
         <span className={hasFilters ? "active" : ""}>絞り込み</span>
-        <span>{candidates.length}件</span>
+        <span>{visibleCandidates.length}件表示</span>
+        {hasMoreCandidates && <span>続きあり</span>}
       </div>
 
+      {candidateError && <div className="form-error">{candidateError}</div>}
+
       <div className="part-candidate-grid">
-        {pagedCandidates.map((item) => (
+        {visibleCandidates.map((item) => (
           <PartCandidateCard
             item={item}
             key={item.id}
@@ -953,35 +1006,25 @@ function PartCandidateBrowser({
         ))}
       </div>
 
-      {candidates.length > candidatePageSize && (
+      {(hasMoreCandidates || isLoadingCandidates) && (
         <div className="candidate-pagination" aria-label="候補ページ切り替え">
           <button
             className="secondary-button"
-            disabled={currentPage <= 1}
-            onClick={() => setPage((value) => Math.max(1, value - 1))}
+            disabled={isLoadingCandidates}
+            onClick={() => void loadCandidates(loadedCount)}
             type="button"
           >
-            前へ
-          </button>
-          <span>
-            {currentPage} / {pageCount}
-          </span>
-          <button
-            className="secondary-button"
-            disabled={currentPage >= pageCount}
-            onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
-            type="button"
-          >
-            次へ
+            {isLoadingCandidates ? "読み込み中" : "もっと見る"}
           </button>
         </div>
       )}
 
-      {candidates.length === 0 && (
+      {!isLoadingCandidates && visibleCandidates.length === 0 && (
         <div className="empty-state candidate-empty-state">
           候補にありません。選択中の枠に自由入力できます。
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -1085,10 +1128,6 @@ export function BuildFormSteps({
   const visiblePresets = filteredPresets.length > 0 ? filteredPresets : presets;
 
   useEffect(() => {
-    setOpenPartBrowser(browserKindForStep(currentStep));
-  }, [currentStep]);
-
-  useEffect(() => {
     if (!form.element) {
       return;
     }
@@ -1106,7 +1145,7 @@ export function BuildFormSteps({
 
   function goToStep(step: FormStep) {
     setCurrentStep(step);
-    setOpenPartBrowser(browserKindForStep(step));
+    setOpenPartBrowser(null);
   }
 
   useEffect(() => {
@@ -1398,6 +1437,7 @@ export function BuildFormSteps({
               },
             ];
       applyDraft({ ...currentForm, characterDetails });
+      setOpenPartBrowser(null);
       if (currentCharacterDetails.length === 0) {
         setActiveCharacterIndex(0);
       }
@@ -1416,6 +1456,7 @@ export function BuildFormSteps({
             )
           : [{ ...emptyWeaponDetail, name: master.name, masterId: master.id }];
       applyDraft({ ...currentForm, weaponDetails });
+      setOpenPartBrowser(null);
       if (currentForm.weaponDetails.length === 0) {
         setActiveWeaponIndex(0);
       }
@@ -1441,6 +1482,7 @@ export function BuildFormSteps({
               },
             ];
       applyDraft({ ...currentForm, summonDetails });
+      setOpenPartBrowser(null);
       if (currentForm.summonDetails.length === 0) {
         setActiveSummonIndex(0);
       }
@@ -1653,7 +1695,7 @@ export function BuildFormSteps({
               </div>
 
               <div
-                className={`formation-layout ${openPartBrowser === "character" ? "" : "formation-layout--single"}`}
+                className="formation-layout formation-layout--single"
               >
                 <div className="formation-board">
                   <div className="formation-section formation-section--hero">
@@ -1854,7 +1896,7 @@ export function BuildFormSteps({
               </div>
 
               <div
-                className={`formation-layout ${openPartBrowser === "weapon" ? "" : "formation-layout--single"}`}
+                className="formation-layout formation-layout--single"
               >
                 <div className="formation-board">
                   <div className="formation-section">
@@ -2022,7 +2064,7 @@ export function BuildFormSteps({
               </div>
 
               <div
-                className={`formation-layout ${openPartBrowser === "summon" ? "" : "formation-layout--single"}`}
+                className="formation-layout formation-layout--single"
               >
                 <div className="formation-board">
                   <div className="formation-section summon-top-grid">

@@ -1173,8 +1173,8 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
     useState<BuildListFilters>(emptyListFilters);
   const [error, setError] = useState("");
   const activeBuildTab: BuildTab = buildId ? "search" : mode;
-  const initialMasterScope = useMemo<BuildMastersQuery | "all">(
-    () => (activeBuildTab === "form" ? { kind: "job" } : "all"),
+  const initialMasterScope = useMemo<BuildMastersQuery | false>(
+    () => (activeBuildTab === "form" ? { kind: "job" } : false),
     [activeBuildTab],
   );
   const {

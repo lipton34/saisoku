@@ -613,6 +613,7 @@ export type BuildMastersQuery = {
   element?: string;
   query?: string;
   limit?: number;
+  offset?: number;
 };
 
 type RequestOptions = RequestInit & {
@@ -855,6 +856,7 @@ export const api = {
         element: params?.element,
         query: params?.query,
         limit: params?.limit,
+        offset: params?.offset,
       })}`,
     );
   },
