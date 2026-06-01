@@ -1127,25 +1127,25 @@ export function BuildFormSteps({
   );
   const visiblePresets = filteredPresets.length > 0 ? filteredPresets : presets;
 
-  useEffect(() => {
-    if (!form.element) {
-      return;
-    }
-
-    setCharacterFilters((current) =>
-      current.element === form.element ? current : { ...current, element: form.element },
-    );
-    setWeaponFilters((current) =>
-      current.element === form.element ? current : { ...current, element: form.element },
-    );
-    setSummonFilters((current) =>
-      current.element === form.element ? current : { ...current, element: form.element },
-    );
-  }, [form.element]);
-
   function goToStep(step: FormStep) {
     setCurrentStep(step);
     setOpenPartBrowser(null);
+  }
+
+  function openCandidateBrowser(kind: PartBrowserKind) {
+    const syncElement = (current: CandidateFilters) =>
+      form.element && current.element !== form.element
+        ? { ...current, element: form.element }
+        : current;
+
+    if (kind === "character") {
+      setCharacterFilters(syncElement);
+    } else if (kind === "weapon") {
+      setWeaponFilters(syncElement);
+    } else {
+      setSummonFilters(syncElement);
+    }
+    setOpenPartBrowser(kind);
   }
 
   useEffect(() => {
@@ -1384,12 +1384,13 @@ export function BuildFormSteps({
     await onSubmit(form);
   }
 
-  const displayCharacterDetails = hasFixedCharacterSlotShape(
-    form.characterDetails,
-    subCharacterSlotCount,
-  )
-    ? form.characterDetails
-    : normalizeCharacters(form.characterDetails, subCharacterSlotCount);
+  const displayCharacterDetails = useMemo(
+    () =>
+      hasFixedCharacterSlotShape(form.characterDetails, subCharacterSlotCount)
+        ? form.characterDetails
+        : normalizeCharacters(form.characterDetails, subCharacterSlotCount),
+    [form.characterDetails, subCharacterSlotCount],
+  );
   const safeCharacterIndex =
     displayCharacterDetails.length > 0
       ? Math.min(activeCharacterIndex, displayCharacterDetails.length - 1)
@@ -1405,20 +1406,32 @@ export function BuildFormSteps({
   const activeCharacter = displayCharacterDetails[safeCharacterIndex];
   const activeWeapon = form.weaponDetails[safeWeaponIndex];
   const activeSummon = form.summonDetails[safeSummonIndex];
-  const frontCharacters = displayCharacterDetails
-    .slice(0, frontCharacterSlots)
-    .map((character, index) => ({ character, index }));
-  const subCharacters = displayCharacterDetails
-    .slice(frontCharacterSlots, frontCharacterSlots + subCharacterSlotCount)
-    .map((character, index) => ({
-      character,
-      index: frontCharacterSlots + index,
-    }));
+  const frontCharacters = useMemo(
+    () =>
+      displayCharacterDetails
+        .slice(0, frontCharacterSlots)
+        .map((character, index) => ({ character, index })),
+    [displayCharacterDetails],
+  );
+  const subCharacters = useMemo(
+    () =>
+      displayCharacterDetails
+        .slice(frontCharacterSlots, frontCharacterSlots + subCharacterSlotCount)
+        .map((character, index) => ({
+          character,
+          index: frontCharacterSlots + index,
+        })),
+    [displayCharacterDetails, subCharacterSlotCount],
+  );
   const mainWeapon = form.weaponDetails[0] ?? emptyWeaponDetail;
-  const normalWeapons = form.weaponDetails.slice(1).map((weapon, index) => ({
-    weapon,
-    index: index + 1,
-  }));
+  const normalWeapons = useMemo(
+    () =>
+      form.weaponDetails.slice(1).map((weapon, index) => ({
+        weapon,
+        index: index + 1,
+      })),
+    [form.weaponDetails],
+  );
   const mainSummon = form.summonDetails[0] ?? {
     ...emptySummonDetail,
     position: "メイン",
@@ -1427,10 +1440,14 @@ export function BuildFormSteps({
     ...emptySummonDetail,
     position: "フレンド",
   };
-  const subSummons = form.summonDetails.slice(2, 8).map((summon, index) => ({
-    summon,
-    index: index + 2,
-  }));
+  const subSummons = useMemo(
+    () =>
+      form.summonDetails.slice(2, 8).map((summon, index) => ({
+        summon,
+        index: index + 2,
+      })),
+    [form.summonDetails],
+  );
   const selectCharacterCandidate = useCallback(
     (master: BuildMasterItem) => {
       const currentForm = latestFormRef.current;
@@ -1767,7 +1784,7 @@ export function BuildFormSteps({
                           onClear={() => updateCharacter(index, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveCharacterIndex(index);
-                            setOpenPartBrowser("character");
+                            openCandidateBrowser("character");
                           }}
                         />
                       ))}
@@ -1794,7 +1811,7 @@ export function BuildFormSteps({
                           onClear={() => updateCharacter(index, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveCharacterIndex(index);
-                            setOpenPartBrowser("character");
+                            openCandidateBrowser("character");
                           }}
                         />
                       ))}
@@ -1856,7 +1873,7 @@ export function BuildFormSteps({
                       </label>
                       <button
                         className="secondary-button"
-                        onClick={() => setOpenPartBrowser("character")}
+                        onClick={() => openCandidateBrowser("character")}
                         type="button"
                       >
                         <Search size={16} />
@@ -1934,7 +1951,7 @@ export function BuildFormSteps({
                           onClear={() => updateWeapon(0, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveWeaponIndex(0);
-                            setOpenPartBrowser("weapon");
+                            openCandidateBrowser("weapon");
                           }}
                         />
                       </div>
@@ -1960,7 +1977,7 @@ export function BuildFormSteps({
                           onClear={() => updateWeapon(index, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveWeaponIndex(index);
-                            setOpenPartBrowser("weapon");
+                            openCandidateBrowser("weapon");
                           }}
                         />
                       ))}
@@ -2039,7 +2056,7 @@ export function BuildFormSteps({
                       </label>
                       <button
                         className="secondary-button"
-                        onClick={() => setOpenPartBrowser("weapon")}
+                        onClick={() => openCandidateBrowser("weapon")}
                         type="button"
                       >
                         <Search size={16} />
@@ -2103,7 +2120,7 @@ export function BuildFormSteps({
                           onClear={() => updateSummon(0, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveSummonIndex(0);
-                            setOpenPartBrowser("summon");
+                            openCandidateBrowser("summon");
                           }}
                         />
                       </div>
@@ -2127,7 +2144,7 @@ export function BuildFormSteps({
                           onClear={() => updateSummon(1, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveSummonIndex(1);
-                            setOpenPartBrowser("summon");
+                            openCandidateBrowser("summon");
                           }}
                         />
                       </div>
@@ -2154,7 +2171,7 @@ export function BuildFormSteps({
                           onClear={() => updateSummon(index, { name: "", masterId: null })}
                           onClick={() => {
                             setActiveSummonIndex(index);
-                            setOpenPartBrowser("summon");
+                            openCandidateBrowser("summon");
                           }}
                         />
                       ))}
@@ -2221,7 +2238,7 @@ export function BuildFormSteps({
                       </label>
                       <button
                         className="secondary-button"
-                        onClick={() => setOpenPartBrowser("summon")}
+                        onClick={() => openCandidateBrowser("summon")}
                         type="button"
                       >
                         <Search size={16} />
