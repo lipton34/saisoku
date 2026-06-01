@@ -1360,6 +1360,25 @@ export function BuildFormSteps({
     return true;
   }
 
+  function stepValidationMessage(step: FormStep) {
+    if (step !== 1 || stepIsValid(step)) {
+      return "";
+    }
+
+    const missingFields = [
+      !form.title.trim() ? "編成タイトル" : "",
+      !form.questName.trim() ? "クエスト名" : "",
+      !form.element ? "属性" : "",
+      !form.purpose ? "目的" : "",
+      !form.operationType ? "操作タイプ" : "",
+      !form.verificationStatus ? "検証状態" : "",
+    ].filter(Boolean);
+
+    return missingFields.length > 0
+      ? `${missingFields.join(" / ")}を入力してください。概要メモは空欄でも次へ進めます。`
+      : "";
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await onSubmit(form);
@@ -1496,14 +1515,13 @@ export function BuildFormSteps({
         <div className="steps-navigation">
           <div className="steps-indicator">
             {steps.map((step) => (
-              <button
+              <span
+                aria-current={currentStep === step.id ? "step" : undefined}
                 className={`step-badge ${currentStep === step.id ? "active" : ""} ${stepIsValid(step.id) ? "completed" : ""}`}
                 key={step.id}
-                onClick={() => goToStep(step.id)}
-                type="button"
               >
                 {step.id}
-              </button>
+              </span>
             ))}
           </div>
           <div className="steps-labels">
@@ -2597,6 +2615,11 @@ export function BuildFormSteps({
           </button>
 
           <div className="steps-nav-buttons">
+            {stepValidationMessage(currentStep) && (
+              <span className="steps-validation-message">
+                {stepValidationMessage(currentStep)}
+              </span>
+            )}
             {currentStep > 1 && (
               <button
                 className="secondary-button"
