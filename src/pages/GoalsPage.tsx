@@ -19,8 +19,11 @@ import { BuildMasterCatalogProvider, useBuildMasterLookup } from "../lib/BuildMa
 import {
   api,
   type BuildPost,
+  type GoalBoardStatus,
   type GoalCategory,
+  type GoalEffort,
   type GoalFormationPart,
+  type GoalPriority,
   type GoalProposal,
   type GoalStatus,
   type MaterialGoal,
@@ -39,7 +42,7 @@ import { useBuildMasterCatalog } from "../lib/useBuildMasterCatalog";
 import { useAuth } from "../components/AuthContext";
 
 type PartKind = "character" | "weapon" | "summon";
-type GoalTab = "goals" | "new" | "proposal" | "inbox";
+type GoalTab = "goals" | "board" | "new" | "proposal" | "inbox";
 
 type GoalFormState = {
   targetUserId: string;
@@ -59,13 +62,57 @@ type GoalFormState = {
   summons: GoalFormationPart[];
   dueDate: string;
   status: GoalStatus;
+  boardStatus: GoalBoardStatus;
+  priority: GoalPriority;
+  effort: GoalEffort;
+  beginnerRecommended: boolean;
+  sortOrder: string;
   memo: string;
   proposalMemo: string;
 };
 
+type GoalBoardFilters = {
+  category: string;
+  priority: string;
+  effort: string;
+  beginnerOnly: boolean;
+  includeDone: boolean;
+};
+
 const goalCategories: GoalCategory[] = ["周回", "編成", "その他"];
 const goalStatuses: GoalStatus[] = ["達成", "未達成"];
+const goalBoardStatuses: GoalBoardStatus[] = ["now", "next", "later", "paused", "done"];
+const goalPriorityOptions: GoalPriority[] = ["high", "medium", "low"];
+const goalEffortOptions: GoalEffort[] = ["light", "normal", "heavy"];
 const proposalStatuses: ProposalStatus[] = ["提案中", "受け入れ済み", "見送り"];
+
+const goalBoardLabels: Record<GoalBoardStatus, string> = {
+  now: "今やる",
+  next: "次にやる",
+  later: "後でやる",
+  paused: "保留",
+  done: "完了"
+};
+
+const goalPriorityLabels: Record<GoalPriority, string> = {
+  high: "高",
+  medium: "中",
+  low: "低"
+};
+
+const goalEffortLabels: Record<GoalEffort, string> = {
+  light: "軽い",
+  normal: "普通",
+  heavy: "重い"
+};
+
+const blankBoardFilters: GoalBoardFilters = {
+  category: "",
+  priority: "",
+  effort: "",
+  beginnerOnly: false,
+  includeDone: false
+};
 
 const blankForm: GoalFormState = {
   targetUserId: "",
@@ -85,6 +132,11 @@ const blankForm: GoalFormState = {
   summons: [],
   dueDate: "",
   status: "未達成",
+  boardStatus: "later",
+  priority: "medium",
+  effort: "normal",
+  beginnerRecommended: false,
+  sortOrder: "0",
   memo: "",
   proposalMemo: ""
 };
@@ -198,6 +250,11 @@ function goalPayload(form: GoalFormState) {
     details: detailPayload,
     dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : "",
     status: statusForCategory(form.status, form.category),
+    boardStatus: form.boardStatus,
+    priority: form.priority,
+    effort: form.effort,
+    beginnerRecommended: form.beginnerRecommended,
+    sortOrder: form.sortOrder ? Number(form.sortOrder) : 0,
     memo: form.memo
   };
 }
@@ -262,7 +319,7 @@ function postParts(post: BuildPost) {
 
 function tabFromSearch(search: string): GoalTab {
   const tab = new URLSearchParams(search).get("tab");
-  return tab === "new" || tab === "proposal" || tab === "inbox" || tab === "goals" ? tab : "goals";
+  return tab === "new" || tab === "proposal" || tab === "inbox" || tab === "goals" || tab === "board" ? tab : "goals";
 }
 
 export function GoalsPage() {
@@ -288,6 +345,7 @@ function GoalsPageContent() {
   const [materialGoals, setMaterialGoals] = useState<MaterialGoal[]>([]);
   const [buildPosts, setBuildPosts] = useState<BuildPost[]>([]);
   const [filters, setFilters] = useState({ userId: "", category: "", status: "", due: "" });
+  const [boardFilters, setBoardFilters] = useState<GoalBoardFilters>(blankBoardFilters);
   const [proposalStatus, setProposalStatus] = useState<ProposalStatus | "all">("all");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -317,6 +375,12 @@ function GoalsPageContent() {
     });
   }
 
+  async function refreshGoal(goalId: string) {
+    const data = await api.sharedGoal(goalId);
+    setGoals((current) => current.map((goal) => (goal.id === data.goal.id ? data.goal : goal)));
+    setSelectedGoal(data.goal);
+  }
+
   async function loadProposals() {
     const data = await api.goalProposalInbox(proposalStatus);
     setProposals(data.proposals);
@@ -338,6 +402,17 @@ function GoalsPageContent() {
 
   const openProposalCount = useMemo(() => proposals.filter((proposal) => proposal.status === "提案中").length, [proposals]);
   const canUpdateSelected = selectedGoal?.ownerId === user?.id;
+  const boardGoals = useMemo(() => {
+    return goals.filter((goal) => {
+      return (
+        (!boardFilters.category || goal.category === boardFilters.category) &&
+        (!boardFilters.priority || goal.priority === boardFilters.priority) &&
+        (!boardFilters.effort || goal.effort === boardFilters.effort) &&
+        (!boardFilters.beginnerOnly || goal.beginnerRecommended) &&
+        (boardFilters.includeDone || goal.boardStatus !== "done")
+      );
+    });
+  }, [boardFilters, goals]);
 
   function resetGoalForm(category: GoalCategory = goalForm.category) {
     setGoalForm({ ...blankForm, category, status: "未達成" });
@@ -380,6 +455,21 @@ function GoalsPageContent() {
       return false;
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function updateGoalBoardStatus(goal: SharedGoal, boardStatus: GoalBoardStatus) {
+    setError("");
+    setNotice("");
+    try {
+      const data = await api.updateSharedGoal(goal.id, {
+        boardStatus,
+        status: boardStatus === "done" ? "達成" : "未達成"
+      });
+      setGoals((current) => current.map((item) => (item.id === data.goal.id ? data.goal : item)));
+      setSelectedGoal((current) => (current?.id === data.goal.id ? data.goal : current));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "ボード状態の更新に失敗しました");
     }
   }
 
@@ -480,6 +570,10 @@ function GoalsPageContent() {
           <button className={activeTab === "goals" ? "active" : ""} onClick={() => setActiveTab("goals")} type="button">
             <ClipboardList size={16} />
             一覧
+          </button>
+          <button className={activeTab === "board" ? "active" : ""} onClick={() => setActiveTab("board")} type="button">
+            <ClipboardList size={16} />
+            目標ボード
           </button>
           <button className={activeTab === "new" ? "active" : ""} onClick={() => setActiveTab("new")} type="button">
             <Plus size={16} />
@@ -592,6 +686,55 @@ function GoalsPageContent() {
         </section>
       )}
 
+      {activeTab === "board" && (
+        <section className="content-grid goals-layout">
+          <div className="panel wide">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Board</p>
+                <h2>目標ボード</h2>
+              </div>
+              <button className="secondary-button" onClick={() => setBoardFilters(blankBoardFilters)} type="button">
+                <RotateCcw size={16} />
+                リセット
+              </button>
+            </div>
+            <GoalBoardFilters filters={boardFilters} onChange={setBoardFilters} />
+            <GoalBoard
+              canUpdateGoal={(goal) => goal.ownerId === user?.id}
+              goals={boardGoals}
+              onSelect={setSelectedGoal}
+              onUpdateBoardStatus={(goal, boardStatus) => void updateGoalBoardStatus(goal, boardStatus)}
+              selectedGoalId={selectedGoal?.id ?? ""}
+            />
+          </div>
+
+          <aside className="panel goal-detail-panel">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Detail</p>
+                <h2>目標詳細</h2>
+              </div>
+              <Eye size={20} />
+            </div>
+            {selectedGoal ? (
+              <GoalDetail
+                buildPosts={buildPosts}
+                canUpdate={canUpdateSelected}
+                goal={selectedGoal}
+                isSubmitting={isSubmitting}
+                materialGoals={materialGoals}
+                onDelete={deleteGoal}
+                onRefresh={refreshGoal}
+                onUpdate={handleUpdateGoal}
+              />
+            ) : (
+              <div className="empty-state">カードから目標を選んでください。</div>
+            )}
+          </aside>
+        </section>
+      )}
+
       {activeTab === "goals" && (
         <section className="content-grid goals-layout">
           <div className="panel wide">
@@ -636,6 +779,7 @@ function GoalsPageContent() {
                 isSubmitting={isSubmitting}
                 materialGoals={materialGoals}
                 onDelete={deleteGoal}
+                onRefresh={refreshGoal}
                 onUpdate={handleUpdateGoal}
               />
             ) : (
@@ -645,6 +789,168 @@ function GoalsPageContent() {
         </section>
       )}
     </div>
+  );
+}
+
+function GoalBoardFilters({
+  filters,
+  onChange
+}: {
+  filters: GoalBoardFilters;
+  onChange: (filters: GoalBoardFilters) => void;
+}) {
+  return (
+    <div className="goal-filter-grid goal-board-filter-grid">
+      <label>
+        カテゴリ
+        <select onChange={(event) => onChange({ ...filters, category: event.target.value })} value={filters.category}>
+          <option value="">すべて</option>
+          {goalCategories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        優先度
+        <select onChange={(event) => onChange({ ...filters, priority: event.target.value })} value={filters.priority}>
+          <option value="">すべて</option>
+          {goalPriorityOptions.map((priority) => (
+            <option key={priority} value={priority}>
+              {goalPriorityLabels[priority]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        負荷
+        <select onChange={(event) => onChange({ ...filters, effort: event.target.value })} value={filters.effort}>
+          <option value="">すべて</option>
+          {goalEffortOptions.map((effort) => (
+            <option key={effort} value={effort}>
+              {goalEffortLabels[effort]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="checkbox-field">
+        <input
+          checked={filters.beginnerOnly}
+          onChange={(event) => onChange({ ...filters, beginnerOnly: event.target.checked })}
+          type="checkbox"
+        />
+        初心者向けのみ
+      </label>
+      <label className="checkbox-field">
+        <input
+          checked={filters.includeDone}
+          onChange={(event) => onChange({ ...filters, includeDone: event.target.checked })}
+          type="checkbox"
+        />
+        完了を表示
+      </label>
+    </div>
+  );
+}
+
+function GoalBoard({
+  canUpdateGoal,
+  goals,
+  onSelect,
+  onUpdateBoardStatus,
+  selectedGoalId
+}: {
+  canUpdateGoal: (goal: SharedGoal) => boolean;
+  goals: SharedGoal[];
+  onSelect: (goal: SharedGoal) => void;
+  onUpdateBoardStatus: (goal: SharedGoal, boardStatus: GoalBoardStatus) => void;
+  selectedGoalId: string;
+}) {
+  return (
+    <div className="goal-board">
+      {goalBoardStatuses.map((status) => {
+        const columnGoals = goals
+          .filter((goal) => goal.boardStatus === status)
+          .sort((first, second) => first.sortOrder - second.sortOrder || new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime());
+
+        return (
+          <section className="goal-board-column" key={status}>
+            <div className="goal-board-column-header">
+              <h3>{goalBoardLabels[status]}</h3>
+              <span className="pill muted">{columnGoals.length}</span>
+            </div>
+            <div className="goal-board-card-list">
+              {columnGoals.length === 0 ? (
+                <div className="empty-state compact">目標はありません。</div>
+              ) : (
+                columnGoals.map((goal) => (
+                  <GoalBoardCard
+                    canUpdate={canUpdateGoal(goal)}
+                    goal={goal}
+                    isActive={selectedGoalId === goal.id}
+                    key={goal.id}
+                    onSelect={onSelect}
+                    onUpdateBoardStatus={onUpdateBoardStatus}
+                  />
+                ))
+              )}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function GoalBoardCard({
+  canUpdate,
+  goal,
+  isActive,
+  onSelect,
+  onUpdateBoardStatus
+}: {
+  canUpdate: boolean;
+  goal: SharedGoal;
+  isActive: boolean;
+  onSelect: (goal: SharedGoal) => void;
+  onUpdateBoardStatus: (goal: SharedGoal, boardStatus: GoalBoardStatus) => void;
+}) {
+  const goalDetails = details(goal);
+  const requiredWeaponCount = goal.category === "編成" ? goalDetails.weapons?.length ?? 0 : 0;
+
+  return (
+    <article className={isActive ? "goal-board-card active" : "goal-board-card"}>
+      <button className="goal-board-card-main" onClick={() => onSelect(goal)} type="button">
+        <strong>{goal.title}</strong>
+        <div className="tag-row">
+          <span className="pill muted">{goal.category}</span>
+          <span className="pill">優先度: {goalPriorityLabels[goal.priority]}</span>
+          <span className="pill muted">負荷: {goalEffortLabels[goal.effort]}</span>
+          {goal.beginnerRecommended && <span className="pill">初心者向け</span>}
+        </div>
+        <div className="goal-board-card-meta">
+          <span>期限: {formatDate(goal.dueDate)}</span>
+          <span>{progressLabel(goal)}</span>
+          {requiredWeaponCount > 0 && <span>必要武器 {requiredWeaponCount}</span>}
+        </div>
+      </button>
+      {canUpdate && (
+        <label className="goal-board-status-select">
+          状態
+          <select
+            onChange={(event) => onUpdateBoardStatus(goal, event.target.value as GoalBoardStatus)}
+            value={goal.boardStatus}
+          >
+            {goalBoardStatuses.map((status) => (
+              <option key={status} value={status}>
+                {goalBoardLabels[status]}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+    </article>
   );
 }
 
@@ -769,6 +1075,11 @@ function GoalEditor({
       targetUserIds: form.targetUserIds,
       category,
       status: "未達成",
+      boardStatus: form.boardStatus,
+      priority: form.priority,
+      effort: form.effort,
+      beginnerRecommended: form.beginnerRecommended,
+      sortOrder: form.sortOrder,
       proposalMemo: form.proposalMemo
     });
   }
@@ -829,6 +1140,39 @@ function GoalEditor({
         </label>
       </div>
 
+      <div className="form-row">
+        <label>
+          ボード状態
+          <select onChange={(event) => update("boardStatus", event.target.value as GoalBoardStatus)} value={form.boardStatus}>
+            {goalBoardStatuses.map((status) => (
+              <option key={status} value={status}>
+                {goalBoardLabels[status]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          優先度
+          <select onChange={(event) => update("priority", event.target.value as GoalPriority)} value={form.priority}>
+            {goalPriorityOptions.map((priority) => (
+              <option key={priority} value={priority}>
+                {goalPriorityLabels[priority]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          負荷
+          <select onChange={(event) => update("effort", event.target.value as GoalEffort)} value={form.effort}>
+            {goalEffortOptions.map((effort) => (
+              <option key={effort} value={effort}>
+                {goalEffortLabels[effort]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       <label>
         目標タイトル
         <input onChange={(event) => update("title", event.target.value)} required value={form.title} />
@@ -858,6 +1202,22 @@ function GoalEditor({
           期限
           <input onChange={(event) => update("dueDate", event.target.value)} type="date" value={form.dueDate} />
         </label>
+        <label>
+          並び順
+          <input min={0} onChange={(event) => update("sortOrder", event.target.value)} type="number" value={form.sortOrder} />
+        </label>
+      </div>
+
+      <label className="checkbox-field">
+        <input
+          checked={form.beginnerRecommended}
+          onChange={(event) => update("beginnerRecommended", event.target.checked)}
+          type="checkbox"
+        />
+        初心者・復帰者におすすめ
+      </label>
+
+      <div className="form-row">
         <label>
           メモ
           <textarea onChange={(event) => update("memo", event.target.value)} rows={3} value={form.memo} />
@@ -1138,6 +1498,7 @@ function GoalDetail({
   isSubmitting,
   materialGoals,
   onDelete,
+  onRefresh,
   onUpdate
 }: {
   buildPosts: BuildPost[];
@@ -1146,6 +1507,7 @@ function GoalDetail({
   isSubmitting: boolean;
   materialGoals: MaterialGoal[];
   onDelete: (goal: SharedGoal) => Promise<void>;
+  onRefresh: (goalId: string) => Promise<void>;
   onUpdate: (form: GoalFormState) => Promise<boolean>;
 }) {
   const goalDetails = details(goal);
@@ -1204,6 +1566,22 @@ function GoalDetail({
           <dd>{formatDate(goal.dueDate)}</dd>
         </div>
         <div>
+          <dt>ボード状態</dt>
+          <dd>{goalBoardLabels[goal.boardStatus]}</dd>
+        </div>
+        <div>
+          <dt>優先度</dt>
+          <dd>{goalPriorityLabels[goal.priority]}</dd>
+        </div>
+        <div>
+          <dt>負荷</dt>
+          <dd>{goalEffortLabels[goal.effort]}</dd>
+        </div>
+        <div>
+          <dt>初心者向け</dt>
+          <dd>{goal.beginnerRecommended ? "おすすめ" : "通常"}</dd>
+        </div>
+        <div>
           <dt>進捗</dt>
           <dd>{progressLabel(goal)}</dd>
         </div>
@@ -1219,6 +1597,13 @@ function GoalDetail({
 
       {goal.memo && <p className="goal-note">{goal.memo}</p>}
       {goal.proposedByUser && <p className="goal-note">提案者: {displayName(goal.proposedByUser)}</p>}
+
+      <GoalResourceSections
+        buildPosts={buildPosts}
+        canUpdate={canUpdate}
+        goal={goal}
+        onRefresh={onRefresh}
+      />
 
       {canUpdate && isEditing && (
         <form className="progress-form goal-edit-form" onSubmit={submitEdit}>
@@ -1346,6 +1731,330 @@ function GoalDetail({
   );
 }
 
+function GoalResourceSections({
+  buildPosts,
+  canUpdate,
+  goal,
+  onRefresh
+}: {
+  buildPosts: BuildPost[];
+  canUpdate: boolean;
+  goal: SharedGoal;
+  onRefresh: (goalId: string) => Promise<void>;
+}) {
+  const catalog = useBuildMasterLookup();
+  const [buildId, setBuildId] = useState("");
+  const [buildNote, setBuildNote] = useState("");
+  const [requiredItem, setRequiredItem] = useState({
+    masterItemId: "",
+    name: "",
+    requiredCount: "1",
+    currentCount: "0",
+    importance: "必須",
+    note: ""
+  });
+  const [raidTarget, setRaidTarget] = useState({
+    questName: "",
+    runType: "other",
+    targetCount: "0",
+    currentCount: "0",
+    note: ""
+  });
+  const [subTaskTitle, setSubTaskTitle] = useState("");
+  const [localError, setLocalError] = useState("");
+
+  async function run(action: () => Promise<unknown>) {
+    setLocalError("");
+    try {
+      await action();
+      await onRefresh(goal.id);
+    } catch (caught) {
+      setLocalError(caught instanceof Error ? caught.message : "目標関連情報の更新に失敗しました");
+    }
+  }
+
+  return (
+    <section className="goal-resource-sections">
+      {localError && <p className="form-error">{localError}</p>}
+
+      <section className="goal-resource-section">
+        <div className="inline-section-heading">
+          <div>
+            <p className="eyebrow">Build Links</p>
+            <h3>関連編成</h3>
+          </div>
+        </div>
+        <div className="goal-resource-list">
+          {goal.buildLinks.length === 0 ? (
+            <div className="empty-state compact">関連編成は未設定です。</div>
+          ) : (
+            goal.buildLinks.map((link) => (
+              <div className="goal-resource-row" key={link.id}>
+                <span>
+                  <a className="text-link" href={`/builds/post/${link.build.id}`}>
+                    <strong>{link.build.title}</strong>
+                  </a>
+                  <small>{link.build.questName} / {link.build.element} / {link.note || "メモなし"}</small>
+                </span>
+                {canUpdate && (
+                  <button className="secondary-button" onClick={() => void run(() => api.deleteGoalBuildLink(goal.id, link.id))} type="button">
+                    削除
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+        {canUpdate && (
+          <div className="goal-resource-form">
+            <select onChange={(event) => setBuildId(event.target.value)} value={buildId}>
+              <option value="">編成を選択</option>
+              {buildPosts.map((post) => (
+                <option key={post.id} value={post.id}>
+                  {post.title}
+                </option>
+              ))}
+            </select>
+            <input onChange={(event) => setBuildNote(event.target.value)} placeholder="関連メモ" value={buildNote} />
+            <button
+              className="secondary-button"
+              disabled={!buildId}
+              onClick={() =>
+                void run(async () => {
+                  await api.addGoalBuildLink(goal.id, { buildId, note: buildNote });
+                  setBuildId("");
+                  setBuildNote("");
+                })
+              }
+              type="button"
+            >
+              <Plus size={16} />
+              追加
+            </button>
+          </div>
+        )}
+      </section>
+
+      <section className="goal-resource-section">
+        <div className="inline-section-heading">
+          <div>
+            <p className="eyebrow">Required Weapons</p>
+            <h3>必要武器</h3>
+          </div>
+        </div>
+        <div className="goal-resource-list">
+          {goal.requiredItems.length === 0 ? (
+            <div className="empty-state compact">必要武器は未設定です。</div>
+          ) : (
+            goal.requiredItems.map((item) => (
+              <div className="goal-resource-row" key={item.id}>
+                <span>
+                  <strong>{item.name}</strong>
+                  <small>{item.currentCount} / {item.requiredCount} / {item.importance}{item.note ? ` / ${item.note}` : ""}</small>
+                </span>
+                {canUpdate && (
+                  <div className="goal-resource-actions">
+                    <button
+                      className="secondary-button"
+                      onClick={() => void run(() => api.updateGoalRequiredItem(goal.id, item.id, { currentCount: item.currentCount + 1 }))}
+                      type="button"
+                    >
+                      +1
+                    </button>
+                    <button className="secondary-button" onClick={() => void run(() => api.deleteGoalRequiredItem(goal.id, item.id))} type="button">
+                      削除
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+        {canUpdate && (
+          <div className="goal-resource-form goal-resource-form--wide">
+            <select
+              onChange={(event) => {
+                const master = catalog.options.weapons.find((item) => item.id === event.target.value);
+                setRequiredItem((current) => ({
+                  ...current,
+                  masterItemId: master?.id ?? "",
+                  name: master?.name ?? current.name
+                }));
+              }}
+              value={requiredItem.masterItemId}
+            >
+              <option value="">武器マスタから選択</option>
+              {catalog.options.weapons.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <input onChange={(event) => setRequiredItem((current) => ({ ...current, name: event.target.value }))} placeholder="武器名" value={requiredItem.name} />
+            <input min={0} onChange={(event) => setRequiredItem((current) => ({ ...current, requiredCount: event.target.value }))} type="number" value={requiredItem.requiredCount} />
+            <input min={0} onChange={(event) => setRequiredItem((current) => ({ ...current, currentCount: event.target.value }))} type="number" value={requiredItem.currentCount} />
+            <select onChange={(event) => setRequiredItem((current) => ({ ...current, importance: event.target.value }))} value={requiredItem.importance}>
+              {["必須", "推奨", "代用可", "自由枠"].map((option) => (
+                <option key={option}>{option}</option>
+              ))}
+            </select>
+            <input onChange={(event) => setRequiredItem((current) => ({ ...current, note: event.target.value }))} placeholder="メモ" value={requiredItem.note} />
+            <button
+              className="secondary-button"
+              disabled={!requiredItem.name.trim()}
+              onClick={() =>
+                void run(async () => {
+                  await api.addGoalRequiredItem(goal.id, {
+                    masterItemId: requiredItem.masterItemId || null,
+                    name: requiredItem.name,
+                    requiredCount: Number(requiredItem.requiredCount) || 1,
+                    currentCount: Number(requiredItem.currentCount) || 0,
+                    importance: requiredItem.importance,
+                    note: requiredItem.note
+                  });
+                  setRequiredItem({ masterItemId: "", name: "", requiredCount: "1", currentCount: "0", importance: "必須", note: "" });
+                })
+              }
+              type="button"
+            >
+              <Plus size={16} />
+              追加
+            </button>
+          </div>
+        )}
+      </section>
+
+      <section className="goal-resource-section">
+        <div className="inline-section-heading">
+          <div>
+            <p className="eyebrow">Raid Targets</p>
+            <h3>討伐目標</h3>
+          </div>
+        </div>
+        <div className="goal-resource-list">
+          {goal.raidTargets.length === 0 ? (
+            <div className="empty-state compact">討伐目標は未設定です。</div>
+          ) : (
+            goal.raidTargets.map((target) => (
+              <div className="goal-resource-row" key={target.id}>
+                <span>
+                  <strong>{target.questName}</strong>
+                  <small>{runTypeLabel(target.runType)} {target.currentCount} / {target.targetCount}{target.note ? ` / ${target.note}` : ""}</small>
+                </span>
+                {canUpdate && (
+                  <div className="goal-resource-actions">
+                    <button
+                      className="secondary-button"
+                      onClick={() => void run(() => api.updateGoalRaidTarget(goal.id, target.id, { currentCount: target.currentCount + 1 }))}
+                      type="button"
+                    >
+                      +1
+                    </button>
+                    <button className="secondary-button" onClick={() => void run(() => api.deleteGoalRaidTarget(goal.id, target.id))} type="button">
+                      削除
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+        {canUpdate && (
+          <div className="goal-resource-form goal-resource-form--wide">
+            <input onChange={(event) => setRaidTarget((current) => ({ ...current, questName: event.target.value }))} placeholder="クエスト名" value={raidTarget.questName} />
+            <select onChange={(event) => setRaidTarget((current) => ({ ...current, runType: event.target.value }))} value={raidTarget.runType}>
+              <option value="host">自発</option>
+              <option value="raid">救援</option>
+              <option value="other">その他</option>
+            </select>
+            <input min={0} onChange={(event) => setRaidTarget((current) => ({ ...current, targetCount: event.target.value }))} type="number" value={raidTarget.targetCount} />
+            <input min={0} onChange={(event) => setRaidTarget((current) => ({ ...current, currentCount: event.target.value }))} type="number" value={raidTarget.currentCount} />
+            <input onChange={(event) => setRaidTarget((current) => ({ ...current, note: event.target.value }))} placeholder="メモ" value={raidTarget.note} />
+            <button
+              className="secondary-button"
+              disabled={!raidTarget.questName.trim()}
+              onClick={() =>
+                void run(async () => {
+                  await api.addGoalRaidTarget(goal.id, {
+                    questName: raidTarget.questName,
+                    runType: raidTarget.runType,
+                    targetCount: Number(raidTarget.targetCount) || 0,
+                    currentCount: Number(raidTarget.currentCount) || 0,
+                    note: raidTarget.note
+                  });
+                  setRaidTarget({ questName: "", runType: "other", targetCount: "0", currentCount: "0", note: "" });
+                })
+              }
+              type="button"
+            >
+              <Plus size={16} />
+              追加
+            </button>
+          </div>
+        )}
+      </section>
+
+      <section className="goal-resource-section">
+        <div className="inline-section-heading">
+          <div>
+            <p className="eyebrow">Sub Tasks</p>
+            <h3>サブタスク</h3>
+          </div>
+        </div>
+        <div className="goal-resource-list">
+          {goal.subTasks.length === 0 ? (
+            <div className="empty-state compact">サブタスクは未設定です。</div>
+          ) : (
+            goal.subTasks.map((task) => (
+              <div className="goal-resource-row" key={task.id}>
+                <label className="checkbox-field">
+                  <input
+                    checked={task.isDone}
+                    disabled={!canUpdate}
+                    onChange={(event) => void run(() => api.updateGoalSubTask(goal.id, task.id, { isDone: event.target.checked }))}
+                    type="checkbox"
+                  />
+                  <span>{task.title}</span>
+                </label>
+                {canUpdate && (
+                  <button className="secondary-button" onClick={() => void run(() => api.deleteGoalSubTask(goal.id, task.id))} type="button">
+                    削除
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+        {canUpdate && (
+          <div className="goal-resource-form">
+            <input onChange={(event) => setSubTaskTitle(event.target.value)} placeholder="サブタスク名" value={subTaskTitle} />
+            <button
+              className="secondary-button"
+              disabled={!subTaskTitle.trim()}
+              onClick={() =>
+                void run(async () => {
+                  await api.addGoalSubTask(goal.id, { title: subTaskTitle, sortOrder: goal.subTasks.length });
+                  setSubTaskTitle("");
+                })
+              }
+              type="button"
+            >
+              <Plus size={16} />
+              追加
+            </button>
+          </div>
+        )}
+      </section>
+    </section>
+  );
+}
+
+function runTypeLabel(value: string) {
+  if (value === "host") return "自発";
+  if (value === "raid") return "救援";
+  return "その他";
+}
+
 function indexInKind(form: GoalFormState, part: GoalFormationPart, flatIndex: number) {
   const sameKindBefore = [...(form.characters ?? []), ...(form.weapons ?? []), ...(form.summons ?? [])]
     .slice(0, flatIndex)
@@ -1373,6 +2082,11 @@ function formFromGoal(goal: SharedGoal): GoalFormState {
     summons: goalDetails.summons ?? [],
     dueDate: goal.dueDate ? new Date(goal.dueDate).toISOString().slice(0, 10) : "",
     status: statusForCategory(goal.status, goal.category),
+    boardStatus: goal.boardStatus,
+    priority: goal.priority,
+    effort: goal.effort,
+    beginnerRecommended: goal.beginnerRecommended,
+    sortOrder: String(goal.sortOrder ?? 0),
     memo: goal.memo ?? ""
   };
 }
@@ -1469,13 +2183,22 @@ function ProposalCard({
     details: proposal.details,
     progressRate: proposal.category === "周回" ? 0 : null,
     status: "未達成",
+    boardStatus: "later",
+    priority: "medium",
+    effort: "normal",
     dueDate: proposal.dueDate,
+    beginnerRecommended: false,
+    sortOrder: 0,
     memo: proposal.proposalMemo,
     sourceProposalId: null,
     proposedByUserId: proposal.proposerUserId,
     ownerId: proposal.targetUserId,
     owner: proposal.targetUser,
     proposedByUser: proposal.proposer,
+    buildLinks: [],
+    requiredItems: [],
+    raidTargets: [],
+    subTasks: [],
     createdAt: proposal.createdAt,
     updatedAt: proposal.updatedAt
   } as SharedGoal;

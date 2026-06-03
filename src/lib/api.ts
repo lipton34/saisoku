@@ -8,6 +8,9 @@ export type User = {
 
 export type GoalCategory = "周回" | "編成" | "その他";
 export type GoalStatus = "達成" | "未達成";
+export type GoalBoardStatus = "now" | "next" | "later" | "paused" | "done";
+export type GoalPriority = "high" | "medium" | "low";
+export type GoalEffort = "light" | "normal" | "heavy";
 export type ProposalStatus = "提案中" | "受け入れ済み" | "見送り";
 
 export type GoalFormationPart = {
@@ -32,6 +35,65 @@ export type SharedGoalDetails = {
   summons?: GoalFormationPart[];
 };
 
+export type GoalLinkedBuild = {
+  id: string;
+  title: string;
+  category: string;
+  questName: string;
+  element: string;
+  purpose: string;
+  operationType: string;
+  verificationStatus: string;
+  ownerId: string;
+};
+
+export type GoalBuildLink = {
+  id: string;
+  goalId: string;
+  buildId: string;
+  note: string | null;
+  build: GoalLinkedBuild;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GoalRequiredItem = {
+  id: string;
+  goalId: string;
+  masterItemId: string | null;
+  itemKind: string;
+  name: string;
+  requiredCount: number;
+  currentCount: number;
+  importance: string;
+  note: string | null;
+  masterItem?: GbfMasterItem | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GoalRaidTarget = {
+  id: string;
+  goalId: string;
+  questName: string;
+  runType: string;
+  targetCount: number;
+  currentCount: number;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GoalSubTask = {
+  id: string;
+  goalId: string;
+  title: string;
+  isDone: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type SharedGoal = {
   id: string;
   title: string;
@@ -43,13 +105,22 @@ export type SharedGoal = {
   details: SharedGoalDetails;
   progressRate: number | null;
   status: GoalStatus;
+  boardStatus: GoalBoardStatus;
+  priority: GoalPriority;
+  effort: GoalEffort;
   dueDate: string | null;
+  beginnerRecommended: boolean;
+  sortOrder: number;
   memo: string | null;
   sourceProposalId: string | null;
   proposedByUserId: string | null;
   ownerId: string;
   owner: User;
   proposedByUser: User | null;
+  buildLinks: GoalBuildLink[];
+  requiredItems: GoalRequiredItem[];
+  raidTargets: GoalRaidTarget[];
+  subTasks: GoalSubTask[];
   createdAt: string;
   updatedAt: string;
 };
@@ -82,7 +153,12 @@ export type SharedGoalInput = {
   currentValue?: number | string | null;
   details?: SharedGoalDetails;
   status?: GoalStatus;
+  boardStatus?: GoalBoardStatus;
+  priority?: GoalPriority;
+  effort?: GoalEffort;
   dueDate?: string;
+  beginnerRecommended?: boolean;
+  sortOrder?: number;
   memo?: string;
 };
 
@@ -492,6 +568,40 @@ export type BuildReferenceUrl = {
   memo: string;
 };
 
+export type BuildPostImage = {
+  id: string;
+  buildPostId: string;
+  imageType: string;
+  storageBucket: string;
+  storagePath: string;
+  publicUrl: string | null;
+  originalName: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BuildPostGoalLink = {
+  id: string;
+  goalId: string;
+  buildId: string;
+  note: string | null;
+  goal: {
+    id: string;
+    title: string;
+    category: GoalCategory;
+    boardStatus: GoalBoardStatus;
+    priority: GoalPriority;
+    effort: GoalEffort;
+    dueDate: string | null;
+    ownerId: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type BuildCharacterDetail = {
   position: string;
   name: string;
@@ -564,6 +674,8 @@ export type BuildPreset = {
 export type BuildPost = Omit<BuildPreset, "id" | "name" | "presetStatus" | "origins" | "updatedAt"> & {
   id: string;
   title: string;
+  images: BuildPostImage[];
+  goalLinks: BuildPostGoalLink[];
   sourcePresetId: string | null;
   sourcePresetName: string | null;
   changeMemo: string | null;
@@ -573,7 +685,7 @@ export type BuildPost = Omit<BuildPreset, "id" | "name" | "presetStatus" | "orig
   updatedAt: string;
 };
 
-export type BuildPostInput = Omit<BuildPost, "id" | "ownerId" | "createdAt" | "updatedAt">;
+export type BuildPostInput = Omit<BuildPost, "id" | "images" | "goalLinks" | "ownerId" | "createdAt" | "updatedAt">;
 
 export type GbfMasterKind = "character" | "weapon" | "summon" | "job" | "material" | "quest";
 
@@ -680,6 +792,10 @@ export const api = {
     status?: string;
     due?: string;
     keyword?: string;
+    boardStatus?: string;
+    priority?: string;
+    effort?: string;
+    beginnerOnly?: boolean;
   }) => {
     const params = new URLSearchParams();
     if (filters?.userId) params.set("userId", filters.userId);
@@ -687,6 +803,10 @@ export const api = {
     if (filters?.status) params.set("status", filters.status);
     if (filters?.due) params.set("due", filters.due);
     if (filters?.keyword) params.set("keyword", filters.keyword);
+    if (filters?.boardStatus) params.set("boardStatus", filters.boardStatus);
+    if (filters?.priority) params.set("priority", filters.priority);
+    if (filters?.effort) params.set("effort", filters.effort);
+    if (filters?.beginnerOnly) params.set("beginnerOnly", "true");
     const query = params.toString();
     return request<{ goals: SharedGoal[] }>(`/api/shared-goals${query ? `?${query}` : ""}`);
   },
@@ -696,6 +816,54 @@ export const api = {
   updateSharedGoal: (id: string, goal: Partial<SharedGoalInput>) =>
     request<{ goal: SharedGoal }>(`/api/shared-goals/${id}`, { method: "PATCH", json: goal }),
   deleteSharedGoal: (id: string) => request<void>(`/api/shared-goals/${id}`, { method: "DELETE" }),
+  addGoalBuildLink: (id: string, link: { buildId: string; note?: string | null }) =>
+    request<{ link: GoalBuildLink }>(`/api/shared-goals/${id}/build-links`, { method: "POST", json: link }),
+  updateGoalBuildLink: (id: string, linkId: string, link: { note?: string | null }) =>
+    request<{ link: GoalBuildLink }>(`/api/shared-goals/${id}/build-links/${linkId}`, {
+      method: "PATCH",
+      json: link
+    }),
+  deleteGoalBuildLink: (id: string, linkId: string) =>
+    request<void>(`/api/shared-goals/${id}/build-links/${linkId}`, { method: "DELETE" }),
+  addGoalRequiredItem: (
+    id: string,
+    item: {
+      masterItemId?: string | null;
+      itemKind?: string;
+      name: string;
+      requiredCount: number;
+      currentCount?: number;
+      importance?: string;
+      note?: string | null;
+    }
+  ) => request<{ item: GoalRequiredItem }>(`/api/shared-goals/${id}/required-items`, { method: "POST", json: item }),
+  updateGoalRequiredItem: (id: string, itemId: string, item: Partial<GoalRequiredItem>) =>
+    request<{ item: GoalRequiredItem }>(`/api/shared-goals/${id}/required-items/${itemId}`, {
+      method: "PATCH",
+      json: item
+    }),
+  deleteGoalRequiredItem: (id: string, itemId: string) =>
+    request<void>(`/api/shared-goals/${id}/required-items/${itemId}`, { method: "DELETE" }),
+  addGoalRaidTarget: (
+    id: string,
+    target: { questName: string; runType: string; targetCount: number; currentCount?: number; note?: string | null }
+  ) => request<{ target: GoalRaidTarget }>(`/api/shared-goals/${id}/raid-targets`, { method: "POST", json: target }),
+  updateGoalRaidTarget: (id: string, targetId: string, target: Partial<GoalRaidTarget>) =>
+    request<{ target: GoalRaidTarget }>(`/api/shared-goals/${id}/raid-targets/${targetId}`, {
+      method: "PATCH",
+      json: target
+    }),
+  deleteGoalRaidTarget: (id: string, targetId: string) =>
+    request<void>(`/api/shared-goals/${id}/raid-targets/${targetId}`, { method: "DELETE" }),
+  addGoalSubTask: (id: string, task: { title: string; isDone?: boolean; sortOrder?: number }) =>
+    request<{ task: GoalSubTask }>(`/api/shared-goals/${id}/sub-tasks`, { method: "POST", json: task }),
+  updateGoalSubTask: (id: string, taskId: string, task: Partial<GoalSubTask>) =>
+    request<{ task: GoalSubTask }>(`/api/shared-goals/${id}/sub-tasks/${taskId}`, {
+      method: "PATCH",
+      json: task
+    }),
+  deleteGoalSubTask: (id: string, taskId: string) =>
+    request<void>(`/api/shared-goals/${id}/sub-tasks/${taskId}`, { method: "DELETE" }),
   createGoalProposal: (proposal: GoalProposalInput) =>
     request<{ proposal: GoalProposal; proposals?: GoalProposal[] }>("/api/shared-goals/proposals", {
       method: "POST",
@@ -871,5 +1039,22 @@ export const api = {
       method: "PATCH",
       json: post
     }),
+  buildPostImages: (id: string) => request<{ images: BuildPostImage[] }>(`/api/builds/${id}/images`),
+  uploadBuildPostImage: (id: string, payload: { file: File; imageType: string }) => {
+    const formData = new FormData();
+    formData.set("image", payload.file);
+    formData.set("imageType", payload.imageType);
+    return request<{ image: BuildPostImage }>(`/api/builds/${id}/images`, {
+      method: "POST",
+      body: formData
+    });
+  },
+  updateBuildPostImage: (id: string, imageId: string, imageType: string) =>
+    request<{ image: BuildPostImage }>(`/api/builds/${id}/images/${imageId}`, {
+      method: "PATCH",
+      json: { imageType }
+    }),
+  deleteBuildPostImage: (id: string, imageId: string) =>
+    request<void>(`/api/builds/${id}/images/${imageId}`, { method: "DELETE" }),
   deleteBuildPost: (id: string) => request<void>(`/api/builds/${id}`, { method: "DELETE" })
 };

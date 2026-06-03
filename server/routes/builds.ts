@@ -1,11 +1,27 @@
-import { Router } from "express";
+import crypto from "node:crypto";
+import path from "node:path";
+import { Router, type Request } from "express";
 import type { Prisma } from "@prisma/client";
+import multer from "multer";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
+import {
+  removeBuildImagesFromStorage,
+  uploadBuildImageToStorage
+} from "../services/buildImageStorage.js";
 
 const router = Router();
 
 router.use(requireAuth);
+
+const buildImageTypes = ["キャラ", "武器", "召喚石", "ジョブ・アビリティ", "討伐結果", "その他"];
+const allowedImageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const maxBuildImages = 5;
+const maxBuildImageSizeBytes = 5 * 1024 * 1024;
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: maxBuildImageSizeBytes }
+});
 
 type ReferenceUrl = {
   type: string;
@@ -40,6 +56,29 @@ type WeaponDetail = {
   usageMemo: string;
   substituteMemo: string;
 };
+
+type BuildPostWithOwnerAndImages = Prisma.BuildPostGetPayload<{
+  include: {
+    owner: { select: { displayName: true; username: true } };
+    images: true;
+    goalLinks: {
+      include: {
+        goal: {
+          select: {
+            id: true;
+            title: true;
+            category: true;
+            boardStatus: true;
+            priority: true;
+            effort: true;
+            dueDate: true;
+            ownerId: true;
+          };
+        };
+      };
+    };
+  };
+}>;
 
 type BuildPreset = {
   id: string;
@@ -225,7 +264,7 @@ const buildPresets: BuildPreset[] = [
 
 const buildPresetIndex = new Map(buildPresets.map((preset) => [preset.id, preset]));
 
-function currentUserId(req: Parameters<Parameters<typeof router.get>[1]>[0]) {
+function currentUserId(req: Request) {
   return req.user?.id ?? "";
 }
 
@@ -364,6 +403,44 @@ function parseReferenceUrls(value: unknown): ReferenceUrl[] {
     .filter((item): item is ReferenceUrl => item !== null);
 }
 
+function normalizeBuildImageType(value: unknown) {
+  const imageType = parseOptionalText(value) ?? "その他";
+  return buildImageTypes.includes(imageType) ? imageType : "その他";
+}
+
+function serializePost({ owner, images, goalLinks, ...post }: BuildPostWithOwnerAndImages) {
+  return {
+    ...post,
+    images: images.map((image) => ({
+      ...image,
+      publicUrl: image.publicUrl ?? ""
+    })),
+    goalLinks,
+    authorName: owner.displayName ?? owner.username
+  };
+}
+
+function safeFileExtension(file: Express.Multer.File) {
+  const originalExtension = path.extname(file.originalname).toLowerCase();
+  if ([".jpg", ".jpeg", ".png", ".webp"].includes(originalExtension)) {
+    return originalExtension === ".jpeg" ? ".jpg" : originalExtension;
+  }
+  if (file.mimetype === "image/png") {
+    return ".png";
+  }
+  if (file.mimetype === "image/webp") {
+    return ".webp";
+  }
+  return ".jpg";
+}
+
+async function findOwnedBuildPost(buildPostId: string, ownerId: string) {
+  return prisma.buildPost.findFirst({
+    where: { id: buildPostId, ownerId },
+    select: { id: true }
+  });
+}
+
 function findPreset(presetId: unknown) {
   const id = parseText(presetId);
   return buildPresetIndex.get(id);
@@ -462,15 +539,16 @@ router.get("/presets", (req, res) => {
 router.get("/", async (req, res, next) => {
   try {
     const posts = await prisma.buildPost.findMany({
-      include: { owner: { select: { displayName: true, username: true } } },
+      include: {
+        owner: { select: { displayName: true, username: true } },
+        images: { orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }] },
+        goalLinks: { include: { goal: { select: { id: true, title: true, category: true, boardStatus: true, priority: true, effort: true, dueDate: true, ownerId: true } } } }
+      },
       orderBy: { updatedAt: "desc" }
     });
 
     res.json({
-      posts: posts.map(({ owner, ...post }) => ({
-        ...post,
-        authorName: owner.displayName ?? owner.username
-      }))
+      posts: posts.map(serializePost)
     });
   } catch (error) {
     next(error);
@@ -481,11 +559,14 @@ router.post("/", async (req, res, next) => {
   try {
     const post = await prisma.buildPost.create({
       data: buildPostData(req.body as Record<string, unknown>, currentUserId(req)),
-      include: { owner: { select: { displayName: true, username: true } } }
+      include: {
+        owner: { select: { displayName: true, username: true } },
+        images: { orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }] },
+        goalLinks: { include: { goal: { select: { id: true, title: true, category: true, boardStatus: true, priority: true, effort: true, dueDate: true, ownerId: true } } } }
+      }
     });
 
-    const { owner, ...rest } = post;
-    res.status(201).json({ post: { ...rest, authorName: owner.displayName ?? owner.username } });
+    res.status(201).json({ post: serializePost(post) });
   } catch (error) {
     if (error instanceof Error && error.message.includes("入力してください")) {
       res.status(400).json({ message: error.message });
@@ -498,8 +579,9 @@ router.post("/", async (req, res, next) => {
 
 router.patch("/:id", async (req, res, next) => {
   try {
+    const buildPostId = parseText(req.params.id);
     const current = await prisma.buildPost.findFirst({
-      where: { id: req.params.id, ownerId: currentUserId(req) },
+      where: { id: buildPostId, ownerId: currentUserId(req) },
       select: { id: true }
     });
 
@@ -510,13 +592,16 @@ router.patch("/:id", async (req, res, next) => {
 
     const { owner, ...data } = buildPostData(req.body as Record<string, unknown>, currentUserId(req));
     const post = await prisma.buildPost.update({
-      where: { id: req.params.id },
+      where: { id: buildPostId },
       data,
-      include: { owner: { select: { displayName: true, username: true } } }
+      include: {
+        owner: { select: { displayName: true, username: true } },
+        images: { orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }] },
+        goalLinks: { include: { goal: { select: { id: true, title: true, category: true, boardStatus: true, priority: true, effort: true, dueDate: true, ownerId: true } } } }
+      }
     });
 
-    const { owner: postOwner, ...rest } = post;
-    res.json({ post: { ...rest, authorName: postOwner.displayName ?? postOwner.username } });
+    res.json({ post: serializePost(post) });
   } catch (error) {
     if (error instanceof Error && error.message.includes("入力してください")) {
       res.status(400).json({ message: error.message });
@@ -527,15 +612,170 @@ router.patch("/:id", async (req, res, next) => {
   }
 });
 
-router.delete("/:id", async (req, res, next) => {
+router.get("/:id/images", async (req, res, next) => {
   try {
-    const deleted = await prisma.buildPost.deleteMany({
-      where: { id: req.params.id, ownerId: currentUserId(req) }
+    const buildPostId = parseText(req.params.id);
+    const post = await prisma.buildPost.findUnique({
+      where: { id: buildPostId },
+      select: {
+        id: true,
+        images: { orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }] }
+      }
     });
 
-    if (deleted.count === 0) {
+    if (!post) {
       res.status(404).json({ message: "編成メモが見つかりません" });
       return;
+    }
+
+    res.json({ images: post.images });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/:id/images", upload.single("image"), async (req, res, next) => {
+  try {
+    const buildPost = await findOwnedBuildPost(parseText(req.params.id), currentUserId(req));
+    if (!buildPost) {
+      res.status(404).json({ message: "編成メモが見つかりません" });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ message: "画像ファイルを選択してください" });
+      return;
+    }
+
+    if (!allowedImageMimeTypes.has(req.file.mimetype)) {
+      res.status(400).json({ message: "jpg / jpeg / png / webp の画像のみアップロードできます" });
+      return;
+    }
+
+    const imageCount = await prisma.buildPostImage.count({
+      where: { buildPostId: buildPost.id }
+    });
+    if (imageCount >= maxBuildImages) {
+      res.status(400).json({ message: "編成スクショは1編成につき最大5枚までです" });
+      return;
+    }
+
+    const displayOrder = imageCount;
+    const imageType = normalizeBuildImageType(req.body.imageType);
+    const extension = safeFileExtension(req.file);
+    const storagePath = `${buildPost.id}/${Date.now()}-${crypto.randomUUID()}${extension}`;
+    const uploadResult = await uploadBuildImageToStorage({
+      path: storagePath,
+      buffer: req.file.buffer,
+      mimeType: req.file.mimetype
+    });
+
+    const image = await prisma.buildPostImage.create({
+      data: {
+        buildPostId: buildPost.id,
+        imageType,
+        storageBucket: uploadResult.bucket,
+        storagePath,
+        publicUrl: uploadResult.publicUrl,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        sizeBytes: req.file.size,
+        displayOrder
+      }
+    });
+
+    res.status(201).json({ image });
+  } catch (error) {
+    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+      res.status(400).json({ message: "画像は1ファイル5MBまでです" });
+      return;
+    }
+    if (error instanceof Error && error.message.includes("アップロードできます")) {
+      res.status(400).json({ message: error.message });
+      return;
+    }
+    if (error instanceof Error && error.message.includes("Supabase Storage設定")) {
+      res.status(500).json({ message: error.message });
+      return;
+    }
+
+    next(error);
+  }
+});
+
+router.patch("/:id/images/:imageId", async (req, res, next) => {
+  try {
+    const buildPost = await findOwnedBuildPost(parseText(req.params.id), currentUserId(req));
+    const imageId = parseText(req.params.imageId);
+    if (!buildPost) {
+      res.status(404).json({ message: "編成メモが見つかりません" });
+      return;
+    }
+
+    const image = await prisma.buildPostImage.updateMany({
+      where: { id: imageId, buildPostId: buildPost.id },
+      data: { imageType: normalizeBuildImageType(req.body.imageType) }
+    });
+    if (image.count === 0) {
+      res.status(404).json({ message: "編成スクショが見つかりません" });
+      return;
+    }
+
+    const updated = await prisma.buildPostImage.findUnique({ where: { id: imageId } });
+    res.json({ image: updated });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/:id/images/:imageId", async (req, res, next) => {
+  try {
+    const buildPost = await findOwnedBuildPost(parseText(req.params.id), currentUserId(req));
+    const imageId = parseText(req.params.imageId);
+    if (!buildPost) {
+      res.status(404).json({ message: "編成メモが見つかりません" });
+      return;
+    }
+
+    const image = await prisma.buildPostImage.findFirst({
+      where: { id: imageId, buildPostId: buildPost.id }
+    });
+    if (!image) {
+      res.status(404).json({ message: "編成スクショが見つかりません" });
+      return;
+    }
+
+    await prisma.buildPostImage.delete({ where: { id: image.id } });
+    try {
+      await removeBuildImagesFromStorage([image]);
+    } catch (storageError) {
+      console.warn("Failed to remove build image from storage", storageError);
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/:id", async (req, res, next) => {
+  try {
+    const buildPostId = parseText(req.params.id);
+    const current = await prisma.buildPost.findFirst({
+      where: { id: buildPostId, ownerId: currentUserId(req) },
+      include: { images: true }
+    });
+
+    if (!current) {
+      res.status(404).json({ message: "編成メモが見つかりません" });
+      return;
+    }
+
+    await prisma.buildPost.delete({ where: { id: current.id } });
+    try {
+      await removeBuildImagesFromStorage(current.images);
+    } catch (storageError) {
+      console.warn("Failed to remove build images from storage", storageError);
     }
 
     res.status(204).send();

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   CopyPlus,
@@ -15,6 +15,7 @@ import {
   api,
   type BuildCharacterDetail,
   type BuildMastersQuery,
+  type BuildPostImage,
   type BuildPost,
   type BuildPostInput,
   type BuildPreset,
@@ -30,6 +31,7 @@ import {
   type BuildMasterItem,
 } from "../lib/buildMasters";
 import { BuildFormSteps } from "../components/BuildFormSteps";
+import type { PendingBuildImage } from "../components/BuildFormSteps";
 import {
   BuildMasterCatalogProvider,
   useBuildMasterLookup,
@@ -123,6 +125,18 @@ const allPurposeOptions = Array.from(
 );
 const raidRoleOptions = ["自発", "救援", "どちらでも"];
 const buildTabOptions = ["search", "form"] as const;
+const linkedGoalBoardLabels: Record<string, string> = {
+  now: "今やる",
+  next: "次にやる",
+  later: "後でやる",
+  paused: "保留",
+  done: "完了",
+};
+const linkedGoalPriorityLabels: Record<string, string> = {
+  high: "高",
+  medium: "中",
+  low: "低",
+};
 
 type BuildTab = (typeof buildTabOptions)[number];
 
@@ -185,6 +199,8 @@ type BuildListItem = {
   rescueTiming?: string | null;
   farmingCautions?: string | null;
   referenceUrls: BuildReferenceUrl[];
+  images: BuildPostImage[];
+  goalLinks: BuildPost["goalLinks"];
   authorName: string;
   updatedAt: string;
   searchText?: string;
@@ -268,8 +284,41 @@ function presetToForm(preset: BuildPreset): BuildPostInput {
 
 function postToForm(post: BuildPost): BuildPostInput {
   return {
-    ...post,
     title: `${post.title} コピー`,
+    category: post.category,
+    questName: post.questName,
+    element: post.element,
+    purpose: post.purpose,
+    operationType: post.operationType,
+    verificationStatus: post.verificationStatus,
+    overview: post.overview ?? "",
+    protagonistJob: post.protagonistJob ?? "",
+    characterDetails: post.characterDetails,
+    summonDetails: post.summonDetails,
+    weaponDetails: post.weaponDetails,
+    characters: post.characters,
+    summons: post.summons,
+    weapons: post.weapons,
+    requiredParts: post.requiredParts,
+    recommendedParts: post.recommendedParts,
+    substitutableParts: post.substitutableParts,
+    freeSlots: post.freeSlots,
+    substituteNotes: post.substituteNotes ?? "",
+    cautions: post.cautions ?? "",
+    role: post.role ?? "",
+    omenNotes: post.omenNotes ?? "",
+    actionNotes: post.actionNotes ?? "",
+    failurePoints: post.failurePoints ?? "",
+    farmingGoal: post.farmingGoal ?? "",
+    raidRole: post.raidRole ?? "",
+    blueChest: post.blueChest ?? "",
+    clearTime: post.clearTime ?? "",
+    stability: post.stability ?? "",
+    prerequisites: post.prerequisites ?? "",
+    weaponTarget: post.weaponTarget ?? "",
+    rescueTiming: post.rescueTiming ?? "",
+    farmingCautions: post.farmingCautions ?? "",
+    referenceUrls: post.referenceUrls,
     sourcePresetId: post.sourcePresetId,
     sourcePresetName: post.sourcePresetName ?? post.title,
     changeMemo: post.changeMemo ?? "",
@@ -278,7 +327,41 @@ function postToForm(post: BuildPost): BuildPostInput {
 
 function postToEditForm(post: BuildPost): BuildPostInput {
   return {
-    ...post,
+    title: post.title,
+    category: post.category,
+    questName: post.questName,
+    element: post.element,
+    purpose: post.purpose,
+    operationType: post.operationType,
+    verificationStatus: post.verificationStatus,
+    overview: post.overview ?? "",
+    protagonistJob: post.protagonistJob ?? "",
+    characterDetails: post.characterDetails,
+    summonDetails: post.summonDetails,
+    weaponDetails: post.weaponDetails,
+    characters: post.characters,
+    summons: post.summons,
+    weapons: post.weapons,
+    requiredParts: post.requiredParts,
+    recommendedParts: post.recommendedParts,
+    substitutableParts: post.substitutableParts,
+    freeSlots: post.freeSlots,
+    substituteNotes: post.substituteNotes ?? "",
+    cautions: post.cautions ?? "",
+    role: post.role ?? "",
+    omenNotes: post.omenNotes ?? "",
+    actionNotes: post.actionNotes ?? "",
+    failurePoints: post.failurePoints ?? "",
+    farmingGoal: post.farmingGoal ?? "",
+    raidRole: post.raidRole ?? "",
+    blueChest: post.blueChest ?? "",
+    clearTime: post.clearTime ?? "",
+    stability: post.stability ?? "",
+    prerequisites: post.prerequisites ?? "",
+    weaponTarget: post.weaponTarget ?? "",
+    rescueTiming: post.rescueTiming ?? "",
+    farmingCautions: post.farmingCautions ?? "",
+    referenceUrls: post.referenceUrls,
     sourcePresetId: post.sourcePresetId,
     sourcePresetName: post.sourcePresetName,
     changeMemo: post.changeMemo ?? "",
@@ -422,6 +505,8 @@ function normalizePreset(preset: BuildPreset): BuildListItem {
     weaponTarget: preset.weaponTarget ?? null,
     rescueTiming: preset.rescueTiming ?? null,
     farmingCautions: preset.farmingCautions ?? null,
+    images: [],
+    goalLinks: [],
     authorName: "団内テンプレート",
     preset,
   };
@@ -449,6 +534,8 @@ function normalizePost(post: BuildPost): BuildListItem {
     weaponTarget: post.weaponTarget ?? null,
     rescueTiming: post.rescueTiming ?? null,
     farmingCautions: post.farmingCautions ?? null,
+    images: post.images ?? [],
+    goalLinks: post.goalLinks ?? [],
     authorName: post.authorName ?? "自分",
     post,
   };
@@ -713,6 +800,10 @@ function BuildListCard({
           <dt>{actionLabel}</dt>
           <dd>{hasMemo ? "あり" : "なし"}</dd>
         </div>
+        <div>
+          <dt>スクショ</dt>
+          <dd>{item.images.length > 0 ? `画像あり：${item.images.length}枚` : "なし"}</dd>
+        </div>
       </dl>
 
       {item.category === "周回・武器集め用" && (
@@ -882,6 +973,65 @@ function BuildDetailView({
               <dd>{textOrDash(item.rescueTiming)}</dd>
             </div>
           </dl>
+        </section>
+      )}
+
+      {item.images.length > 0 && (
+        <section className="panel">
+          <div className="section-heading compact-heading">
+            <div>
+              <p className="eyebrow">Screenshots</p>
+              <h2>スクショ</h2>
+            </div>
+          </div>
+          <div className="build-detail-image-groups">
+            {Array.from(new Set(item.images.map((image) => image.imageType))).map((imageType) => (
+              <div className="build-detail-image-group" key={imageType}>
+                <h3>{imageType}</h3>
+                <div className="build-detail-image-grid">
+                  {item.images
+                    .filter((image) => image.imageType === imageType)
+                    .map((image) => (
+                      <a
+                        href={image.publicUrl ?? "#"}
+                        key={image.id}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {image.publicUrl ? (
+                          <img alt={image.originalName ?? image.imageType} src={image.publicUrl} />
+                        ) : (
+                          <span>画像URL未設定</span>
+                        )}
+                      </a>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {item.goalLinks.length > 0 && (
+        <section className="panel">
+          <div className="section-heading compact-heading">
+            <div>
+              <p className="eyebrow">Goals</p>
+              <h2>この編成が関連している目標</h2>
+            </div>
+          </div>
+          <div className="linked-goal-list">
+            {item.goalLinks.map((link) => (
+              <div className="linked-goal-row" key={link.id}>
+                <strong>{link.goal.title}</strong>
+                <span>
+                  {link.goal.category} / {linkedGoalBoardLabels[link.goal.boardStatus] ?? link.goal.boardStatus} / 優先度:
+                  {linkedGoalPriorityLabels[link.goal.priority] ?? link.goal.priority}
+                </span>
+                {link.note && <small>{link.note}</small>}
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
@@ -1168,6 +1318,8 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
   const [posts, setPosts] = useState<BuildPost[]>([]);
   const [form, setForm] = useState<BuildPostInput>(emptyForm);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [pendingImages, setPendingImages] = useState<PendingBuildImage[]>([]);
+  const pendingImagesRef = useRef<PendingBuildImage[]>([]);
   const [isBuildsLoading, setIsBuildsLoading] = useState(true);
   const [listFilters, setListFilters] =
     useState<BuildListFilters>(emptyListFilters);
@@ -1259,6 +1411,21 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
       ) ?? null
     );
   }, [buildId, listItems, sourceType]);
+  const editingPost = useMemo(
+    () => posts.find((post) => post.id === editingPostId) ?? null,
+    [editingPostId, posts],
+  );
+  const existingImages = editingPost?.images ?? [];
+
+  useEffect(() => {
+    pendingImagesRef.current = pendingImages;
+  }, [pendingImages]);
+
+  useEffect(() => {
+    return () => {
+      pendingImagesRef.current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    };
+  }, []);
 
   async function load() {
     setIsBuildsLoading(true);
@@ -1309,6 +1476,7 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
     const next = presetToForm(preset);
     setForm(next);
     setEditingPostId(null);
+    clearPendingImages();
     setError("");
     navigate("/builds/post");
   }
@@ -1316,8 +1484,121 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
   function resetForm() {
     setForm(emptyForm);
     setEditingPostId(null);
+    clearPendingImages();
     setError("");
     navigate("/builds/post");
+  }
+
+  function clearPendingImages() {
+    setPendingImages((current) => {
+      current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+      return [];
+    });
+  }
+
+  function addPendingImages(files: FileList | File[]) {
+    setError("");
+    const incomingFiles = Array.from(files);
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    const maxCount = 5;
+    const maxSize = 5 * 1024 * 1024;
+    const validFiles: File[] = [];
+
+    for (const file of incomingFiles) {
+      if (!allowedTypes.has(file.type)) {
+        setError("jpg / jpeg / png / webp の画像のみアップロードできます");
+        continue;
+      }
+      if (file.size > maxSize) {
+        setError("画像は1ファイル5MBまでです");
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (validFiles.length === 0) {
+      return;
+    }
+
+    setPendingImages((current) => {
+      const remainingSlots = maxCount - existingImages.length - current.length;
+      if (remainingSlots <= 0) {
+        setError("編成スクショは1編成につき最大5枚までです");
+        return current;
+      }
+
+      const acceptedFiles = validFiles.slice(0, remainingSlots);
+      if (acceptedFiles.length < validFiles.length) {
+        setError("編成スクショは1編成につき最大5枚までです");
+      }
+
+      return [
+        ...current,
+        ...acceptedFiles.map((file) => ({
+          id: crypto.randomUUID(),
+          file,
+          imageType: "その他",
+          previewUrl: URL.createObjectURL(file),
+        })),
+      ];
+    });
+  }
+
+  function removePendingImage(id: string) {
+    setPendingImages((current) => {
+      const target = current.find((image) => image.id === id);
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return current.filter((image) => image.id !== id);
+    });
+  }
+
+  function updatePendingImageType(id: string, imageType: string) {
+    setPendingImages((current) =>
+      current.map((image) => (image.id === id ? { ...image, imageType } : image)),
+    );
+  }
+
+  async function uploadPendingImages(postId: string) {
+    if (pendingImages.length === 0) {
+      return null;
+    }
+
+    for (const image of pendingImages) {
+      await api.uploadBuildPostImage(postId, {
+        file: image.file,
+        imageType: image.imageType,
+      });
+    }
+
+    const imageData = await api.buildPostImages(postId);
+    clearPendingImages();
+    return imageData.images;
+  }
+
+  function updatePostImages(postId: string, images: BuildPostImage[]) {
+    setPosts((current) =>
+      current.map((post) => (post.id === postId ? { ...post, images } : post)),
+    );
+  }
+
+  async function deleteExistingImage(imageId: string) {
+    if (!editingPostId) {
+      return;
+    }
+    await api.deleteBuildPostImage(editingPostId, imageId);
+    const imageData = await api.buildPostImages(editingPostId);
+    updatePostImages(editingPostId, imageData.images);
+  }
+
+  async function updateExistingImageType(imageId: string, imageType: string) {
+    if (!editingPostId) {
+      return;
+    }
+    await api.updateBuildPostImage(editingPostId, imageId, imageType);
+    const imageData = await api.buildPostImages(editingPostId);
+    updatePostImages(editingPostId, imageData.images);
   }
 
   async function submit(formData: BuildPostInput) {
@@ -1334,12 +1615,14 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
       const data = editingPostId
         ? await api.updateBuildPost(editingPostId, payload)
         : await api.createBuildPost(payload);
+      const uploadedImages = await uploadPendingImages(data.post.id);
+      const savedPost = uploadedImages ? { ...data.post, images: uploadedImages } : data.post;
       setPosts((current) => {
         if (!editingPostId) {
-          return [data.post, ...current];
+          return [savedPost, ...current];
         }
         return current.map((post) =>
-          post.id === data.post.id ? data.post : post,
+          post.id === savedPost.id ? savedPost : post,
         );
       });
       setForm(emptyForm);
@@ -1363,6 +1646,7 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
     const next = postToForm(post);
     setForm(next);
     setEditingPostId(null);
+    clearPendingImages();
     setError("");
     navigate("/builds/post");
   }
@@ -1370,6 +1654,7 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
   function editPost(post: BuildPost) {
     setForm(postToEditForm(post));
     setEditingPostId(post.id);
+    clearPendingImages();
     setError("");
     navigate("/builds/post");
   }
@@ -1699,13 +1984,23 @@ export function BuildsPage({ mode = "search" }: BuildsPageProps) {
           <BuildFormSteps
             error={error}
             editMode={Boolean(editingPostId)}
+            existingImages={existingImages}
             form={form}
             isSubmitting={false}
+            pendingImages={pendingImages}
+            onAddPendingImages={addPendingImages}
             onApplyPreset={applyPreset}
+            onDeleteExistingImage={(imageId) => void deleteExistingImage(imageId)}
             onLoadMasterCandidates={loadBuildMasters}
+            onRemovePendingImage={removePendingImage}
+            onUpdateExistingImageType={(imageId, imageType) =>
+              void updateExistingImageType(imageId, imageType)
+            }
+            onUpdatePendingImageType={updatePendingImageType}
             onCancel={() => {
               setForm(emptyForm);
               setEditingPostId(null);
+              clearPendingImages();
               setError("");
               navigate("/builds/search");
             }}

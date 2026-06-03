@@ -18,6 +18,9 @@ JWT_SECRET="長いランダム文字列"
 INVITE_CODE="身内に共有する招待コード"
 PORT=4000
 CLIENT_ORIGIN="http://localhost:5173"
+SUPABASE_URL="https://example.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="Supabase Storageへアップロードできるservice role key"
+SUPABASE_BUILD_SCREENSHOT_BUCKET="gbf-build-screenshots"
 ```
 
 3. Prisma Client とDBテーブルを準備します。

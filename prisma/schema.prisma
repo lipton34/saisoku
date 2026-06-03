@@ -209,11 +209,32 @@ model BuildPost {
   changeMemo          String?
   ownerId             String
   owner               User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  images              BuildPostImage[]
+  goalLinks           GoalBuildLink[]
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   @@index([ownerId, updatedAt])
   @@index([ownerId, category, questName, element])
+}
+
+model BuildPostImage {
+  id           String    @id @default(cuid())
+  buildPostId  String
+  imageType    String
+  storageBucket String   @default("gbf-build-screenshots")
+  storagePath  String
+  publicUrl    String?
+  originalName String?
+  mimeType     String?
+  sizeBytes    Int?
+  displayOrder Int       @default(0)
+  buildPost    BuildPost @relation(fields: [buildPostId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([buildPostId, displayOrder])
+  @@map("build_post_images")
 }
 
 model SharedGoal {
@@ -227,7 +248,12 @@ model SharedGoal {
   details            Json          @default("{}")
   progressRate       Float?
   status             String        @default("未達成")
+  boardStatus        String        @default("later")
+  priority           String        @default("medium")
+  effort             String        @default("normal")
   dueDate            DateTime?
+  beginnerRecommended Boolean      @default(false)
+  sortOrder          Int           @default(0)
   memo               String?
   sourceProposalId   String?       @unique
   sourceProposal     GoalProposal? @relation("GoalSourceProposal", fields: [sourceProposalId], references: [id], onDelete: SetNull)
@@ -236,13 +262,86 @@ model SharedGoal {
   ownerId            String
   owner              User          @relation("SharedGoalOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   acceptedProposal   GoalProposal? @relation("GoalProposalAcceptedGoal")
+  buildLinks         GoalBuildLink[]
+  requiredItems      GoalRequiredItem[]
+  raidTargets        GoalRaidTarget[]
+  subTasks           GoalSubTask[]
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
   @@index([ownerId, status])
+  @@index([ownerId, boardStatus, sortOrder])
+  @@index([priority])
+  @@index([effort])
   @@index([category, status])
   @@index([dueDate])
   @@map("shared_goals")
+}
+
+model GoalBuildLink {
+  id        String     @id @default(cuid())
+  goalId    String
+  buildId   String
+  note      String?
+  goal      SharedGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  build     BuildPost  @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([goalId, buildId])
+  @@index([goalId])
+  @@index([buildId])
+  @@map("goal_build_links")
+}
+
+model GoalRequiredItem {
+  id            String        @id @default(cuid())
+  goalId        String
+  masterItemId  String?
+  itemKind      String        @default("weapon")
+  name          String
+  requiredCount Int           @default(1)
+  currentCount  Int           @default(0)
+  importance    String        @default("必須")
+  note          String?
+  goal          SharedGoal    @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  masterItem    GbfMasterItem? @relation(fields: [masterItemId], references: [id], onDelete: SetNull)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([goalId])
+  @@index([masterItemId])
+  @@map("goal_required_items")
+}
+
+model GoalRaidTarget {
+  id           String     @id @default(cuid())
+  goalId       String
+  questName    String
+  runType      String     @default("other")
+  targetCount  Int        @default(0)
+  currentCount Int        @default(0)
+  note         String?
+  goal         SharedGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([goalId])
+  @@map("goal_raid_targets")
+}
+
+model GoalSubTask {
+  id        String     @id @default(cuid())
+  goalId    String
+  title     String
+  isDone    Boolean    @default(false)
+  sortOrder Int        @default(0)
+  goal      SharedGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([goalId])
+  @@map("goal_sub_tasks")
 }
 
 model GoalProposal {
@@ -288,6 +387,7 @@ model GbfMasterItem {
   sortOrder     Int              @default(0)
   isActive      Boolean          @default(true)
   aliases       GbfMasterAlias[]
+  goalRequiredItems GoalRequiredItem[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
