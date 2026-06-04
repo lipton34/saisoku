@@ -215,8 +215,10 @@ a {
 .page-stack {
   display: grid;
   gap: 22px;
-  max-width: 1180px;
+  width: min(100%, 1440px);
+  max-width: 1440px;
   margin: 0 auto;
+  min-width: 0;
 }
 
 .home-hero,
@@ -235,6 +237,7 @@ a {
 .page-heading h2,
 .section-heading h2 {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .home-hero p,
@@ -283,7 +286,7 @@ a {
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -316,6 +319,7 @@ a {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.6fr);
   gap: 18px;
+  min-width: 0;
 }
 
 .task-page-grid {
@@ -330,6 +334,8 @@ a {
 
 .panel {
   padding: 20px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .panel.wide {
@@ -342,6 +348,13 @@ a {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
+  min-width: 0;
+}
+
+.home-hero > div,
+.page-heading > div,
+.section-heading > div {
+  min-width: 0;
 }
 
 .text-link {
@@ -449,7 +462,7 @@ a {
 
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -515,12 +528,12 @@ a {
 }
 
 .build-category-switch {
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr));
 }
 
 .build-filter-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
   gap: 12px;
   align-items: end;
 }
@@ -576,7 +589,7 @@ a {
 
 .advanced-filter-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   gap: 12px;
   align-items: end;
   padding: 14px;
@@ -599,7 +612,7 @@ a {
 
 .build-search-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -617,13 +630,13 @@ a {
 }
 
 .official-news-tabs {
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
   min-width: min(460px, 100%);
 }
 
 .official-news-filter-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   gap: 12px;
   align-items: end;
   padding: 14px;
@@ -675,7 +688,7 @@ a {
 
 .official-news-facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   gap: 8px;
   margin: 0;
 }
@@ -820,7 +833,7 @@ a {
 
 .event-note-form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 10px;
 }
 
@@ -831,7 +844,7 @@ a {
 
 .event-note-link-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   gap: 8px;
 }
 
@@ -1034,7 +1047,7 @@ a {
 
 .detail-fact-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
   gap: 10px;
   margin: 0;
 }
@@ -1068,11 +1081,11 @@ a {
 }
 
 .required-part-grid {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
 }
 
 .parts-section-grid {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
 }
 
 .parts-section-grid h3,
@@ -1218,7 +1231,7 @@ a {
 .build-image-grid,
 .build-detail-image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 10px;
 }
 
@@ -1524,7 +1537,7 @@ textarea {
 
 .form-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -1536,7 +1549,7 @@ textarea {
 
 .filter-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 220px));
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 220px));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -1578,15 +1591,15 @@ textarea {
 
 .character-row,
 .summon-row {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
 }
 
 .weapon-row {
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr));
 }
 
 .reference-row {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
 }
 
 .empty-state.compact {
@@ -1623,7 +1636,7 @@ textarea {
 
 .segmented {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
   gap: 4px;
   padding: 4px;
   border-radius: 8px;
@@ -1632,7 +1645,7 @@ textarea {
 
 .segmented.small {
   width: 230px;
-  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(64px, 100%), 1fr));
 }
 
 .segmented button {
@@ -1675,8 +1688,8 @@ textarea {
   --guild-war-gap: 12px;
   --guild-war-day-table-width: 980px;
   --guild-war-result-table-width: 1640px;
-  width: min(100%, 1200px);
-  max-width: 1200px;
+  width: min(100%, 1440px);
+  max-width: 1440px;
   min-width: 0;
 }
 
@@ -1713,7 +1726,7 @@ textarea {
 }
 
 .guild-war-stat-grid {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
 }
 
 .warning-tile {
@@ -1826,7 +1839,7 @@ textarea {
 
 .time-input-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   gap: 10px;
 }
 
@@ -1973,7 +1986,7 @@ textarea {
 
 .goal-tabs {
   width: min(100%, 520px);
-  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(104px, 100%), 1fr));
 }
 
 .goal-tabs button {
@@ -2044,7 +2057,7 @@ textarea {
 
 .proposal-target-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   gap: 8px;
 }
 
@@ -2068,13 +2081,13 @@ textarea {
 
 .goal-filter-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
 
 .goal-board-filter-grid {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
 }
 
 .goal-filter-grid .keyword-field {
@@ -2239,7 +2252,7 @@ textarea {
 
 .goal-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
   gap: 10px;
   min-width: 0;
   width: 100%;
@@ -2282,8 +2295,8 @@ textarea {
 }
 
 .goal-detail-page {
-  width: min(100%, 1180px);
-  max-width: 1180px;
+  width: min(100%, 1280px);
+  max-width: 1280px;
 }
 
 .goal-detail-topbar {
@@ -2322,7 +2335,7 @@ textarea {
 
 .goal-detail-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 10px;
   margin: 0;
 }
@@ -2356,7 +2369,7 @@ textarea {
 
 .goal-phase3-placeholder {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 10px;
 }
 
@@ -2433,7 +2446,7 @@ textarea {
 }
 
 .goal-resource-form--wide {
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
 }
 
 .linked-goal-list {
@@ -2491,14 +2504,14 @@ textarea {
 }
 
 .goal-candidate-grid {
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
   max-height: 280px;
   overflow-y: auto;
 }
 
 .goal-part-row {
   display: grid;
-  grid-template-columns: auto minmax(160px, 1fr) minmax(96px, auto) auto;
+  grid-template-columns: auto minmax(0, 1fr) minmax(96px, auto) auto;
   gap: 10px;
   align-items: center;
   padding: 10px;
@@ -2508,7 +2521,7 @@ textarea {
 }
 
 .goal-part-row.compact {
-  grid-template-columns: auto minmax(160px, 1fr) minmax(96px, auto);
+  grid-template-columns: auto minmax(0, 1fr) minmax(96px, auto);
 }
 
 .goal-part-row > span {
@@ -2570,7 +2583,7 @@ textarea {
 
 .login-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr) minmax(min(380px, 100%), 380px);
   gap: 24px;
   width: min(960px, 100%);
   align-items: center;
@@ -2772,11 +2785,11 @@ textarea {
   }
 
   .build-filter-grid {
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
   }
 
   .advanced-filter-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   }
 
   .goal-detail-panel {
@@ -2794,7 +2807,7 @@ textarea {
   }
 
   .tool-grid {
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
   }
 }
 
@@ -2875,7 +2888,7 @@ textarea {
   }
 
   .goal-tabs {
-    grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(104px, 100%), 1fr));
   }
 
   .goal-filter-grid .keyword-field {
@@ -3194,7 +3207,7 @@ textarea {
 .summon-item,
 .reference-item {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(110px, 100%), 1fr));
   gap: 8px;
   align-items: center;
   padding: 8px;
@@ -3203,7 +3216,7 @@ textarea {
 }
 
 .reference-item {
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
 }
 
 .character-item input,
@@ -3416,7 +3429,7 @@ textarea {
 
 .job-picker {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 12px;
   align-items: end;
 }
@@ -3461,7 +3474,7 @@ textarea {
 
 .formation-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 0.95fr) minmax(320px, 1.05fr);
+  grid-template-columns: minmax(min(300px, 100%), 0.95fr) minmax(min(320px, 100%), 1.05fr);
   gap: 16px;
   align-items: start;
 }
@@ -3485,11 +3498,11 @@ textarea {
 
 .character-slots,
 .summon-slots {
-  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(136px, 100%), 1fr));
 }
 
 .weapon-slots {
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(118px, 100%), 1fr));
 }
 
 .formation-slot {
@@ -3537,7 +3550,7 @@ textarea {
 
 .slot-editor {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(112px, 100%), 1fr));
   gap: 8px;
   align-items: end;
   padding-top: 10px;
@@ -3550,7 +3563,7 @@ textarea {
 
 .part-browser-header {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 12px;
   align-items: end;
 }
@@ -3656,7 +3669,7 @@ textarea {
 
 .part-candidate-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
   gap: 8px;
   max-height: 420px;
   overflow-y: auto;
@@ -3694,7 +3707,7 @@ textarea {
 
 .selected-part-chip-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 8px;
 }
 
@@ -3802,14 +3815,14 @@ textarea {
 
 /* Build post form UI rework */
 .build-form-page-stack {
-  max-width: 1400px;
+  max-width: 1600px;
   width: 100%;
 }
 
 .content-grid--build-form {
   grid-template-columns: minmax(0, 1fr);
-  width: min(100%, 1400px);
-  max-width: 1400px;
+  width: min(100%, 1600px);
+  max-width: 1600px;
   margin-inline: auto;
 }
 
@@ -3824,7 +3837,7 @@ textarea {
 
 .build-form-steps .form-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 16px;
   min-width: 0;
 }
@@ -3893,11 +3906,11 @@ textarea {
 }
 
 .character-slots--front {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
 }
 
 .character-slots--sub {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
 }
 
 .weapon-main-slot,
@@ -3906,11 +3919,11 @@ textarea {
 }
 
 .weapon-slots {
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(132px, 100%), 1fr));
 }
 
 .summon-top-grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 }
 
 .summon-primary-group {
@@ -3920,7 +3933,7 @@ textarea {
 }
 
 .summon-slots {
-  grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(142px, 100%), 1fr));
 }
 
 .formation-slot {
@@ -3955,7 +3968,7 @@ textarea {
 }
 
 .slot-editor {
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(132px, 100%), 1fr));
   padding: 12px;
   border: 1px solid #e1e8ef;
   border-radius: 8px;
@@ -3991,7 +4004,7 @@ textarea {
 }
 
 .part-browser-header {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
 }
 
 .part-browser-close {
@@ -3999,7 +4012,7 @@ textarea {
 }
 
 .part-candidate-grid {
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
   gap: 10px;
   max-height: 460px;
 }
@@ -4024,7 +4037,7 @@ textarea {
 }
 
 .selected-part-chip-grid {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -4049,7 +4062,7 @@ textarea {
 }
 
 .selected-part-chip {
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(96px, 100%), 1fr));
 }
 
 .selected-part-chip span {
@@ -4057,7 +4070,7 @@ textarea {
 }
 
 .reference-item {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   gap: 10px;
   padding: 10px;
   border: 1px solid #e1e8ef;
@@ -4090,12 +4103,12 @@ textarea {
   .summon-top-grid,
   .character-slots--front,
   .character-slots--sub {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   }
 
   .slot-editor,
   .reference-item {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   }
 
   .reference-item .icon-button {
@@ -4166,6 +4179,24 @@ html,
 
 .app-shell,
 .main-content,
+.page-stack,
+.content-grid,
+.panel,
+.stat-grid,
+.tool-grid,
+.roadmap-grid,
+.roadmap-phase,
+.material-goal-list,
+.material-goal,
+.official-news-panel,
+.official-news-list,
+.official-news-card,
+.event-schedule-list,
+.event-occurrence-card,
+.build-search-panel,
+.build-search-list,
+.build-search-card,
+.goal-detail-page,
 .content-grid--build-form,
 .build-form-page-stack,
 .build-form-steps-container,
@@ -4177,6 +4208,31 @@ html,
 .part-browser {
   min-width: 0;
   max-width: 100%;
+}
+
+.stat-tile,
+.tool-card,
+.mini-item,
+.material-goal,
+.event-occurrence-card,
+.official-news-card,
+.build-search-card,
+.build-preset-card,
+.build-post-card,
+.roadmap-phase,
+.proposal-card {
+  overflow-wrap: anywhere;
+}
+
+.table-scroll,
+.goals-table-wrapper,
+.official-news-table-wrap,
+.ranking-list,
+.guild-war-tabs,
+.formation-board-scroll,
+.candidate-filter-bar {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .formation-board-scroll {
@@ -4210,7 +4266,7 @@ html,
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(132px, 100%), 1fr));
 }
 
 .slot-editor label {
@@ -4226,12 +4282,12 @@ html,
 }
 
 .character-slots--front {
-  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(136px, 100%), 1fr));
 }
 
 .character-slots--sub {
   grid-auto-flow: row;
-  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(136px, 100%), 1fr));
 }
 
 .weapon-main-slot,
@@ -4240,11 +4296,11 @@ html,
 }
 
 .weapon-slots {
-  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(124px, 100%), 1fr));
 }
 
 .summon-slots {
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(132px, 100%), 1fr));
 }
 
 .segmented-control {
@@ -4277,7 +4333,7 @@ html,
 }
 
 .part-candidate-grid {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   min-height: 380px;
   max-height: none;
   overflow-y: visible;
@@ -4350,11 +4406,11 @@ html,
   }
 
   .slot-editor {
-    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(132px, 100%), 1fr));
   }
 
   .part-candidate-grid {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
     min-height: 360px;
   }
 
