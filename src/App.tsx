@@ -3,6 +3,7 @@ import { AppShell } from "./components/AppShell";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { BuildsPage } from "./pages/BuildsPage";
 import { EventSchedulePage } from "./pages/EventSchedulePage";
+import { GoalDetailPage } from "./pages/GoalDetailPage";
 import { GoalsPage } from "./pages/GoalsPage";
 import { GuildWarGoalsPage } from "./pages/GuildWarGoalsPage";
 import { HomePage } from "./pages/HomePage";
@@ -26,6 +27,7 @@ export function App() {
           <Route path="/builds/:sourceType/:buildId" element={<BuildsPage />} />
           <Route path="/event-schedule" element={<EventSchedulePage />} />
           <Route path="/goals" element={<GoalsPage />} />
+          <Route path="/goals/:goalId" element={<GoalDetailPage />} />
           <Route path="/guild-war-goals" element={<GuildWarGoalsPage />} />
           <Route path="/materials" element={<MaterialsPage />} />
           <Route path="/official-news" element={<OfficialNewsPage />} />

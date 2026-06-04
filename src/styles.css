@@ -1972,13 +1972,43 @@ textarea {
 }
 
 .goal-tabs {
-  width: min(100%, 680px);
-  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  width: min(100%, 520px);
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
 }
 
 .goal-tabs button {
   gap: 6px;
   padding-inline: 8px;
+}
+
+.goals-page-wide {
+  width: min(100%, 1680px);
+  max-width: 1680px;
+}
+
+.goals-compact-heading {
+  align-items: flex-start;
+  padding: 16px 18px;
+}
+
+.goals-compact-heading p {
+  margin-block: 6px 0;
+}
+
+.goals-board-layout {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+}
+
+.goals-board-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.goals-board-heading {
+  margin-bottom: 0;
 }
 
 .tab-count {
@@ -2061,9 +2091,11 @@ textarea {
 
 .goal-board {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(5, minmax(240px, 1fr));
+  gap: 16px;
   max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
   padding-bottom: 4px;
 }
 
@@ -2102,6 +2134,7 @@ textarea {
   border: 1px solid #dfe6ee;
   border-radius: 8px;
   background: #ffffff;
+  cursor: pointer;
 }
 
 .goal-board-card.active,
@@ -2118,6 +2151,10 @@ textarea {
   background: transparent;
   color: inherit;
   text-align: left;
+}
+
+.goal-board-card-main:focus {
+  outline: none;
 }
 
 .goal-board-card-main strong,
@@ -2242,6 +2279,33 @@ textarea {
 .goal-detail-panel {
   position: sticky;
   top: 20px;
+}
+
+.goal-detail-page {
+  width: min(100%, 1180px);
+  max-width: 1180px;
+}
+
+.goal-detail-topbar {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.goal-detail-page-panel {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 1600px) {
+  .goal-board {
+    grid-template-columns: repeat(5, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 1199px) {
+  .goal-board {
+    grid-template-columns: repeat(5, minmax(240px, 280px));
+  }
 }
 
 .goal-card-title {

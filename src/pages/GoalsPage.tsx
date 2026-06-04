@@ -2,7 +2,6 @@ import {
   CheckCircle2,
   ClipboardList,
   ExternalLink,
-  Eye,
   Inbox,
   MessageSquarePlus,
   Pencil,
@@ -14,7 +13,7 @@ import {
   X
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BuildMasterCatalogProvider, useBuildMasterLookup } from "../lib/BuildMasterCatalogContext";
 import {
   api,
@@ -42,9 +41,9 @@ import { useBuildMasterCatalog } from "../lib/useBuildMasterCatalog";
 import { useAuth } from "../components/AuthContext";
 
 type PartKind = "character" | "weapon" | "summon";
-type GoalTab = "goals" | "board" | "new" | "proposal" | "inbox";
+type GoalTab = "board" | "new" | "proposal" | "inbox";
 
-type GoalFormState = {
+export type GoalFormState = {
   targetUserId: string;
   targetUserIds: string[];
   title: string;
@@ -221,7 +220,7 @@ function hasParts(goal: Pick<SharedGoal, "details">, key: "characters" | "weapon
   return (details(goal)[key] ?? []).length > 0 ? "あり" : "なし";
 }
 
-function goalPayload(form: GoalFormState) {
+export function goalPayload(form: GoalFormState) {
   const detailPayload: SharedGoalDetails =
     form.category === "周回"
       ? {
@@ -319,7 +318,7 @@ function postParts(post: BuildPost) {
 
 function tabFromSearch(search: string): GoalTab {
   const tab = new URLSearchParams(search).get("tab");
-  return tab === "new" || tab === "proposal" || tab === "inbox" || tab === "goals" || tab === "board" ? tab : "goals";
+  return tab === "new" || tab === "proposal" || tab === "inbox" || tab === "board" ? tab : "board";
 }
 
 export function GoalsPage() {
@@ -334,17 +333,16 @@ export function GoalsPage() {
 
 function GoalsPageContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<GoalTab>(() => tabFromSearch(location.search));
   const [members, setMembers] = useState<User[]>([]);
   const [goals, setGoals] = useState<SharedGoal[]>([]);
   const [proposals, setProposals] = useState<GoalProposal[]>([]);
-  const [selectedGoal, setSelectedGoal] = useState<SharedGoal | null>(null);
   const [goalForm, setGoalForm] = useState<GoalFormState>(blankForm);
   const [proposalForm, setProposalForm] = useState<GoalFormState>(blankForm);
   const [materialGoals, setMaterialGoals] = useState<MaterialGoal[]>([]);
   const [buildPosts, setBuildPosts] = useState<BuildPost[]>([]);
-  const [filters, setFilters] = useState({ userId: "", category: "", status: "", due: "" });
   const [boardFilters, setBoardFilters] = useState<GoalBoardFilters>(blankBoardFilters);
   const [proposalStatus, setProposalStatus] = useState<ProposalStatus | "all">("all");
   const [error, setError] = useState("");
@@ -367,18 +365,8 @@ function GoalsPageContent() {
   }
 
   async function loadGoals() {
-    const data = await api.sharedGoals(filters);
+    const data = await api.sharedGoals();
     setGoals(data.goals);
-    setSelectedGoal((current) => {
-      if (!current) return data.goals[0] ?? null;
-      return data.goals.find((goal) => goal.id === current.id) ?? data.goals[0] ?? null;
-    });
-  }
-
-  async function refreshGoal(goalId: string) {
-    const data = await api.sharedGoal(goalId);
-    setGoals((current) => current.map((goal) => (goal.id === data.goal.id ? data.goal : goal)));
-    setSelectedGoal(data.goal);
   }
 
   async function loadProposals() {
@@ -394,14 +382,13 @@ function GoalsPageContent() {
 
   useEffect(() => {
     void loadGoals().catch((caught) => setError(caught instanceof Error ? caught.message : "目標の取得に失敗しました"));
-  }, [filters]);
+  }, []);
 
   useEffect(() => {
     void loadProposals().catch((caught) => setError(caught instanceof Error ? caught.message : "提案の取得に失敗しました"));
   }, [proposalStatus]);
 
   const openProposalCount = useMemo(() => proposals.filter((proposal) => proposal.status === "提案中").length, [proposals]);
-  const canUpdateSelected = selectedGoal?.ownerId === user?.id;
   const boardGoals = useMemo(() => {
     return goals.filter((goal) => {
       return (
@@ -427,32 +414,11 @@ function GoalsPageContent() {
     try {
       const data = await api.createSharedGoal(goalPayload(goalForm));
       setGoals((current) => [data.goal, ...current]);
-      setSelectedGoal(data.goal);
       resetGoalForm();
-      setActiveTab("goals");
+      setActiveTab("board");
       setNotice("目標を登録しました。");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "目標の登録に失敗しました");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleUpdateGoal(form: GoalFormState) {
-    if (!selectedGoal) return false;
-    setError("");
-    setNotice("");
-    setIsSubmitting(true);
-
-    try {
-      const data = await api.updateSharedGoal(selectedGoal.id, goalPayload(form));
-      setSelectedGoal(data.goal);
-      setGoals((current) => current.map((goal) => (goal.id === data.goal.id ? data.goal : goal)));
-      setNotice("目標を保存しました。");
-      return true;
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "目標の保存に失敗しました");
-      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -467,7 +433,6 @@ function GoalsPageContent() {
         status: boardStatus === "done" ? "達成" : "未達成"
       });
       setGoals((current) => current.map((item) => (item.id === data.goal.id ? data.goal : item)));
-      setSelectedGoal((current) => (current?.id === data.goal.id ? data.goal : current));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "ボード状態の更新に失敗しました");
     }
@@ -516,8 +481,7 @@ function GoalsPageContent() {
       const data = await api.acceptGoalProposal(proposal.id);
       setProposals((current) => current.map((item) => (item.id === data.proposal.id ? data.proposal : item)));
       setGoals((current) => [data.goal, ...current]);
-      setSelectedGoal(data.goal);
-      setActiveTab("goals");
+      setActiveTab("board");
       setNotice("提案を受け入れて、自分の目標として登録しました。");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "提案の受け入れに失敗しました");
@@ -537,40 +501,15 @@ function GoalsPageContent() {
     }
   }
 
-  async function deleteGoal(goal: SharedGoal) {
-    if (!window.confirm(`「${goal.title}」を削除しますか？`)) {
-      return;
-    }
-
-    setError("");
-    setNotice("");
-    setIsSubmitting(true);
-
-    try {
-      await api.deleteSharedGoal(goal.id);
-      setGoals((current) => current.filter((item) => item.id !== goal.id));
-      setSelectedGoal((current) => (current?.id === goal.id ? null : current));
-      setNotice("目標を削除しました。");
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "目標の削除に失敗しました");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   return (
-    <div className="page-stack">
-      <section className="page-heading">
+    <div className="page-stack goals-page-wide">
+      <section className="page-heading goals-compact-heading">
         <div>
           <p className="eyebrow">Crew Goals</p>
-          <h2>団内目標共有</h2>
-          <p>団員それぞれの目標と手入力の進捗を、ゆるく確認できる場所です。</p>
+          <h2>目標ボード</h2>
+          <p>今やることを状態ごとに整理し、詳細はカードから確認します。</p>
         </div>
         <div className="segmented goal-tabs">
-          <button className={activeTab === "goals" ? "active" : ""} onClick={() => setActiveTab("goals")} type="button">
-            <ClipboardList size={16} />
-            一覧
-          </button>
           <button className={activeTab === "board" ? "active" : ""} onClick={() => setActiveTab("board")} type="button">
             <ClipboardList size={16} />
             目標ボード
@@ -687,9 +626,9 @@ function GoalsPageContent() {
       )}
 
       {activeTab === "board" && (
-        <section className="content-grid goals-layout">
-          <div className="panel wide">
-            <div className="section-heading">
+        <section className="goals-board-layout">
+          <div className="panel wide goals-board-panel">
+            <div className="section-heading goals-board-heading">
               <div>
                 <p className="eyebrow">Board</p>
                 <h2>目標ボード</h2>
@@ -703,89 +642,10 @@ function GoalsPageContent() {
             <GoalBoard
               canUpdateGoal={(goal) => goal.ownerId === user?.id}
               goals={boardGoals}
-              onSelect={setSelectedGoal}
+              onOpenGoal={(goal) => navigate(`/goals/${goal.id}`)}
               onUpdateBoardStatus={(goal, boardStatus) => void updateGoalBoardStatus(goal, boardStatus)}
-              selectedGoalId={selectedGoal?.id ?? ""}
             />
           </div>
-
-          <aside className="panel goal-detail-panel">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Detail</p>
-                <h2>目標詳細</h2>
-              </div>
-              <Eye size={20} />
-            </div>
-            {selectedGoal ? (
-              <GoalDetail
-                buildPosts={buildPosts}
-                canUpdate={canUpdateSelected}
-                goal={selectedGoal}
-                isSubmitting={isSubmitting}
-                materialGoals={materialGoals}
-                onDelete={deleteGoal}
-                onRefresh={refreshGoal}
-                onUpdate={handleUpdateGoal}
-              />
-            ) : (
-              <div className="empty-state">カードから目標を選んでください。</div>
-            )}
-          </aside>
-        </section>
-      )}
-
-      {activeTab === "goals" && (
-        <section className="content-grid goals-layout">
-          <div className="panel wide">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">List</p>
-                <h2>団員全体の目標</h2>
-              </div>
-            </div>
-            <GoalFilters filters={filters} members={members} onChange={setFilters} />
-            <div className="goals-table-wrapper">
-              <div className="goal-list">
-                {goals.length === 0 ? (
-                  <div className="empty-state">条件に合う目標はまだありません。</div>
-                ) : (
-                  goals.map((goal) => (
-                    <GoalRow
-                      goal={goal}
-                      isActive={selectedGoal?.id === goal.id}
-                      key={goal.id}
-                      onSelect={setSelectedGoal}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          <aside className="panel goal-detail-panel">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Detail</p>
-                <h2>目標詳細</h2>
-              </div>
-              <Eye size={20} />
-            </div>
-            {selectedGoal ? (
-              <GoalDetail
-                buildPosts={buildPosts}
-                canUpdate={canUpdateSelected}
-                goal={selectedGoal}
-                isSubmitting={isSubmitting}
-                materialGoals={materialGoals}
-                onDelete={deleteGoal}
-                onRefresh={refreshGoal}
-                onUpdate={handleUpdateGoal}
-              />
-            ) : (
-              <div className="empty-state">一覧から目標を選んでください。</div>
-            )}
-          </aside>
         </section>
       )}
     </div>
@@ -857,15 +717,13 @@ function GoalBoardFilters({
 function GoalBoard({
   canUpdateGoal,
   goals,
-  onSelect,
-  onUpdateBoardStatus,
-  selectedGoalId
+  onOpenGoal,
+  onUpdateBoardStatus
 }: {
   canUpdateGoal: (goal: SharedGoal) => boolean;
   goals: SharedGoal[];
-  onSelect: (goal: SharedGoal) => void;
+  onOpenGoal: (goal: SharedGoal) => void;
   onUpdateBoardStatus: (goal: SharedGoal, boardStatus: GoalBoardStatus) => void;
-  selectedGoalId: string;
 }) {
   return (
     <div className="goal-board">
@@ -888,9 +746,8 @@ function GoalBoard({
                   <GoalBoardCard
                     canUpdate={canUpdateGoal(goal)}
                     goal={goal}
-                    isActive={selectedGoalId === goal.id}
                     key={goal.id}
-                    onSelect={onSelect}
+                    onOpen={onOpenGoal}
                     onUpdateBoardStatus={onUpdateBoardStatus}
                   />
                 ))
@@ -906,22 +763,34 @@ function GoalBoard({
 function GoalBoardCard({
   canUpdate,
   goal,
-  isActive,
-  onSelect,
+  onOpen,
   onUpdateBoardStatus
 }: {
   canUpdate: boolean;
   goal: SharedGoal;
-  isActive: boolean;
-  onSelect: (goal: SharedGoal) => void;
+  onOpen: (goal: SharedGoal) => void;
   onUpdateBoardStatus: (goal: SharedGoal, boardStatus: GoalBoardStatus) => void;
 }) {
   const goalDetails = details(goal);
   const requiredWeaponCount = goal.category === "編成" ? goalDetails.weapons?.length ?? 0 : 0;
+  function openGoal() {
+    onOpen(goal);
+  }
 
   return (
-    <article className={isActive ? "goal-board-card active" : "goal-board-card"}>
-      <button className="goal-board-card-main" onClick={() => onSelect(goal)} type="button">
+    <article
+      className="goal-board-card"
+      onClick={openGoal}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openGoal();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+    >
+      <div className="goal-board-card-main">
         <strong>{goal.title}</strong>
         <div className="tag-row">
           <span className="pill muted">{goal.category}</span>
@@ -934,12 +803,21 @@ function GoalBoardCard({
           <span>{progressLabel(goal)}</span>
           {requiredWeaponCount > 0 && <span>必要武器 {requiredWeaponCount}</span>}
         </div>
-      </button>
+      </div>
       {canUpdate && (
-        <label className="goal-board-status-select">
+        <label
+          className="goal-board-status-select"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
           状態
           <select
-            onChange={(event) => onUpdateBoardStatus(goal, event.target.value as GoalBoardStatus)}
+            onChange={(event) => {
+              event.stopPropagation();
+              onUpdateBoardStatus(goal, event.target.value as GoalBoardStatus);
+            }}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
             value={goal.boardStatus}
           >
             {goalBoardStatuses.map((status) => (
@@ -1491,7 +1369,7 @@ function GoalRow({ goal, isActive, onSelect }: { goal: SharedGoal; isActive: boo
   );
 }
 
-function GoalDetail({
+export function GoalDetail({
   buildPosts,
   canUpdate,
   goal,
