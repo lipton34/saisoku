@@ -1573,6 +1573,107 @@ export function BuildFormSteps({
     [safeSummonIndex],
   );
 
+  const buildScreenshotSection = (
+    <div className="build-screenshot-section">
+      <div className="section-header">
+        <div>
+          <h3>編成スクショ</h3>
+          <p className="muted-text">
+            キャラ・武器・召喚石などのスクショを最大5枚まで添付できます。
+          </p>
+        </div>
+        <label className="secondary-button file-upload-button">
+          <Upload size={16} />
+          画像を追加
+          <input
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={(event) => {
+              handleImageFiles(event.target.files);
+              event.currentTarget.value = "";
+            }}
+            type="file"
+          />
+        </label>
+      </div>
+
+      <div className="build-image-grid">
+        {existingImages.map((image) => (
+          <div className="build-image-card" key={image.id}>
+            {image.publicUrl ? (
+              <a href={image.publicUrl} rel="noreferrer" target="_blank">
+                <img alt={image.originalName ?? image.imageType} src={image.publicUrl} />
+              </a>
+            ) : (
+              <div className="build-image-placeholder">
+                <ImageIcon size={24} />
+              </div>
+            )}
+            <div className="build-image-meta">
+              <select
+                onChange={(event) =>
+                  onUpdateExistingImageType?.(image.id, event.target.value)
+                }
+                value={image.imageType}
+              >
+                {buildImageTypeOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+              <small>
+                {image.originalName ?? "保存済み画像"}
+                {formatBytes(image.sizeBytes) ? ` / ${formatBytes(image.sizeBytes)}` : ""}
+              </small>
+              <button
+                className="secondary-button danger"
+                onClick={() => onDeleteExistingImage?.(image.id)}
+                type="button"
+              >
+                <Trash2 size={16} />
+                削除
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {pendingImages.map((image) => (
+          <div className="build-image-card" key={image.id}>
+            <img alt={image.file.name} src={image.previewUrl} />
+            <div className="build-image-meta">
+              <select
+                onChange={(event) =>
+                  onUpdatePendingImageType?.(image.id, event.target.value)
+                }
+                value={image.imageType}
+              >
+                {buildImageTypeOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+              <small>
+                {image.file.name} / {formatBytes(image.file.size)}
+              </small>
+              <button
+                className="secondary-button danger"
+                onClick={() => onRemovePendingImage?.(image.id)}
+                type="button"
+              >
+                <Trash2 size={16} />
+                取り消し
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {existingImages.length === 0 && pendingImages.length === 0 && (
+          <div className="empty-state compact">
+            スクショは未添付です。選択式入力だけでも投稿できます。
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <section className="build-form-steps-container">
       <form className="build-form-steps" onSubmit={handleSubmit}>
@@ -1616,6 +1717,8 @@ export function BuildFormSteps({
                   プリセットを使う
                 </button>
               </div>
+
+              {buildScreenshotSection}
 
               <div className="form-row">
                 <label>
@@ -2324,105 +2427,6 @@ export function BuildFormSteps({
                 <div>
                   <p className="eyebrow">Step 5</p>
                   <h2>{steps[4].title}</h2>
-                </div>
-              </div>
-
-              <div className="build-screenshot-section">
-                <div className="section-header">
-                  <div>
-                    <h3>編成スクショ</h3>
-                    <p className="muted-text">
-                      キャラ・武器・召喚石などのスクショを最大5枚まで添付できます。
-                    </p>
-                  </div>
-                  <label className="secondary-button file-upload-button">
-                    <Upload size={16} />
-                    画像を追加
-                    <input
-                      accept="image/jpeg,image/png,image/webp"
-                      multiple
-                      onChange={(event) => {
-                        handleImageFiles(event.target.files);
-                        event.currentTarget.value = "";
-                      }}
-                      type="file"
-                    />
-                  </label>
-                </div>
-
-                <div className="build-image-grid">
-                  {existingImages.map((image) => (
-                    <div className="build-image-card" key={image.id}>
-                      {image.publicUrl ? (
-                        <a href={image.publicUrl} rel="noreferrer" target="_blank">
-                          <img alt={image.originalName ?? image.imageType} src={image.publicUrl} />
-                        </a>
-                      ) : (
-                        <div className="build-image-placeholder">
-                          <ImageIcon size={24} />
-                        </div>
-                      )}
-                      <div className="build-image-meta">
-                        <select
-                          onChange={(event) =>
-                            onUpdateExistingImageType?.(image.id, event.target.value)
-                          }
-                          value={image.imageType}
-                        >
-                          {buildImageTypeOptions.map((option) => (
-                            <option key={option}>{option}</option>
-                          ))}
-                        </select>
-                        <small>
-                          {image.originalName ?? "保存済み画像"}
-                          {formatBytes(image.sizeBytes) ? ` / ${formatBytes(image.sizeBytes)}` : ""}
-                        </small>
-                        <button
-                          className="secondary-button danger"
-                          onClick={() => onDeleteExistingImage?.(image.id)}
-                          type="button"
-                        >
-                          <Trash2 size={16} />
-                          削除
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {pendingImages.map((image) => (
-                    <div className="build-image-card" key={image.id}>
-                      <img alt={image.file.name} src={image.previewUrl} />
-                      <div className="build-image-meta">
-                        <select
-                          onChange={(event) =>
-                            onUpdatePendingImageType?.(image.id, event.target.value)
-                          }
-                          value={image.imageType}
-                        >
-                          {buildImageTypeOptions.map((option) => (
-                            <option key={option}>{option}</option>
-                          ))}
-                        </select>
-                        <small>
-                          {image.file.name} / {formatBytes(image.file.size)}
-                        </small>
-                        <button
-                          className="secondary-button danger"
-                          onClick={() => onRemovePendingImage?.(image.id)}
-                          type="button"
-                        >
-                          <Trash2 size={16} />
-                          取り消し
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {existingImages.length === 0 && pendingImages.length === 0 && (
-                    <div className="empty-state compact">
-                      スクショは未添付です。選択式入力だけでも投稿できます。
-                    </div>
-                  )}
                 </div>
               </div>
 
