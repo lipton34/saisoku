@@ -934,13 +934,15 @@ function GoalEditor({
   form,
   materialGoals,
   mode,
-  onChange
+  onChange,
+  showDetailMetadata = true
 }: {
   buildPosts: BuildPost[];
   form: GoalFormState;
   materialGoals: MaterialGoal[];
   mode: "goal" | "proposal";
   onChange: (form: GoalFormState) => void;
+  showDetailMetadata?: boolean;
 }) {
   function update<K extends keyof GoalFormState>(key: K, value: GoalFormState[K]) {
     onChange({ ...form, [key]: value });
@@ -1039,16 +1041,18 @@ function GoalEditor({
             ))}
           </select>
         </label>
-        <label>
-          負荷
-          <select onChange={(event) => update("effort", event.target.value as GoalEffort)} value={form.effort}>
-            {goalEffortOptions.map((effort) => (
-              <option key={effort} value={effort}>
-                {goalEffortLabels[effort]}
-              </option>
-            ))}
-          </select>
-        </label>
+        {showDetailMetadata && (
+          <label>
+            負荷
+            <select onChange={(event) => update("effort", event.target.value as GoalEffort)} value={form.effort}>
+              {goalEffortOptions.map((effort) => (
+                <option key={effort} value={effort}>
+                  {goalEffortLabels[effort]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <label>
@@ -1080,20 +1084,24 @@ function GoalEditor({
           期限
           <input onChange={(event) => update("dueDate", event.target.value)} type="date" value={form.dueDate} />
         </label>
-        <label>
-          並び順
-          <input min={0} onChange={(event) => update("sortOrder", event.target.value)} type="number" value={form.sortOrder} />
-        </label>
+        {showDetailMetadata && (
+          <label>
+            並び順
+            <input min={0} onChange={(event) => update("sortOrder", event.target.value)} type="number" value={form.sortOrder} />
+          </label>
+        )}
       </div>
 
-      <label className="checkbox-field">
-        <input
-          checked={form.beginnerRecommended}
-          onChange={(event) => update("beginnerRecommended", event.target.checked)}
-          type="checkbox"
-        />
-        初心者・復帰者におすすめ
-      </label>
+      {showDetailMetadata && (
+        <label className="checkbox-field">
+          <input
+            checked={form.beginnerRecommended}
+            onChange={(event) => update("beginnerRecommended", event.target.checked)}
+            type="checkbox"
+          />
+          初心者・復帰者におすすめ
+        </label>
+      )}
 
       <div className="form-row">
         <label>
@@ -1452,14 +1460,6 @@ export function GoalDetail({
           <dd>{goalPriorityLabels[goal.priority]}</dd>
         </div>
         <div>
-          <dt>負荷</dt>
-          <dd>{goalEffortLabels[goal.effort]}</dd>
-        </div>
-        <div>
-          <dt>初心者向け</dt>
-          <dd>{goal.beginnerRecommended ? "おすすめ" : "通常"}</dd>
-        </div>
-        <div>
           <dt>進捗</dt>
           <dd>{progressLabel(goal)}</dd>
         </div>
@@ -1497,6 +1497,7 @@ export function GoalDetail({
             materialGoals={materialGoals}
             mode="goal"
             onChange={setForm}
+            showDetailMetadata={false}
           />
           <div className="goal-detail-actions">
             <button className="primary-button" disabled={isSubmitting} type="submit">
