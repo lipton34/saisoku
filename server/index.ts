@@ -29,8 +29,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
+const host = "0.0.0.0";
 const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
 const isProduction = process.env.NODE_ENV === "production";
+
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({ ok: true });
+});
 
 app.use(
   cors({
@@ -41,10 +46,6 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 app.use(attachUser);
-
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
-});
 
 app.use("/api/auth", authRouter);
 app.use("/api/build-masters", buildMastersRouter);
@@ -62,6 +63,10 @@ app.use("/api/source-articles", sourceArticlesRouter);
 app.use("/api/shared-goals", sharedGoalsRouter);
 app.use("/api/tasks", tasksRouter);
 
+app.use("/api", (_req, res) => {
+  res.status(404).json({ message: "API route not found" });
+});
+
 if (isProduction) {
   const clientDistPath = path.resolve(__dirname, "../dist");
   app.use(express.static(clientDistPath));
@@ -75,6 +80,6 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
   res.status(500).json({ message: "サーバーでエラーが発生しました" });
 });
 
-app.listen(port, () => {
-  console.log(`Saisoku API listening on http://localhost:${port}`);
+app.listen(port, host, () => {
+  console.log(`Saisoku API listening on http://${host}:${port}`);
 });
