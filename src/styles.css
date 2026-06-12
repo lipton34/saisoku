@@ -1255,7 +1255,8 @@ a {
 
 .build-image-card img {
   display: block;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .build-image-placeholder {
@@ -1302,7 +1303,8 @@ a {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .build-preset-card,
@@ -1703,7 +1705,8 @@ textarea {
 .guild-war-page input,
 .guild-war-page select,
 .guild-war-page textarea {
-  padding: var(--guild-war-control-padding-block) var(--guild-war-control-padding-inline);
+  padding: var(--guild-war-control-padding-block)
+    var(--guild-war-control-padding-inline);
 }
 
 .guild-war-page .stat-tile strong {
@@ -1925,7 +1928,10 @@ textarea {
 
 .ranking-row {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) minmax(110px, 0.22fr) minmax(110px, 0.22fr);
+  grid-template-columns: 42px minmax(0, 1fr) minmax(110px, 0.22fr) minmax(
+      110px,
+      0.22fr
+    );
   gap: var(--guild-war-gap);
   align-items: center;
   min-width: 0;
@@ -2863,7 +2869,6 @@ textarea {
     width: 100%;
   }
 
-
   .home-hero,
   .page-heading,
   .section-heading {
@@ -3474,7 +3479,10 @@ textarea {
 
 .formation-layout {
   display: grid;
-  grid-template-columns: minmax(min(300px, 100%), 0.95fr) minmax(min(320px, 100%), 1.05fr);
+  grid-template-columns: minmax(min(300px, 100%), 0.95fr) minmax(
+      min(320px, 100%),
+      1.05fr
+    );
   gap: 16px;
   align-items: start;
 }
@@ -3850,7 +3858,10 @@ textarea {
 }
 
 .formation-layout {
-  grid-template-columns: minmax(min(520px, 100%), 1.08fr) minmax(min(360px, 100%), 0.92fr);
+  grid-template-columns: minmax(min(520px, 100%), 1.08fr) minmax(
+      min(360px, 100%),
+      0.92fr
+    );
   gap: 20px;
 }
 
@@ -3862,7 +3873,11 @@ textarea {
   gap: 16px;
   padding: 16px;
   background:
-    linear-gradient(180deg, rgba(47, 142, 102, 0.06), rgba(255, 255, 255, 0) 160px),
+    linear-gradient(
+      180deg,
+      rgba(47, 142, 102, 0.06),
+      rgba(255, 255, 255, 0) 160px
+    ),
     #fbfcfd;
 }
 
@@ -3941,8 +3956,7 @@ textarea {
   grid-template-columns: 52px minmax(0, 1fr);
   padding: 10px;
   border-color: #cfd9e3;
-  background:
-    linear-gradient(180deg, #ffffff 0%, #edf4f8 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #edf4f8 100%);
 }
 
 .formation-slot .part-thumbnail {
@@ -3955,7 +3969,9 @@ textarea {
 .formation-slot.active {
   border-color: #2f8e66;
   background: linear-gradient(180deg, #f8fffb 0%, #e6f4ee 100%);
-  box-shadow: 0 0 0 2px rgba(47, 142, 102, 0.16), 0 4px 12px rgba(20, 33, 43, 0.06);
+  box-shadow:
+    0 0 0 2px rgba(47, 142, 102, 0.16),
+    0 4px 12px rgba(20, 33, 43, 0.06);
 }
 
 .formation-slot--empty {
