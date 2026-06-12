@@ -7,7 +7,16 @@ import {
   useRef,
   useState,
 } from "react";
-import { ArrowLeft, Check, Image as ImageIcon, Plus, Search, Trash2, Upload, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Image as ImageIcon,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import {
   type BuildCharacterDetail,
   type BuildMastersQuery,
@@ -25,6 +34,11 @@ import {
   type BuildMasterKind,
   type BuildMasterItem,
 } from "../lib/buildMasters";
+import {
+  JOB_CATEGORY_LABELS,
+  JOB_CATEGORY_ORDER,
+  groupJobOptions,
+} from "../lib/jobOptions";
 import { useBuildMasterLookup } from "../lib/BuildMasterCatalogContext";
 
 type FormStep = 1 | 2 | 3 | 4 | 5;
@@ -215,7 +229,9 @@ interface BuildFormStepsProps {
   onSubmit: (form: BuildPostInput) => Promise<void>;
   onCancel: () => void;
   onApplyPreset: (preset: BuildPreset) => void;
-  onLoadMasterCandidates?: (params?: BuildMastersQuery) => Promise<BuildMastersResponse>;
+  onLoadMasterCandidates?: (
+    params?: BuildMastersQuery,
+  ) => Promise<BuildMastersResponse>;
   isSubmitting?: boolean;
   error?: string;
   presets?: BuildPreset[];
@@ -343,13 +359,13 @@ function seasonalType(item: BuildMasterItem) {
 }
 
 function isLimitedCharacter(item: BuildMasterItem) {
-  return textMeta(item, "series") === "リミテッド" || hasTag(item, "リミテッド");
+  return (
+    textMeta(item, "series") === "リミテッド" || hasTag(item, "リミテッド")
+  );
 }
 
 function isDivineGeneralCharacter(item: BuildMasterItem) {
-  return (
-    textMeta(item, "subSeries") === "十二神将" || hasTag(item, "十二神将")
-  );
+  return textMeta(item, "subSeries") === "十二神将" || hasTag(item, "十二神将");
 }
 
 function isEternalsCharacter(item: BuildMasterItem) {
@@ -500,7 +516,8 @@ function classifyCandidate(item: BuildMasterItem) {
     const type = seasonalType(item);
     if (type) return type;
     if (isDivineGeneralCharacter(item)) return "十二神将";
-    if (isLimitedCharacter(item) || joined.includes("リミ")) return "リミテッド";
+    if (isLimitedCharacter(item) || joined.includes("リミ"))
+      return "リミテッド";
     if (joined.includes("十天衆")) return "十天衆";
     if (joined.includes("十賢者")) return "十賢者";
     if (joined.includes("高難度")) return "高難度";
@@ -573,7 +590,8 @@ function hasFixedWeaponSlotShape(
 
 function hasFixedSummonSlotShape(summonDetails: BuildSummonDetail[]) {
   return (
-    summonDetails.length === summonSlots.main + summonSlots.friend + summonSlots.sub &&
+    summonDetails.length ===
+      summonSlots.main + summonSlots.friend + summonSlots.sub &&
     summonDetails[0]?.position === "メイン" &&
     summonDetails[1]?.position === "フレンド" &&
     summonDetails.slice(2).every((item) => item.position === "サブ")
@@ -597,10 +615,7 @@ function normalizeCharacters(
     ...frontItems,
     ...fallbackItems.slice(0, frontFallbackCount),
   ];
-  const orderedSub = [
-    ...subItems,
-    ...fallbackItems.slice(frontFallbackCount),
-  ];
+  const orderedSub = [...subItems, ...fallbackItems.slice(frontFallbackCount)];
 
   return [
     ...Array.from({ length: frontCharacterSlots }, (_, index) => ({
@@ -704,57 +719,71 @@ type PartSlotProps = {
   onClear: () => void;
 };
 
-const PartSlot = memo(function PartSlot({
-  kind,
-  label,
-  masterId,
-  name,
-  meta,
-  active,
-  onClick,
-  onClear,
-}: PartSlotProps) {
-  const masterCatalog = useBuildMasterLookup();
-  const master = findBuildMasterInCatalog(masterCatalog, kind, name, masterId);
+const PartSlot = memo(
+  function PartSlot({
+    kind,
+    label,
+    masterId,
+    name,
+    meta,
+    active,
+    onClick,
+    onClear,
+  }: PartSlotProps) {
+    const masterCatalog = useBuildMasterLookup();
+    const master = findBuildMasterInCatalog(
+      masterCatalog,
+      kind,
+      name,
+      masterId,
+    );
 
-  return (
-    <button
-      className={`formation-slot ${active ? "active formation-slot--active" : ""} ${name ? "" : "formation-slot--empty"}`}
-      onClick={onClick}
-      type="button"
-    >
-      <PartThumbnail kind={kind} masterId={masterId} name={name} />
-      <span className="formation-slot-body">
-        <small>{label}</small>
-        <strong>{name || "未選択"}</strong>
-        {(meta || master) && <em>{[meta, master?.element, master?.weaponType, master?.series].filter(Boolean).join(" / ")}</em>}
-      </span>
-      {name && (
-        <span
-          aria-label="選択を解除"
-          className="slot-clear"
-          onClick={(event) => {
-            event.stopPropagation();
-            onClear();
-          }}
-          role="button"
-          tabIndex={0}
-        >
-          <X size={14} />
+    return (
+      <button
+        className={`formation-slot ${active ? "active formation-slot--active" : ""} ${name ? "" : "formation-slot--empty"}`}
+        onClick={onClick}
+        type="button"
+      >
+        <PartThumbnail kind={kind} masterId={masterId} name={name} />
+        <span className="formation-slot-body">
+          <small>{label}</small>
+          <strong>{name || "未選択"}</strong>
+          {(meta || master) && (
+            <em>
+              {[meta, master?.element, master?.weaponType, master?.series]
+                .filter(Boolean)
+                .join(" / ")}
+            </em>
+          )}
         </span>
-      )}
-    </button>
-  );
-}, function partSlotPropsEqual(previous, next) {
-  return (
-    previous.kind === next.kind &&
-    previous.label === next.label &&
-    previous.masterId === next.masterId &&
-    previous.name === next.name &&
-    previous.meta === next.meta &&
-    previous.active === next.active
-  );
-});
+        {name && (
+          <span
+            aria-label="選択を解除"
+            className="slot-clear"
+            onClick={(event) => {
+              event.stopPropagation();
+              onClear();
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <X size={14} />
+          </span>
+        )}
+      </button>
+    );
+  },
+  function partSlotPropsEqual(previous, next) {
+    return (
+      previous.kind === next.kind &&
+      previous.label === next.label &&
+      previous.masterId === next.masterId &&
+      previous.name === next.name &&
+      previous.meta === next.meta &&
+      previous.active === next.active
+    );
+  },
+);
 
 const PartCandidateCard = memo(function PartCandidateCard({
   kind,
@@ -852,7 +881,9 @@ function PartCandidateBrowser({
   kind: PartBrowserKind;
   activeName: string;
   filters: CandidateFilters;
-  onLoadCandidates?: (params?: BuildMastersQuery) => Promise<BuildMastersResponse>;
+  onLoadCandidates?: (
+    params?: BuildMastersQuery,
+  ) => Promise<BuildMastersResponse>;
   onFilterChange: (filters: CandidateFilters) => void;
   onClose?: () => void;
   onSelect: (item: BuildMasterItem) => void;
@@ -869,54 +900,58 @@ function PartCandidateBrowser({
   const debouncedQueryFilter = useDebouncedValue(queryFilter.trim(), 250);
   const hasFilters = Boolean(elementFilter || categoryFilter || queryFilter);
 
-  const loadCandidates = useCallback(async (offset: number) => {
-    if (!onLoadCandidates) {
-      return;
-    }
-
-    setIsLoadingCandidates(true);
-    setCandidateError("");
-    const requestId = candidateRequestRef.current + 1;
-    candidateRequestRef.current = requestId;
-    const requestedElement = debouncedQueryFilter ? "" : elementFilter;
-    try {
-      const response = await onLoadCandidates({
-        kind,
-        element: requestedElement,
-        query: debouncedQueryFilter,
-        limit: candidateFetchLimit,
-        offset,
-      });
-      const nextCandidates = browserCandidatesFromResponse(response, kind);
-      if (candidateRequestRef.current !== requestId) {
+  const loadCandidates = useCallback(
+    async (offset: number) => {
+      if (!onLoadCandidates) {
         return;
       }
 
-      setCandidates((current) =>
-        offset === 0
-          ? nextCandidates
-          : [
-              ...current,
-              ...nextCandidates.filter(
-                (item) => !current.some((currentItem) => currentItem.id === item.id),
-              ),
-            ],
-      );
-      setLoadedCount(offset + nextCandidates.length);
-      setHasMoreCandidates(nextCandidates.length === candidateFetchLimit);
-    } catch (caught) {
-      if (candidateRequestRef.current !== requestId) {
-        return;
+      setIsLoadingCandidates(true);
+      setCandidateError("");
+      const requestId = candidateRequestRef.current + 1;
+      candidateRequestRef.current = requestId;
+      const requestedElement = debouncedQueryFilter ? "" : elementFilter;
+      try {
+        const response = await onLoadCandidates({
+          kind,
+          element: requestedElement,
+          query: debouncedQueryFilter,
+          limit: candidateFetchLimit,
+          offset,
+        });
+        const nextCandidates = browserCandidatesFromResponse(response, kind);
+        if (candidateRequestRef.current !== requestId) {
+          return;
+        }
+
+        setCandidates((current) =>
+          offset === 0
+            ? nextCandidates
+            : [
+                ...current,
+                ...nextCandidates.filter(
+                  (item) =>
+                    !current.some((currentItem) => currentItem.id === item.id),
+                ),
+              ],
+        );
+        setLoadedCount(offset + nextCandidates.length);
+        setHasMoreCandidates(nextCandidates.length === candidateFetchLimit);
+      } catch (caught) {
+        if (candidateRequestRef.current !== requestId) {
+          return;
+        }
+        setCandidateError(
+          caught instanceof Error ? caught.message : "候補の取得に失敗しました",
+        );
+      } finally {
+        if (candidateRequestRef.current === requestId) {
+          setIsLoadingCandidates(false);
+        }
       }
-      setCandidateError(
-        caught instanceof Error ? caught.message : "候補の取得に失敗しました",
-      );
-    } finally {
-      if (candidateRequestRef.current === requestId) {
-        setIsLoadingCandidates(false);
-      }
-    }
-  }, [debouncedQueryFilter, elementFilter, kind, onLoadCandidates]);
+    },
+    [debouncedQueryFilter, elementFilter, kind, onLoadCandidates],
+  );
 
   useEffect(() => {
     setCandidates([]);
@@ -939,124 +974,124 @@ function PartCandidateBrowser({
     <div className="part-browser-modal" role="dialog" aria-modal="true">
       <div className="part-browser-modal-backdrop" onClick={onClose} />
       <div className="part-browser part-browser--modal">
-      <div className="part-browser-header">
-        <div>
-          <p className="eyebrow">{partKindLabel(kind)}候補</p>
-          <h3>{hasFilters ? "絞り込み結果" : "候補一覧"}</h3>
+        <div className="part-browser-header">
+          <div>
+            <p className="eyebrow">{partKindLabel(kind)}候補</p>
+            <h3>{hasFilters ? "絞り込み結果" : "候補一覧"}</h3>
+          </div>
+          {onClose && (
+            <button
+              aria-label="候補一覧を閉じる"
+              className="icon-button part-browser-close"
+              onClick={onClose}
+              type="button"
+            >
+              <X size={16} />
+            </button>
+          )}
+          <label className="part-search-field">
+            検索
+            <Search size={16} />
+            <input
+              onChange={(event) =>
+                onFilterChange({ ...filters, query: event.target.value })
+              }
+              placeholder={`${partKindLabel(kind)}名で検索`}
+              type="search"
+              value={filters.query}
+            />
+          </label>
         </div>
-        {onClose && (
-          <button
-            aria-label="候補一覧を閉じる"
-            className="icon-button part-browser-close"
-            onClick={onClose}
-            type="button"
-          >
-            <X size={16} />
-          </button>
+
+        <div className="candidate-filter-row" aria-label="分類フィルター">
+          <span>分類</span>
+          <div className="candidate-filter-bar">
+            <button
+              className={`candidate-filter-chip ${categoryFilter ? "" : "active"}`}
+              onClick={() => onFilterChange({ ...filters, category: "" })}
+              type="button"
+            >
+              すべて
+            </button>
+            {candidateCategoryOptions(kind).map((option) => (
+              <button
+                className={`candidate-filter-chip ${categoryFilter === option ? "active" : ""}`}
+                key={option}
+                onClick={() => onFilterChange({ ...filters, category: option })}
+                type="button"
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="candidate-filter-row" aria-label="属性フィルター">
+          <span>属性</span>
+          <div className="candidate-filter-bar">
+            <button
+              className={`candidate-filter-chip ${elementFilter ? "" : "active"}`}
+              onClick={() => onFilterChange({ ...filters, element: "" })}
+              type="button"
+            >
+              すべて
+            </button>
+            {candidateElementOptions.map((option) => (
+              <button
+                className={`candidate-filter-chip ${elementFilter === option ? "active" : ""}`}
+                key={option}
+                onClick={() => onFilterChange({ ...filters, element: option })}
+                type="button"
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div
+          className="part-browser-tabs"
+          role="tablist"
+          aria-label={`${partKindLabel(kind)}選択表示`}
+        >
+          <span className="active">候補一覧</span>
+          <span className={hasFilters ? "active" : ""}>絞り込み</span>
+          <span>{visibleCandidates.length}件表示</span>
+          {hasMoreCandidates && <span>続きあり</span>}
+        </div>
+
+        {candidateError && <div className="form-error">{candidateError}</div>}
+
+        <div className="part-candidate-grid">
+          {visibleCandidates.map((item) => (
+            <PartCandidateCard
+              item={item}
+              key={item.id}
+              kind={kind}
+              onSelect={onSelect}
+              selected={activeName === item.name}
+            />
+          ))}
+        </div>
+
+        {(hasMoreCandidates || isLoadingCandidates) && (
+          <div className="candidate-pagination" aria-label="候補ページ切り替え">
+            <button
+              className="secondary-button"
+              disabled={isLoadingCandidates}
+              onClick={() => void loadCandidates(loadedCount)}
+              type="button"
+            >
+              {isLoadingCandidates ? "読み込み中" : "もっと見る"}
+            </button>
+          </div>
         )}
-        <label className="part-search-field">
-          検索
-          <Search size={16} />
-          <input
-            onChange={(event) =>
-              onFilterChange({ ...filters, query: event.target.value })
-            }
-            placeholder={`${partKindLabel(kind)}名で検索`}
-            type="search"
-            value={filters.query}
-          />
-        </label>
-      </div>
 
-      <div className="candidate-filter-row" aria-label="分類フィルター">
-        <span>分類</span>
-        <div className="candidate-filter-bar">
-          <button
-            className={`candidate-filter-chip ${categoryFilter ? "" : "active"}`}
-            onClick={() => onFilterChange({ ...filters, category: "" })}
-            type="button"
-          >
-            すべて
-          </button>
-          {candidateCategoryOptions(kind).map((option) => (
-            <button
-              className={`candidate-filter-chip ${categoryFilter === option ? "active" : ""}`}
-              key={option}
-              onClick={() => onFilterChange({ ...filters, category: option })}
-              type="button"
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="candidate-filter-row" aria-label="属性フィルター">
-        <span>属性</span>
-        <div className="candidate-filter-bar">
-          <button
-            className={`candidate-filter-chip ${elementFilter ? "" : "active"}`}
-            onClick={() => onFilterChange({ ...filters, element: "" })}
-            type="button"
-          >
-            すべて
-          </button>
-          {candidateElementOptions.map((option) => (
-            <button
-              className={`candidate-filter-chip ${elementFilter === option ? "active" : ""}`}
-              key={option}
-              onClick={() => onFilterChange({ ...filters, element: option })}
-              type="button"
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div
-        className="part-browser-tabs"
-        role="tablist"
-        aria-label={`${partKindLabel(kind)}選択表示`}
-      >
-        <span className="active">候補一覧</span>
-        <span className={hasFilters ? "active" : ""}>絞り込み</span>
-        <span>{visibleCandidates.length}件表示</span>
-        {hasMoreCandidates && <span>続きあり</span>}
-      </div>
-
-      {candidateError && <div className="form-error">{candidateError}</div>}
-
-      <div className="part-candidate-grid">
-        {visibleCandidates.map((item) => (
-          <PartCandidateCard
-            item={item}
-            key={item.id}
-            kind={kind}
-            onSelect={onSelect}
-            selected={activeName === item.name}
-          />
-        ))}
-      </div>
-
-      {(hasMoreCandidates || isLoadingCandidates) && (
-        <div className="candidate-pagination" aria-label="候補ページ切り替え">
-          <button
-            className="secondary-button"
-            disabled={isLoadingCandidates}
-            onClick={() => void loadCandidates(loadedCount)}
-            type="button"
-          >
-            {isLoadingCandidates ? "読み込み中" : "もっと見る"}
-          </button>
-        </div>
-      )}
-
-      {!isLoadingCandidates && visibleCandidates.length === 0 && (
-        <div className="empty-state candidate-empty-state">
-          候補にありません。選択中の枠に自由入力できます。
-        </div>
-      )}
+        {!isLoadingCandidates && visibleCandidates.length === 0 && (
+          <div className="empty-state candidate-empty-state">
+            候補にありません。選択中の枠に自由入力できます。
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1081,8 +1116,12 @@ export function BuildFormSteps({
   onUpdateExistingImageType,
 }: BuildFormStepsProps) {
   const masterCatalog = useBuildMasterLookup();
-  const jobOptions = useMemo(
-    () => masterCatalog.options.jobs.map((item) => item.name),
+  const jobOptionsByCategory = useMemo(
+    () => groupJobOptions(masterCatalog.options.jobs),
+    [masterCatalog.options.jobs],
+  );
+  const jobOptionNames = useMemo(
+    () => new Set(masterCatalog.options.jobs.map((item) => item.name)),
     [masterCatalog.options.jobs],
   );
   const [draftForm, setDraftForm] = useState(initialForm);
@@ -1346,7 +1385,9 @@ export function BuildFormSteps({
 
   function removeSummon(index: number) {
     const summonDetails = form.summonDetails.map((item, itemIndex) =>
-      itemIndex === index ? { ...emptySummonDetail, position: item.position } : item,
+      itemIndex === index
+        ? { ...emptySummonDetail, position: item.position }
+        : item,
     );
     applyDraft({ ...form, summonDetails });
   }
@@ -1503,7 +1544,10 @@ export function BuildFormSteps({
         subCharacterSlotCount,
       )
         ? currentForm.characterDetails
-        : normalizeCharacters(currentForm.characterDetails, subCharacterSlotCount);
+        : normalizeCharacters(
+            currentForm.characterDetails,
+            subCharacterSlotCount,
+          );
       const characterDetails =
         currentCharacterDetails.length > 0
           ? currentCharacterDetails.map((item, itemIndex) =>
@@ -1602,7 +1646,10 @@ export function BuildFormSteps({
           <div className="build-image-card" key={image.id}>
             {image.publicUrl ? (
               <a href={image.publicUrl} rel="noreferrer" target="_blank">
-                <img alt={image.originalName ?? image.imageType} src={image.publicUrl} />
+                <img
+                  alt={image.originalName ?? image.imageType}
+                  src={image.publicUrl}
+                />
               </a>
             ) : (
               <div className="build-image-placeholder">
@@ -1622,7 +1669,9 @@ export function BuildFormSteps({
               </select>
               <small>
                 {image.originalName ?? "保存済み画像"}
-                {formatBytes(image.sizeBytes) ? ` / ${formatBytes(image.sizeBytes)}` : ""}
+                {formatBytes(image.sizeBytes)
+                  ? ` / ${formatBytes(image.sizeBytes)}`
+                  : ""}
               </small>
               <button
                 className="secondary-button danger"
@@ -1879,9 +1928,7 @@ export function BuildFormSteps({
                 </div>
               </div>
 
-              <div
-                className="formation-layout formation-layout--single"
-              >
+              <div className="formation-layout formation-layout--single">
                 <div className="formation-board">
                   <div className="formation-section formation-section--hero">
                     <div className="formation-section-title">
@@ -1899,16 +1946,47 @@ export function BuildFormSteps({
                             value={form.protagonistJob}
                           >
                             <option value="">選択してください</option>
-                            {jobOptions.map((option) => (
-                              <option key={option}>{option}</option>
-                            ))}
+                            {!jobOptionNames.has(form.protagonistJob) &&
+                            form.protagonistJob ? (
+                              <option value={form.protagonistJob}>
+                                {form.protagonistJob}
+                              </option>
+                            ) : null}
+                            {JOB_CATEGORY_ORDER.map((category) => {
+                              const options = jobOptionsByCategory[category];
+                              if (!options.length) {
+                                return null;
+                              }
+
+                              return (
+                                <optgroup
+                                  key={category}
+                                  label={JOB_CATEGORY_LABELS[category]}
+                                >
+                                  {options.map((option) => (
+                                    <option key={option.id} value={option.name}>
+                                      {option.name}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              );
+                            })}
                           </select>
                         </label>
                         <div className="job-preview">
-                          <PartThumbnail kind="job" name={form.protagonistJob} />
+                          <PartThumbnail
+                            kind="job"
+                            name={form.protagonistJob}
+                          />
                           <div>
-                            <strong>{form.protagonistJob || "主人公ジョブ未選択"}</strong>
-                            <span>{masterMeta(masterCatalog.find("job", form.protagonistJob))}</span>
+                            <strong>
+                              {form.protagonistJob || "主人公ジョブ未選択"}
+                            </strong>
+                            <span>
+                              {masterMeta(
+                                masterCatalog.find("job", form.protagonistJob),
+                              )}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1921,24 +1999,29 @@ export function BuildFormSteps({
                       <strong>Front Member</strong>
                     </div>
                     <div className="formation-board-scroll">
-                    <div className="formation-slot-grid character-slots character-slots--front">
-                      {frontCharacters.map(({ character, index }) => (
-                        <PartSlot
-                          active={safeCharacterIndex === index}
-                          kind="character"
-                          key={index}
-                          label={`フロント ${frontCharacters.findIndex((item) => item.index === index) + 1}`}
-                          masterId={character.masterId}
-                          meta={character.importance || character.roleMemo}
-                          name={character.name}
-                          onClear={() => updateCharacter(index, { name: "", masterId: null })}
-                          onClick={() => {
-                            setActiveCharacterIndex(index);
-                            openCandidateBrowser("character");
-                          }}
-                        />
-                      ))}
-                    </div>
+                      <div className="formation-slot-grid character-slots character-slots--front">
+                        {frontCharacters.map(({ character, index }) => (
+                          <PartSlot
+                            active={safeCharacterIndex === index}
+                            kind="character"
+                            key={index}
+                            label={`フロント ${frontCharacters.findIndex((item) => item.index === index) + 1}`}
+                            masterId={character.masterId}
+                            meta={character.importance || character.roleMemo}
+                            name={character.name}
+                            onClear={() =>
+                              updateCharacter(index, {
+                                name: "",
+                                masterId: null,
+                              })
+                            }
+                            onClick={() => {
+                              setActiveCharacterIndex(index);
+                              openCandidateBrowser("character");
+                            }}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
 
@@ -1948,23 +2031,28 @@ export function BuildFormSteps({
                       <strong>Sub Member</strong>
                     </div>
                     <div className="formation-board-scroll">
-                    <div className="formation-slot-grid character-slots character-slots--sub">
-                      {subCharacters.map(({ character, index }) => (
-                        <PartSlot
-                          active={safeCharacterIndex === index}
-                          kind="character"
-                          key={index}
-                          label={`サブ ${subCharacters.findIndex((item) => item.index === index) + 1}`}
-                          masterId={character.masterId}
-                          meta={character.importance || character.roleMemo}
-                          name={character.name}
-                          onClear={() => updateCharacter(index, { name: "", masterId: null })}
-                          onClick={() => {
-                            setActiveCharacterIndex(index);
-                            openCandidateBrowser("character");
-                          }}
-                        />
-                      ))}
+                      <div className="formation-slot-grid character-slots character-slots--sub">
+                        {subCharacters.map(({ character, index }) => (
+                          <PartSlot
+                            active={safeCharacterIndex === index}
+                            kind="character"
+                            key={index}
+                            label={`サブ ${subCharacters.findIndex((item) => item.index === index) + 1}`}
+                            masterId={character.masterId}
+                            meta={character.importance || character.roleMemo}
+                            name={character.name}
+                            onClear={() =>
+                              updateCharacter(index, {
+                                name: "",
+                                masterId: null,
+                              })
+                            }
+                            onClick={() => {
+                              setActiveCharacterIndex(index);
+                              openCandidateBrowser("character");
+                            }}
+                          />
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -2080,9 +2168,7 @@ export function BuildFormSteps({
                 </div>
               </div>
 
-              <div
-                className="formation-layout formation-layout--single"
-              >
+              <div className="formation-layout formation-layout--single">
                 <div className="formation-board">
                   <div className="formation-section">
                     <div className="formation-section-title">
@@ -2096,9 +2182,15 @@ export function BuildFormSteps({
                           kind="weapon"
                           label="メイン武器"
                           masterId={mainWeapon.masterId}
-                          meta={mainWeapon.count ? `${mainWeapon.count}本 / ${mainWeapon.importance}` : mainWeapon.importance}
+                          meta={
+                            mainWeapon.count
+                              ? `${mainWeapon.count}本 / ${mainWeapon.importance}`
+                              : mainWeapon.importance
+                          }
                           name={mainWeapon.name}
-                          onClear={() => updateWeapon(0, { name: "", masterId: null })}
+                          onClear={() =>
+                            updateWeapon(0, { name: "", masterId: null })
+                          }
                           onClick={() => {
                             setActiveWeaponIndex(0);
                             openCandidateBrowser("weapon");
@@ -2114,113 +2206,123 @@ export function BuildFormSteps({
                       <strong>Weapon Grid</strong>
                     </div>
                     <div className="formation-board-scroll">
-                    <div className="formation-slot-grid weapon-slots">
-                      {normalWeapons.map(({ weapon, index }) => (
-                        <PartSlot
-                          active={safeWeaponIndex === index}
-                          kind="weapon"
-                          key={index}
-                          label={`武器 ${index + 1}`}
-                          masterId={weapon.masterId}
-                          meta={weapon.count ? `${weapon.count}本 / ${weapon.importance}` : weapon.importance}
-                          name={weapon.name}
-                          onClear={() => updateWeapon(index, { name: "", masterId: null })}
-                          onClick={() => {
-                            setActiveWeaponIndex(index);
-                            openCandidateBrowser("weapon");
-                          }}
-                        />
-                      ))}
-                    </div>
+                      <div className="formation-slot-grid weapon-slots">
+                        {normalWeapons.map(({ weapon, index }) => (
+                          <PartSlot
+                            active={safeWeaponIndex === index}
+                            kind="weapon"
+                            key={index}
+                            label={`武器 ${index + 1}`}
+                            masterId={weapon.masterId}
+                            meta={
+                              weapon.count
+                                ? `${weapon.count}本 / ${weapon.importance}`
+                                : weapon.importance
+                            }
+                            name={weapon.name}
+                            onClear={() =>
+                              updateWeapon(index, { name: "", masterId: null })
+                            }
+                            onClick={() => {
+                              setActiveWeaponIndex(index);
+                              openCandidateBrowser("weapon");
+                            }}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
 
                   <div className="formation-section">
                     <div className="formation-section-title">
                       <span>選択中の武器</span>
-                      <strong>{activeWeapon ? `武器 ${safeWeaponIndex + 1}` : "未選択"}</strong>
+                      <strong>
+                        {activeWeapon
+                          ? `武器 ${safeWeaponIndex + 1}`
+                          : "未選択"}
+                      </strong>
                     </div>
 
-                  {activeWeapon && (
-                    <div className="slot-editor">
-                      <label>
-                        自由入力
-                        <input
-                          onChange={(event) =>
-                            updateWeapon(safeWeaponIndex, {
-                              name: event.target.value,
-                              masterId: null,
-                            })
-                          }
-                          placeholder="候補にない武器名"
-                          value={activeWeapon.name}
-                        />
-                      </label>
-                      <label>
-                        重要度
-                        <select
-                          onChange={(event) =>
-                            updateWeapon(safeWeaponIndex, {
-                              importance: event.target.value,
-                            })
-                          }
-                          value={activeWeapon.importance}
+                    {activeWeapon && (
+                      <div className="slot-editor">
+                        <label>
+                          自由入力
+                          <input
+                            onChange={(event) =>
+                              updateWeapon(safeWeaponIndex, {
+                                name: event.target.value,
+                                masterId: null,
+                              })
+                            }
+                            placeholder="候補にない武器名"
+                            value={activeWeapon.name}
+                          />
+                        </label>
+                        <label>
+                          重要度
+                          <select
+                            onChange={(event) =>
+                              updateWeapon(safeWeaponIndex, {
+                                importance: event.target.value,
+                              })
+                            }
+                            value={activeWeapon.importance}
+                          >
+                            {importanceOptions.map((option) => (
+                              <option key={option}>{option}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          本数
+                          <input
+                            onChange={(event) =>
+                              updateWeapon(safeWeaponIndex, {
+                                count: event.target.value,
+                              })
+                            }
+                            value={activeWeapon.count}
+                          />
+                        </label>
+                        <label>
+                          用途
+                          <input
+                            onChange={(event) =>
+                              updateWeapon(safeWeaponIndex, {
+                                usageMemo: event.target.value,
+                              })
+                            }
+                            value={activeWeapon.usageMemo}
+                          />
+                        </label>
+                        <label>
+                          代用
+                          <input
+                            onChange={(event) =>
+                              updateWeapon(safeWeaponIndex, {
+                                substituteMemo: event.target.value,
+                              })
+                            }
+                            value={activeWeapon.substituteMemo}
+                          />
+                        </label>
+                        <button
+                          className="secondary-button"
+                          onClick={() => openCandidateBrowser("weapon")}
+                          type="button"
                         >
-                          {importanceOptions.map((option) => (
-                            <option key={option}>{option}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        本数
-                        <input
-                          onChange={(event) =>
-                            updateWeapon(safeWeaponIndex, {
-                              count: event.target.value,
-                            })
-                          }
-                          value={activeWeapon.count}
-                        />
-                      </label>
-                      <label>
-                        用途
-                        <input
-                          onChange={(event) =>
-                            updateWeapon(safeWeaponIndex, {
-                              usageMemo: event.target.value,
-                            })
-                          }
-                          value={activeWeapon.usageMemo}
-                        />
-                      </label>
-                      <label>
-                        代用
-                        <input
-                          onChange={(event) =>
-                            updateWeapon(safeWeaponIndex, {
-                              substituteMemo: event.target.value,
-                            })
-                          }
-                          value={activeWeapon.substituteMemo}
-                        />
-                      </label>
-                      <button
-                        className="secondary-button"
-                        onClick={() => openCandidateBrowser("weapon")}
-                        type="button"
-                      >
-                        <Search size={16} />
-                        候補から選ぶ
-                      </button>
-                      <button
-                        className="icon-button danger"
-                        onClick={() => removeWeapon(safeWeaponIndex)}
-                        type="button"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  )}
+                          <Search size={16} />
+                          候補から選ぶ
+                        </button>
+                        <button
+                          className="icon-button danger"
+                          onClick={() => removeWeapon(safeWeaponIndex)}
+                          type="button"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2248,9 +2350,7 @@ export function BuildFormSteps({
                 </div>
               </div>
 
-              <div
-                className="formation-layout formation-layout--single"
-              >
+              <div className="formation-layout formation-layout--single">
                 <div className="formation-board">
                   <div className="formation-section summon-top-grid">
                     <div className="summon-primary-group">
@@ -2259,21 +2359,23 @@ export function BuildFormSteps({
                         <strong>Main Summon</strong>
                       </div>
                       <div className="formation-board-scroll">
-                      <div className="formation-slot-grid summon-primary-slot">
-                        <PartSlot
-                          active={safeSummonIndex === 0}
-                          kind="summon"
-                          label="メイン"
-                          masterId={mainSummon.masterId}
-                          meta={mainSummon.importance}
-                          name={mainSummon.name}
-                          onClear={() => updateSummon(0, { name: "", masterId: null })}
-                          onClick={() => {
-                            setActiveSummonIndex(0);
-                            openCandidateBrowser("summon");
-                          }}
-                        />
-                      </div>
+                        <div className="formation-slot-grid summon-primary-slot">
+                          <PartSlot
+                            active={safeSummonIndex === 0}
+                            kind="summon"
+                            label="メイン"
+                            masterId={mainSummon.masterId}
+                            meta={mainSummon.importance}
+                            name={mainSummon.name}
+                            onClear={() =>
+                              updateSummon(0, { name: "", masterId: null })
+                            }
+                            onClick={() => {
+                              setActiveSummonIndex(0);
+                              openCandidateBrowser("summon");
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -2283,21 +2385,23 @@ export function BuildFormSteps({
                         <strong>Support Summon</strong>
                       </div>
                       <div className="formation-board-scroll">
-                      <div className="formation-slot-grid summon-primary-slot">
-                        <PartSlot
-                          active={safeSummonIndex === 1}
-                          kind="summon"
-                          label="フレンド"
-                          masterId={friendSummon.masterId}
-                          meta={friendSummon.importance}
-                          name={friendSummon.name}
-                          onClear={() => updateSummon(1, { name: "", masterId: null })}
-                          onClick={() => {
-                            setActiveSummonIndex(1);
-                            openCandidateBrowser("summon");
-                          }}
-                        />
-                      </div>
+                        <div className="formation-slot-grid summon-primary-slot">
+                          <PartSlot
+                            active={safeSummonIndex === 1}
+                            kind="summon"
+                            label="フレンド"
+                            masterId={friendSummon.masterId}
+                            meta={friendSummon.importance}
+                            name={friendSummon.name}
+                            onClear={() =>
+                              updateSummon(1, { name: "", masterId: null })
+                            }
+                            onClick={() => {
+                              setActiveSummonIndex(1);
+                              openCandidateBrowser("summon");
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2308,23 +2412,25 @@ export function BuildFormSteps({
                       <strong>Sub Summon</strong>
                     </div>
                     <div className="formation-board-scroll">
-                    <div className="formation-slot-grid summon-slots">
-                      {subSummons.map(({ summon, index }) => (
-                        <PartSlot
-                          active={safeSummonIndex === index}
-                          kind="summon"
-                          key={index}
-                          label={`サブ ${subSummons.findIndex((item) => item.index === index) + 1}`}
-                          masterId={summon.masterId}
-                          meta={summon.importance}
-                          name={summon.name}
-                          onClear={() => updateSummon(index, { name: "", masterId: null })}
-                          onClick={() => {
-                            setActiveSummonIndex(index);
-                            openCandidateBrowser("summon");
-                          }}
-                        />
-                      ))}
+                      <div className="formation-slot-grid summon-slots">
+                        {subSummons.map(({ summon, index }) => (
+                          <PartSlot
+                            active={safeSummonIndex === index}
+                            kind="summon"
+                            key={index}
+                            label={`サブ ${subSummons.findIndex((item) => item.index === index) + 1}`}
+                            masterId={summon.masterId}
+                            meta={summon.importance}
+                            name={summon.name}
+                            onClear={() =>
+                              updateSummon(index, { name: "", masterId: null })
+                            }
+                            onClick={() => {
+                              setActiveSummonIndex(index);
+                              openCandidateBrowser("summon");
+                            }}
+                          />
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -2332,75 +2438,79 @@ export function BuildFormSteps({
                   <div className="formation-section">
                     <div className="formation-section-title">
                       <span>選択中の召喚石</span>
-                      <strong>{activeSummon ? `${activeSummon.position} ${safeSummonIndex + 1}` : "未選択"}</strong>
+                      <strong>
+                        {activeSummon
+                          ? `${activeSummon.position} ${safeSummonIndex + 1}`
+                          : "未選択"}
+                      </strong>
                     </div>
                     {activeSummon && (
                       <div className="slot-editor">
-                      <label>
-                        自由入力
-                        <input
-                          onChange={(event) =>
-                            updateSummon(safeSummonIndex, {
-                              name: event.target.value,
-                              masterId: null,
-                            })
-                          }
-                          placeholder="候補にない召喚石名"
-                          value={activeSummon.name}
-                        />
-                      </label>
-                      <label>
-                        重要度
-                        <select
-                          onChange={(event) =>
-                            updateSummon(safeSummonIndex, {
-                              importance: event.target.value,
-                            })
-                          }
-                          value={activeSummon.importance}
+                        <label>
+                          自由入力
+                          <input
+                            onChange={(event) =>
+                              updateSummon(safeSummonIndex, {
+                                name: event.target.value,
+                                masterId: null,
+                              })
+                            }
+                            placeholder="候補にない召喚石名"
+                            value={activeSummon.name}
+                          />
+                        </label>
+                        <label>
+                          重要度
+                          <select
+                            onChange={(event) =>
+                              updateSummon(safeSummonIndex, {
+                                importance: event.target.value,
+                              })
+                            }
+                            value={activeSummon.importance}
+                          >
+                            {importanceOptions.map((option) => (
+                              <option key={option}>{option}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          用途
+                          <input
+                            onChange={(event) =>
+                              updateSummon(safeSummonIndex, {
+                                usageMemo: event.target.value,
+                              })
+                            }
+                            value={activeSummon.usageMemo}
+                          />
+                        </label>
+                        <label>
+                          代用
+                          <input
+                            onChange={(event) =>
+                              updateSummon(safeSummonIndex, {
+                                substituteMemo: event.target.value,
+                              })
+                            }
+                            value={activeSummon.substituteMemo}
+                          />
+                        </label>
+                        <button
+                          className="secondary-button"
+                          onClick={() => openCandidateBrowser("summon")}
+                          type="button"
                         >
-                          {importanceOptions.map((option) => (
-                            <option key={option}>{option}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        用途
-                        <input
-                          onChange={(event) =>
-                            updateSummon(safeSummonIndex, {
-                              usageMemo: event.target.value,
-                            })
-                          }
-                          value={activeSummon.usageMemo}
-                        />
-                      </label>
-                      <label>
-                        代用
-                        <input
-                          onChange={(event) =>
-                            updateSummon(safeSummonIndex, {
-                              substituteMemo: event.target.value,
-                            })
-                          }
-                          value={activeSummon.substituteMemo}
-                        />
-                      </label>
-                      <button
-                        className="secondary-button"
-                        onClick={() => openCandidateBrowser("summon")}
-                        type="button"
-                      >
-                        <Search size={16} />
-                        候補から選ぶ
-                      </button>
-                      <button
-                        className="icon-button danger"
-                        onClick={() => removeSummon(safeSummonIndex)}
-                        type="button"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                          <Search size={16} />
+                          候補から選ぶ
+                        </button>
+                        <button
+                          className="icon-button danger"
+                          onClick={() => removeSummon(safeSummonIndex)}
+                          type="button"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     )}
                   </div>

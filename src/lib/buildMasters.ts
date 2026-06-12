@@ -62,7 +62,9 @@ export function resolveBuildMasterThumbnailUrl(item: {
     return directUrl;
   }
 
-  const thumbnailPath = cleanOptionalText(item.thumbnailPath ?? item.thumbnail_path);
+  const thumbnailPath = cleanOptionalText(
+    item.thumbnailPath ?? item.thumbnail_path,
+  );
   if (!thumbnailPath || !supabaseStoragePublicBaseUrl) {
     return "";
   }
@@ -71,49 +73,333 @@ export function resolveBuildMasterThumbnailUrl(item: {
 }
 
 export const buildMasterItems: BuildMasterItem[] = [
-  { id: "job-kengo", kind: "job", name: "剣豪", tags: ["奥義", "高難度"] },
-  { id: "job-yamato", kind: "job", name: "ヤマト", tags: ["予兆対応", "高難度"] },
-  { id: "job-manadiver", kind: "job", name: "マナダイバー", tags: ["フルオート", "周回"] },
-  { id: "job-berserker", kind: "job", name: "ベルセルク", tags: ["火力", "周回"] },
-  { id: "job-paladin", kind: "job", name: "パラディン", tags: ["耐久", "高難度"] },
-  { id: "job-robinhood", kind: "job", name: "ロビンフッド", tags: ["弱体", "高難度"] },
-  { id: "job-chaos-ruler", kind: "job", name: "カオスルーダー", tags: ["弱体"] },
-  { id: "job-relic-buster", kind: "job", name: "レリックバスター", tags: ["周回"] },
-  { id: "job-wrestler", kind: "job", name: "レスラー", tags: ["短期", "周回"] },
+  {
+    id: "job-fighter-origin",
+    kind: "job",
+    name: "ファイターオリジン",
+    category: "origin",
+  },
+  {
+    id: "job-lancer-origin",
+    kind: "job",
+    name: "ランサーオリジン",
+    category: "origin",
+  },
 
-  { id: "char-haaselia", kind: "character", name: "ハーゼリーラ", element: "水", rarity: "SSR", thumbnailPath: "characters/haaselia.webp", tags: ["十賢者", "高難度"] },
-  { id: "char-gabriel", kind: "character", name: "ガブリエル", element: "水", rarity: "SSR", thumbnailPath: "characters/gabriel.webp", tags: ["リミテッド", "高難度"] },
-  { id: "char-wamdus", kind: "character", name: "ワムデュス", element: "水", rarity: "SSR", thumbnailPath: "characters/wamdus.webp", tags: ["リミテッド", "耐久"] },
-  { id: "char-satyr", kind: "character", name: "サテュロス", element: "土", rarity: "SSR", thumbnailPath: "characters/satyr.webp", tags: ["耐久"] },
-  { id: "char-okto", kind: "character", name: "オクトー", element: "土", rarity: "SSR", thumbnailPath: "characters/okto.webp", tags: ["十天衆", "奥義"] },
-  { id: "char-caim", kind: "character", name: "カイム", element: "土", rarity: "SSR", thumbnailPath: "characters/caim.webp", tags: ["十賢者", "サブ"] },
-  { id: "char-percival", kind: "character", name: "パーシヴァル", element: "火", rarity: "SSR", thumbnailPath: "characters/percival.webp", tags: ["リミテッド", "周回"] },
-  { id: "char-michael", kind: "character", name: "ミカエル", element: "火", rarity: "SSR", thumbnailPath: "characters/michael.webp", tags: ["リミテッド", "周回"] },
-  { id: "char-wilnas", kind: "character", name: "ウィルナス", element: "火", rarity: "SSR", thumbnailPath: "characters/wilnas.webp", tags: ["リミテッド", "火力"] },
+  { id: "job-viking", kind: "job", name: "ヴァイキング", category: "class5" },
+  {
+    id: "job-paladin",
+    kind: "job",
+    name: "パラディン",
+    category: "class5",
+    tags: ["耐久", "高難度"],
+  },
+  { id: "job-panakeia", kind: "job", name: "パナケイア", category: "class5" },
+  {
+    id: "job-manadiver",
+    kind: "job",
+    name: "マナダイバー",
+    category: "class5",
+    tags: ["フルオート", "周回"],
+  },
+  { id: "job-king", kind: "job", name: "キング", category: "class5" },
+  { id: "job-onmyoji", kind: "job", name: "陰陽師", category: "class5" },
+  { id: "job-sumahihito", kind: "job", name: "スマヒヒト", category: "class5" },
+  { id: "job-boogyman", kind: "job", name: "ブギーマン", category: "class5" },
+  { id: "job-mariachi", kind: "job", name: "マリアッチ", category: "class5" },
 
-  { id: "summon-varuna", kind: "summon", name: "ヴァルナ", element: "水", rarity: "SSR", thumbnailPath: "summons/varuna.webp", tags: ["神石", "メイン"] },
-  { id: "summon-titan", kind: "summon", name: "ティターン", element: "土", rarity: "SSR", thumbnailPath: "summons/titan.webp", tags: ["神石", "メイン"] },
-  { id: "summon-agni", kind: "summon", name: "アグニス", element: "火", rarity: "SSR", thumbnailPath: "summons/agni.webp", tags: ["神石", "メイン"] },
-  { id: "summon-bubz", kind: "summon", name: "ベルゼバブ", element: "無属性", rarity: "SSR", thumbnailPath: "summons/beelzebub.webp", tags: ["高難度", "周回"] },
-  { id: "summon-yatima", kind: "summon", name: "ヤチマ", element: "無属性", rarity: "SSR", thumbnailPath: "summons/yatima.webp", tags: ["高難度"] },
-  { id: "summon-lucifer", kind: "summon", name: "ルシフェル", element: "光", rarity: "SSR", thumbnailPath: "summons/lucifer.webp", tags: ["回復", "耐久"] },
-  { id: "summon-godguard-brodia", kind: "summon", name: "ゴッドガード・ブローディア", element: "土", rarity: "SSR", thumbnailPath: "summons/godguard-brodia.webp", tags: ["防御"] },
-  { id: "summon-sun", kind: "summon", name: "サン", element: "火", rarity: "SSR", thumbnailPath: "summons/sun.webp", tags: ["アーカルム", "周回"] },
+  {
+    id: "job-berserker",
+    kind: "job",
+    name: "ベルセルク",
+    category: "class4",
+    tags: ["火力", "周回"],
+  },
+  { id: "job-sparta", kind: "job", name: "スパルタ", category: "class4" },
+  { id: "job-sage", kind: "job", name: "セージ", category: "class4" },
+  { id: "job-warlock", kind: "job", name: "ウォーロック", category: "class4" },
+  { id: "job-gizoku", kind: "job", name: "義賊", category: "class4" },
+  {
+    id: "job-chaos-ruler",
+    kind: "job",
+    name: "カオスルーダー",
+    category: "class4",
+    tags: ["弱体"],
+  },
+  {
+    id: "job-wrestler",
+    kind: "job",
+    name: "レスラー",
+    category: "class4",
+    tags: ["短期", "周回"],
+  },
+  {
+    id: "job-hound-dog",
+    kind: "job",
+    name: "ハウンドドッグ",
+    category: "class4",
+  },
+  { id: "job-elusion", kind: "job", name: "エリュシオン", category: "class4" },
+  { id: "job-apsaras", kind: "job", name: "アプサラス", category: "class4" },
+  { id: "job-chrysaur", kind: "job", name: "クリュサオル", category: "class4" },
+  {
+    id: "job-lumberjack",
+    kind: "job",
+    name: "ランバージャック",
+    category: "class4",
+  },
+  { id: "job-cavalry", kind: "job", name: "キャバルリー", category: "class4" },
+  { id: "job-monk", kind: "job", name: "モンク", category: "class4" },
+  {
+    id: "job-robinhood",
+    kind: "job",
+    name: "ロビンフッド",
+    category: "class4",
+    tags: ["弱体", "高難度"],
+  },
+  {
+    id: "job-relic-buster",
+    kind: "job",
+    name: "レリックバスター",
+    category: "class4",
+    tags: ["周回"],
+  },
+  {
+    id: "job-yamato",
+    kind: "job",
+    name: "ヤマト",
+    category: "class4",
+    tags: ["予兆対応", "高難度"],
+  },
+  {
+    id: "job-shield-sworn",
+    kind: "job",
+    name: "シールドスウォーン",
+    category: "class4",
+  },
 
-  { id: "weapon-ultima", kind: "weapon", name: "オメガ武器", element: "無属性", rarity: "SSR", series: "オメガ", thumbnailPath: "weapons/omega.webp", tags: ["高難度"] },
-  { id: "weapon-dark-opus", kind: "weapon", name: "終末武器", element: "可変", rarity: "SSR", series: "終末", thumbnailPath: "weapons/dark-opus.webp", tags: ["必須級"] },
-  { id: "weapon-kyokusei", kind: "weapon", name: "極星器", element: "無属性", rarity: "SSR", series: "極星器", thumbnailPath: "weapons/kyokusei.webp", tags: ["周回"] }
+  { id: "job-doctor", kind: "job", name: "ドクター", category: "ex2" },
+  { id: "job-magic-warrior", kind: "job", name: "魔法戦士", category: "ex2" },
+  {
+    id: "job-kengo",
+    kind: "job",
+    name: "剣豪",
+    category: "ex2",
+    tags: ["奥義", "高難度"],
+  },
+  { id: "job-the-glory", kind: "job", name: "ザ・グローリー", category: "ex2" },
+  { id: "job-soldier", kind: "job", name: "ソルジャー", category: "ex2" },
+  { id: "job-black-cat-doshi", kind: "job", name: "黒猫道士", category: "ex2" },
+  { id: "job-tormentor", kind: "job", name: "トーメンター", category: "ex2" },
+  {
+    id: "job-rising-force",
+    kind: "job",
+    name: "ライジングフォース",
+    category: "ex2",
+  },
+  { id: "job-masquerade", kind: "job", name: "マスカレード", category: "ex2" },
+
+  {
+    id: "char-haaselia",
+    kind: "character",
+    name: "ハーゼリーラ",
+    element: "水",
+    rarity: "SSR",
+    thumbnailPath: "characters/haaselia.webp",
+    tags: ["十賢者", "高難度"],
+  },
+  {
+    id: "char-gabriel",
+    kind: "character",
+    name: "ガブリエル",
+    element: "水",
+    rarity: "SSR",
+    thumbnailPath: "characters/gabriel.webp",
+    tags: ["リミテッド", "高難度"],
+  },
+  {
+    id: "char-wamdus",
+    kind: "character",
+    name: "ワムデュス",
+    element: "水",
+    rarity: "SSR",
+    thumbnailPath: "characters/wamdus.webp",
+    tags: ["リミテッド", "耐久"],
+  },
+  {
+    id: "char-satyr",
+    kind: "character",
+    name: "サテュロス",
+    element: "土",
+    rarity: "SSR",
+    thumbnailPath: "characters/satyr.webp",
+    tags: ["耐久"],
+  },
+  {
+    id: "char-okto",
+    kind: "character",
+    name: "オクトー",
+    element: "土",
+    rarity: "SSR",
+    thumbnailPath: "characters/okto.webp",
+    tags: ["十天衆", "奥義"],
+  },
+  {
+    id: "char-caim",
+    kind: "character",
+    name: "カイム",
+    element: "土",
+    rarity: "SSR",
+    thumbnailPath: "characters/caim.webp",
+    tags: ["十賢者", "サブ"],
+  },
+  {
+    id: "char-percival",
+    kind: "character",
+    name: "パーシヴァル",
+    element: "火",
+    rarity: "SSR",
+    thumbnailPath: "characters/percival.webp",
+    tags: ["リミテッド", "周回"],
+  },
+  {
+    id: "char-michael",
+    kind: "character",
+    name: "ミカエル",
+    element: "火",
+    rarity: "SSR",
+    thumbnailPath: "characters/michael.webp",
+    tags: ["リミテッド", "周回"],
+  },
+  {
+    id: "char-wilnas",
+    kind: "character",
+    name: "ウィルナス",
+    element: "火",
+    rarity: "SSR",
+    thumbnailPath: "characters/wilnas.webp",
+    tags: ["リミテッド", "火力"],
+  },
+
+  {
+    id: "summon-varuna",
+    kind: "summon",
+    name: "ヴァルナ",
+    element: "水",
+    rarity: "SSR",
+    thumbnailPath: "summons/varuna.webp",
+    tags: ["神石", "メイン"],
+  },
+  {
+    id: "summon-titan",
+    kind: "summon",
+    name: "ティターン",
+    element: "土",
+    rarity: "SSR",
+    thumbnailPath: "summons/titan.webp",
+    tags: ["神石", "メイン"],
+  },
+  {
+    id: "summon-agni",
+    kind: "summon",
+    name: "アグニス",
+    element: "火",
+    rarity: "SSR",
+    thumbnailPath: "summons/agni.webp",
+    tags: ["神石", "メイン"],
+  },
+  {
+    id: "summon-bubz",
+    kind: "summon",
+    name: "ベルゼバブ",
+    element: "無属性",
+    rarity: "SSR",
+    thumbnailPath: "summons/beelzebub.webp",
+    tags: ["高難度", "周回"],
+  },
+  {
+    id: "summon-yatima",
+    kind: "summon",
+    name: "ヤチマ",
+    element: "無属性",
+    rarity: "SSR",
+    thumbnailPath: "summons/yatima.webp",
+    tags: ["高難度"],
+  },
+  {
+    id: "summon-lucifer",
+    kind: "summon",
+    name: "ルシフェル",
+    element: "光",
+    rarity: "SSR",
+    thumbnailPath: "summons/lucifer.webp",
+    tags: ["回復", "耐久"],
+  },
+  {
+    id: "summon-godguard-brodia",
+    kind: "summon",
+    name: "ゴッドガード・ブローディア",
+    element: "土",
+    rarity: "SSR",
+    thumbnailPath: "summons/godguard-brodia.webp",
+    tags: ["防御"],
+  },
+  {
+    id: "summon-sun",
+    kind: "summon",
+    name: "サン",
+    element: "火",
+    rarity: "SSR",
+    thumbnailPath: "summons/sun.webp",
+    tags: ["アーカルム", "周回"],
+  },
+
+  {
+    id: "weapon-ultima",
+    kind: "weapon",
+    name: "オメガ武器",
+    element: "無属性",
+    rarity: "SSR",
+    series: "オメガ",
+    thumbnailPath: "weapons/omega.webp",
+    tags: ["高難度"],
+  },
+  {
+    id: "weapon-dark-opus",
+    kind: "weapon",
+    name: "終末武器",
+    element: "可変",
+    rarity: "SSR",
+    series: "終末",
+    thumbnailPath: "weapons/dark-opus.webp",
+    tags: ["必須級"],
+  },
+  {
+    id: "weapon-kyokusei",
+    kind: "weapon",
+    name: "極星器",
+    element: "無属性",
+    rarity: "SSR",
+    series: "極星器",
+    thumbnailPath: "weapons/kyokusei.webp",
+    tags: ["周回"],
+  },
 ];
 
 export const buildMasterOptions = {
   characters: buildMasterItems.filter((item) => item.kind === "character"),
   summons: buildMasterItems.filter((item) => item.kind === "summon"),
   weapons: buildMasterItems.filter((item) => item.kind === "weapon"),
-  jobs: buildMasterItems.filter((item) => item.kind === "job")
+  jobs: buildMasterItems.filter((item) => item.kind === "job"),
 };
 
 function isBuildMasterKind(kind: GbfMasterKind): kind is BuildMasterKind {
-  return kind === "character" || kind === "summon" || kind === "weapon" || kind === "job";
+  return (
+    kind === "character" ||
+    kind === "summon" ||
+    kind === "weapon" ||
+    kind === "job"
+  );
 }
 
 function optionalText(value: string | null | undefined) {
@@ -121,7 +407,10 @@ function optionalText(value: string | null | undefined) {
   return text || undefined;
 }
 
-function metadataText(metadata: Record<string, unknown> | undefined, key: string) {
+function metadataText(
+  metadata: Record<string, unknown> | undefined,
+  key: string,
+) {
   const value = metadata?.[key];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -139,13 +428,19 @@ function aliasMap(aliases: GbfMasterAlias[] | undefined) {
       continue;
     }
 
-    byMasterId.set(alias.masterItemId, [...(byMasterId.get(alias.masterItemId) ?? []), text]);
+    byMasterId.set(alias.masterItemId, [
+      ...(byMasterId.get(alias.masterItemId) ?? []),
+      text,
+    ]);
   }
 
   return byMasterId;
 }
 
-function normalizeDbMasterItem(item: ApiGbfMasterItem, aliases: string[]): BuildMasterItem | null {
+function normalizeDbMasterItem(
+  item: ApiGbfMasterItem,
+  aliases: string[],
+): BuildMasterItem | null {
   if (!item.isActive || !isBuildMasterKind(item.kind)) {
     return null;
   }
@@ -168,7 +463,7 @@ function normalizeDbMasterItem(item: ApiGbfMasterItem, aliases: string[]): Build
     thumbnailUrl: optionalText(item.thumbnailUrl),
     thumbnailPath: optionalText(item.thumbnailPath),
     description: optionalText(item.description),
-    note: optionalText(item.note)
+    note: optionalText(item.note),
   };
 }
 
@@ -185,10 +480,12 @@ function sortMasterItems(items: BuildMasterItem[]) {
 
 function toBuildMasterOptions(items: BuildMasterItem[]): BuildMasterOptions {
   return {
-    characters: sortMasterItems(items.filter((item) => item.kind === "character")),
+    characters: sortMasterItems(
+      items.filter((item) => item.kind === "character"),
+    ),
     summons: sortMasterItems(items.filter((item) => item.kind === "summon")),
     weapons: sortMasterItems(items.filter((item) => item.kind === "weapon")),
-    jobs: sortMasterItems(items.filter((item) => item.kind === "job"))
+    jobs: sortMasterItems(items.filter((item) => item.kind === "job")),
   };
 }
 
@@ -200,7 +497,7 @@ function buildCatalogIndexes(items: BuildMasterItem[]) {
     ["character", []],
     ["summon", []],
     ["weapon", []],
-    ["job", []]
+    ["job", []],
   ]);
 
   for (const item of items) {
@@ -232,7 +529,10 @@ export function createBuildMasterCatalog(
 
   const aliasesByMasterId = aliasMap(dbAliases);
   for (const item of dbItems ?? []) {
-    const normalized = normalizeDbMasterItem(item, aliasesByMasterId.get(item.id) ?? []);
+    const normalized = normalizeDbMasterItem(
+      item,
+      aliasesByMasterId.get(item.id) ?? [],
+    );
     if (!normalized) {
       continue;
     }
@@ -257,7 +557,7 @@ export function createBuildMasterCatalog(
         indexes.byKindAndName.get(kindAndValueKey(kind, normalized)) ??
         indexes.byKindAndAlias.get(kindAndValueKey(kind, normalized))
       );
-    }
+    },
   };
 }
 
@@ -278,7 +578,8 @@ export function findBuildMasterInCatalog(
 ) {
   const id = masterId?.trim();
   if (id) {
-    const byId = catalog.byId.get(id) ?? fallbackBuildMasterCatalog.byId.get(id);
+    const byId =
+      catalog.byId.get(id) ?? fallbackBuildMasterCatalog.byId.get(id);
     if (byId?.kind === kind) {
       return byId;
     }
