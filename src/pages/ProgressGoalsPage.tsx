@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ChevronDown, CircleAlert, ListChecks, Plus, Trash2 } from "lucide-react";
 import { api, type ProgressGoal, type ProgressPreset } from "../lib/api";
+import "./ProgressGoalsPage.css";
 
 export function ProgressGoalsPage() {
   const [presets, setPresets] = useState<ProgressPreset[]>([]);
@@ -108,6 +109,6 @@ export function ProgressGoalsPage() {
       </div>
     </section>
 
-    <section className="panel"><div className="section-heading"><div><p className="eyebrow">Preset status</p><h2>プリセットデータ</h2></div></div><div className="preset-chip-list">{presets.map((preset) => <div className="preset-chip" key={preset.id}><div><strong>{preset.name}</strong><span>{preset.targets.length ? `${preset.targetLabel}を選択` : "対象を確認中"}・{preset.stages.map((stage) => stage.name).join(" / ")}</span><small>{preset.isAvailable ? "利用可能" : `確認中：${preset.unavailableReason}`}</small></div></div>)}</div></section>
+    <section className="panel"><div className="section-heading"><div><p className="eyebrow">Preset status</p><h2>プリセットデータ</h2></div></div><div className="preset-chip-list progress-preset-list">{presets.map((preset) => <div className="preset-chip" key={preset.id}><div><strong>{preset.name}</strong><span>{preset.targets.length ? `${preset.targetLabel}を選択` : "対象を確認中"}・{preset.stages.map((stage) => stage.name).join(" / ")}</span><small>{preset.isAvailable ? "利用可能" : `確認中：${preset.unavailableReason}`}</small></div></div>)}</div></section>
   </div>;
 }
