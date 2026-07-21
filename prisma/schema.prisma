@@ -85,6 +85,9 @@ model User {
   tasks        Task[]
   materialGoals MaterialGoal[]
   materialPresets MaterialPreset[]
+  progressGoals ProgressGoal[]
+  itemInventories UserItemInventory[]
+  progressSharedValues UserProgressSharedValue[]
   buildPosts   BuildPost[]
   guildWarGoalPlans GuildWarGoalPlan[]
   sharedGoals  SharedGoal[] @relation("SharedGoalOwner")
@@ -165,6 +168,86 @@ model MaterialPresetItem {
   updatedAt     DateTime       @updatedAt
 
   @@index([presetId])
+}
+
+model ProgressGoal {
+  id              String                     @id @default(cuid())
+  presetId        String                     @map("preset_id")
+  presetVersion   Int                        @map("preset_version")
+  presetName      String                     @map("preset_name")
+  targetId        String                     @map("target_id")
+  targetName      String                     @map("target_name")
+  selection       Json                       @default("{}")
+  goalStageId     String                     @map("goal_stage_id")
+  startingStageId String?                    @map("starting_stage_id")
+  ownerId         String                     @map("owner_id")
+  owner           User                       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  stages          ProgressStageProgress[]
+  conditions      ProgressConditionProgress[]
+  createdAt       DateTime                   @default(now()) @map("created_at")
+  updatedAt       DateTime                   @updatedAt @map("updated_at")
+
+  @@index([ownerId, updatedAt])
+  @@index([ownerId, presetId, targetId, goalStageId])
+  @@map("progress_goals")
+}
+
+model UserItemInventory {
+  id        String   @id @default(cuid())
+  ownerId   String   @map("owner_id")
+  itemKey   String   @map("item_key")
+  itemName  String   @map("item_name")
+  ownedCount Int     @default(0) @map("owned_count")
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerId, itemKey])
+  @@index([ownerId, itemName])
+  @@map("user_item_inventories")
+}
+
+model UserProgressSharedValue {
+  id        String   @id @default(cuid())
+  ownerId   String   @map("owner_id")
+  valueKey  String   @map("value_key")
+  value     Int      @default(0)
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerId, valueKey])
+  @@map("user_progress_shared_values")
+}
+
+model ProgressStageProgress {
+  id              String       @id @default(cuid())
+  goalId          String       @map("goal_id")
+  stageId         String       @map("stage_id")
+  isManuallyDone  Boolean      @default(false) @map("is_manually_done")
+  completedAt     DateTime?    @map("completed_at")
+  goal            ProgressGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  @@unique([goalId, stageId])
+  @@index([goalId])
+  @@map("progress_stage_progresses")
+}
+
+model ProgressConditionProgress {
+  id          String       @id @default(cuid())
+  goalId      String       @map("goal_id")
+  conditionId String       @map("condition_id")
+  isChecked   Boolean      @default(false) @map("is_checked")
+  numericValue Int?        @map("numeric_value")
+  goal        ProgressGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@unique([goalId, conditionId])
+  @@index([goalId])
+  @@map("progress_condition_progresses")
 }
 
 model BuildPost {

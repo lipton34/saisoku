@@ -9,6 +9,7 @@ import { GuildWarGoalsPage } from "./pages/GuildWarGoalsPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { MaterialsPage } from "./pages/MaterialsPage";
+import { ProgressGoalsPage } from "./pages/ProgressGoalsPage";
 import { OfficialNewsPage } from "./pages/OfficialNewsPage";
 import { RoadmapPage } from "./pages/RoadmapPage";
 import { TasksPage } from "./pages/TasksPage";
@@ -30,6 +31,7 @@ export function App() {
           <Route path="/goals/:goalId" element={<GoalDetailPage />} />
           <Route path="/guild-war-goals" element={<GuildWarGoalsPage />} />
           <Route path="/materials" element={<MaterialsPage />} />
+          <Route path="/progress-goals" element={<ProgressGoalsPage />} />
           <Route path="/official-news" element={<OfficialNewsPage />} />
           <Route path="/roadmap" element={<RoadmapPage />} />
           <Route path="/tasks" element={<TasksPage />} />

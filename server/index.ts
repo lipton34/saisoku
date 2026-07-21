@@ -13,6 +13,7 @@ import { eventNotesRouter } from "./routes/eventNotes.js";
 import { eventSeriesRouter } from "./routes/eventSeries.js";
 import { guildWarGoalsRouter } from "./routes/guildWarGoals.js";
 import { materialGoalsRouter } from "./routes/materialGoals.js";
+import { progressGoalsRouter } from "./routes/progressGoals.js";
 import {
   newsFetchLogsRouter,
   newsItemsRouter,
@@ -55,6 +56,7 @@ app.use("/api/event-occurrences", eventOccurrencesRouter);
 app.use("/api/event-series", eventSeriesRouter);
 app.use("/api/guild-war-goals", guildWarGoalsRouter);
 app.use("/api/material-goals", materialGoalsRouter);
+app.use("/api/progress-goals", progressGoalsRouter);
 app.use("/api/news", officialNewsRouter);
 app.use("/api/news-fetch-logs", newsFetchLogsRouter);
 app.use("/api/news-items", newsItemsRouter);

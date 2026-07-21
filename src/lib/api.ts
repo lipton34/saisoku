@@ -233,6 +233,63 @@ export type MaterialPreset = {
   updatedAt: string;
 };
 
+export type ProgressPreset = {
+  id: string;
+  version: number;
+  name: string;
+  targetLabel: string;
+  selectionLabel?: string;
+  selectionOptions?: string[];
+  targets: { id: string; name: string }[];
+  stages: { id: string; name: string }[];
+  isAvailable: boolean;
+  unavailableReason?: string;
+};
+
+export type ProgressGoalStage = {
+  id: string;
+  name: string;
+  isManuallyDone: boolean;
+  isEligible: boolean;
+  isDone: boolean;
+  requirements: {
+    itemKey: string;
+    itemName: string;
+    requiredCount: number;
+    ownedCount: number;
+    shortage: number;
+    isMet: boolean;
+  }[];
+  conditions: {
+    id: string;
+    label: string;
+    kind: "check" | "shared-number" | "goal-number";
+    requiredValue?: number;
+    sharedValueKey?: string;
+    note?: string;
+    numericValue: number;
+    isChecked: boolean;
+    isMet: boolean;
+  }[];
+};
+
+export type ProgressGoal = {
+  id: string;
+  preset: ProgressPreset;
+  targetId: string;
+  targetName: string;
+  selection: Record<string, unknown>;
+  goalStageId: string;
+  startingStageId: string | null;
+  stages: ProgressGoalStage[];
+  completedCount: number;
+  totalStageCount: number;
+  progressRate: number;
+  currentStage: ProgressGoalStage | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type GuildWarGoalDay = {
   id: string;
   dayLabel: string;
@@ -929,6 +986,17 @@ export const api = {
     }),
   deleteMaterialPreset: (presetId: string) =>
     request<void>(`/api/material-goals/presets/${presetId}`, { method: "DELETE" }),
+  progressPresets: () => request<{ presets: ProgressPreset[] }>("/api/progress-goals/presets"),
+  progressGoals: () => request<{ goals: ProgressGoal[] }>("/api/progress-goals"),
+  createProgressGoal: (goal: { presetId: string; targetId: string; goalStageId: string; startingStageId?: string; selection?: Record<string, string> }) =>
+    request<{ goal: ProgressGoal }>("/api/progress-goals", { method: "POST", json: goal }),
+  updateProgressInventory: (goalId: string, itemKey: string, ownedCount: number) =>
+    request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/inventory/${encodeURIComponent(itemKey)}`, { method: "PATCH", json: { ownedCount } }),
+  updateProgressCondition: (goalId: string, conditionId: string, value: { isChecked?: boolean; numericValue?: number }) =>
+    request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/conditions/${encodeURIComponent(conditionId)}`, { method: "PATCH", json: value }),
+  completeProgressStage: (goalId: string, stageId: string) =>
+    request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/stages/${encodeURIComponent(stageId)}/complete`, { method: "POST" }),
+  deleteProgressGoal: (goalId: string) => request<void>(`/api/progress-goals/${goalId}`, { method: "DELETE" }),
   guildWarGoalPlan: () =>
     request<{ plan: GuildWarGoalPlan; bossMasters: GuildWarBossMaster[] }>("/api/guild-war-goals/current"),
   saveGuildWarGoalPlan: (plan: GuildWarGoalPayload) =>

@@ -4,6 +4,7 @@ import {
   Flag,
   Flame,
   LogOut,
+  ListChecks,
   Map,
   Newspaper,
   PanelLeftClose,
@@ -63,6 +64,10 @@ export function AppShell() {
           <NavLink to="/materials">
             <Boxes size={18} />
             <span className="sidebar-label">素材メモ</span>
+          </NavLink>
+          <NavLink to="/progress-goals">
+            <ListChecks size={18} />
+            <span className="sidebar-label">必要数の進捗</span>
           </NavLink>
           <NavLink to="/goals">
             <Flag size={18} />
