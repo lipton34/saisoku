@@ -130,6 +130,8 @@ Storage操作には `SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が必要。s
 - `docs/20_goal_board_feature.md`: 目標ボードPhase 2
 - `docs/21_goal_links_feature.md`: 目標連結Phase 3
 - `docs/22_修正.md`: `/goals` のカンバン中心UI
+- `docs/23_progress_preset_feature.md`: 必要数の進捗・素材収集プリセット機能の正本
+- `docs/preset.md`: 素材数、対象、出典の調査資料
 
 ### 技術的な注意
 

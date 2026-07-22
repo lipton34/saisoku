@@ -28,6 +28,8 @@ Before feature work, read documents in this order:
 4. `README.md` and `HANDOFF.md`
 5. the current code, Prisma schema, migrations, and recent Git history
 
+For any change to `/progress-goals`, progress preset definitions, staged material calculations, or user progress inventory, `docs/23_progress_preset_feature.md` is the required feature specification and must be read before `docs/preset.md`. Keep behavior decisions in that specification; use `docs/preset.md` for researched material counts and sources.
+
 `docs/01_overall_policy.md` is the product baseline for scope, image handling, external references, and Supabase Free constraints. Later feature documents can refine that baseline, such as allowing a small number of build screenshots, but must not silently discard its intent.
 
 If requirements conflict, stop before changing code and summarize the exact conflict. Do not resolve a material product contradiction by assumption.
