@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { findProgressPreset, type ProgressCondition, type ProgressPreset, type ProgressStage, progressPresets } from "../data/progressPresets.js";
+import { findProgressPreset, type ProgressCondition, type ProgressPreset, resolveProgressPreset, progressPresets } from "../data/progressPresets.js";
+import { calculateProgress, collectRequiredStageIds, isStageDone, validateCompletedStageIds } from "../lib/progressEngine.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
 
@@ -15,6 +16,12 @@ function ownerId(req: Parameters<Parameters<typeof router.get>[1]>[0]) {
 function parseCount(value: unknown) {
   const count = Number(value);
   return Number.isInteger(count) && count >= 0 && count <= MAX_COUNT ? count : null;
+}
+
+function parseStringArray(value: unknown) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? [...new Set(value)]
+    : null;
 }
 
 function stageFor(preset: ProgressPreset, stageId: string) {
@@ -38,50 +45,86 @@ function publicPreset(preset: ProgressPreset) {
     selectionLabel: preset.selectionLabel,
     selectionOptions: preset.selectionOptions,
     targets: preset.targets,
-    stages: preset.stages.map(({ id, name }) => ({ id, name })),
+    groups: preset.groups,
+    stages: preset.stages.map(({ id, name, groupId, kind, dependsOn, note }) => ({ id, name, groupId, kind, dependsOn, note })),
     isAvailable: preset.isAvailable,
     unavailableReason: preset.unavailableReason
   };
 }
 
-function stageState(
-  stage: ProgressStage,
-  isManuallyDone: boolean,
-  inventory: Map<string, number>,
-  conditions: Map<string, { isChecked: boolean; numericValue: number | null }>,
-  sharedValues: Map<string, number>
-) {
-  const requirements = stage.requirements.map((requirement) => {
-    const ownedCount = inventory.get(requirement.itemKey) ?? 0;
-    return { ...requirement, ownedCount, shortage: Math.max(requirement.requiredCount - ownedCount, 0), isMet: ownedCount >= requirement.requiredCount };
-  });
-  const conditionState = stage.conditions.map((condition) => {
-    const saved = conditions.get(condition.id);
-    const numericValue = condition.kind === "shared-number" ? sharedValues.get(condition.sharedValueKey ?? "") ?? 0 : saved?.numericValue ?? 0;
-    const isMet = condition.kind === "check" ? saved?.isChecked === true : numericValue >= (condition.requiredValue ?? 0);
-    return { ...condition, numericValue, isChecked: saved?.isChecked ?? false, isMet };
-  });
-  const isEligible = requirements.length + conditionState.length > 0 && requirements.every((item) => item.isMet) && conditionState.every((item) => item.isMet);
-  return { requirements, conditions: conditionState, isManuallyDone, isEligible, isDone: isManuallyDone };
+function definitionForGoal(goal: { presetId: string; presetVersion: number; targetId: string }) {
+  const base = findProgressPreset(goal.presetId, goal.presetVersion);
+  return base ? resolveProgressPreset(base, goal.targetId) : undefined;
 }
 
-async function serializeGoal(goal: Awaited<ReturnType<typeof findGoal>>) {
-  if (!goal) return null;
-  const preset = findProgressPreset(goal.presetId);
-  if (!preset) {
-    return { ...goal, error: "プリセット定義が見つかりません" };
+function conditionState(
+  condition: ProgressCondition,
+  saved: { isChecked: boolean; numericValue: number | null } | undefined,
+  sharedValues: Map<string, number>
+) {
+  const numericValue = condition.kind === "shared-number"
+    ? sharedValues.get(condition.sharedValueKey ?? "") ?? 0
+    : saved?.numericValue ?? 0;
+  const isMet = condition.kind === "check"
+    ? saved?.isChecked === true
+    : numericValue >= (condition.requiredValue ?? 0);
+  return { ...condition, numericValue, isChecked: saved?.isChecked ?? false, isMet };
+}
+
+type GoalRecord = NonNullable<Awaited<ReturnType<typeof findGoal>>>;
+
+async function serializeGoal(
+  goal: GoalRecord,
+  options: {
+    targetStageId?: string;
+    completedStageIds?: string[];
+    inventoryOverrides?: Map<string, number>;
+  } = {}
+) {
+  const preset = definitionForGoal(goal);
+  if (!preset) return { ...goal, error: "保存時のプリセット定義が見つかりません" };
+
+  const finalRequiredIds = new Set(collectRequiredStageIds(preset, goal.goalStageId));
+  const targetStageId = options.targetStageId ?? goal.goalStageId;
+  if (!finalRequiredIds.has(targetStageId)) {
+    throw new Error("目標中継点が最終ゴールの依存関係に含まれていません");
   }
+
   const [inventories, sharedValues] = await Promise.all([
     prisma.userItemInventory.findMany({ where: { ownerId: goal.ownerId } }),
     prisma.userProgressSharedValue.findMany({ where: { ownerId: goal.ownerId } })
   ]);
   const inventory = new Map(inventories.map((item) => [item.itemKey, item.ownedCount]));
+  for (const [itemKey, ownedCount] of options.inventoryOverrides ?? []) inventory.set(itemKey, ownedCount);
+
+  const completedIds = new Set(options.completedStageIds ?? goal.stages.filter((item) => item.isManuallyDone).map((item) => item.stageId));
   const conditionProgress = new Map(goal.conditions.map((item) => [item.conditionId, { isChecked: item.isChecked, numericValue: item.numericValue }]));
-  const stageProgress = new Map(goal.stages.map((item) => [item.stageId, item.isManuallyDone]));
   const shared = new Map(sharedValues.map((item) => [item.valueKey, item.value]));
-  const stages = preset.stages.map((stage) => ({ ...stage, ...stageState(stage, stageProgress.get(stage.id) ?? false, inventory, conditionProgress, shared) }));
-  const completedCount = stages.filter((stage) => stage.isDone).length;
-  const currentStage = stages.find((stage) => !stage.isDone) ?? null;
+  const calculation = calculateProgress(preset, targetStageId, completedIds, inventory);
+
+  const stages = preset.stages.map((stage) => {
+    const requirements = stage.requirements.map((requirement) => {
+      const ownedCount = inventory.get(requirement.itemKey) ?? 0;
+      return { ...requirement, ownedCount, shortage: Math.max(requirement.requiredCount - ownedCount, 0), isMet: ownedCount >= requirement.requiredCount };
+    });
+    const conditions = stage.conditions.map((condition) => conditionState(condition, conditionProgress.get(condition.id), shared));
+    const missingDependencyIds = collectRequiredStageIds(preset, stage.id)
+      .filter((id) => id !== stage.id && stageFor(preset, id)?.kind === "stage" && !completedIds.has(id));
+    return {
+      ...stage,
+      requirements,
+      conditions,
+      isManuallyDone: stage.kind === "stage" && completedIds.has(stage.id),
+      isDone: isStageDone(stage, completedIds),
+      canComplete: stage.kind === "stage" && missingDependencyIds.length === 0,
+      missingDependencyIds
+    };
+  });
+
+  const finalNormalStages = preset.stages.filter((stage) => finalRequiredIds.has(stage.id) && stage.kind === "stage");
+  const completedCount = finalNormalStages.filter((stage) => completedIds.has(stage.id)).length;
+  const currentStage = finalNormalStages.find((stage) => !completedIds.has(stage.id)) ?? null;
+
   return {
     id: goal.id,
     preset: publicPreset(preset),
@@ -89,14 +132,18 @@ async function serializeGoal(goal: Awaited<ReturnType<typeof findGoal>>) {
     targetName: goal.targetName,
     selection: goal.selection,
     goalStageId: goal.goalStageId,
+    targetStageId,
+    availableTargetStageIds: [...finalRequiredIds],
     startingStageId: goal.startingStageId,
     createdAt: goal.createdAt,
     updatedAt: goal.updatedAt,
     stages,
+    completedStageIds: [...completedIds],
     completedCount,
-    totalStageCount: stages.length,
-    progressRate: stages.length ? Math.round((completedCount / stages.length) * 100) : 0,
-    currentStage
+    totalStageCount: finalNormalStages.length,
+    progressRate: finalNormalStages.length ? Math.round((completedCount / finalNormalStages.length) * 100) : 0,
+    currentStage,
+    calculation
   };
 }
 
@@ -118,35 +165,55 @@ router.get("/", async (req, res, next) => {
       include: { stages: true, conditions: true },
       orderBy: { updatedAt: "desc" }
     });
-    res.json({ goals: (await Promise.all(goals.map(serializeGoal))).filter(Boolean) });
+    res.json({ goals: await Promise.all(goals.map((goal) => serializeGoal(goal))) });
   } catch (error) { next(error); }
 });
 
 router.get("/:id", async (req, res, next) => {
   try {
-    const goal = await serializeGoal(await findGoal(req.params.id, ownerId(req)));
-    if (!goal) return res.status(404).json({ message: "進捗目標が見つかりません" });
-    res.json({ goal });
-  } catch (error) { next(error); }
+    const record = await findGoal(req.params.id, ownerId(req));
+    if (!record) return res.status(404).json({ message: "進捗目標が見つかりません" });
+    const targetStageId = typeof req.query.targetStageId === "string" ? req.query.targetStageId : undefined;
+    res.json({ goal: await serializeGoal(record, { targetStageId }) });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("目標中継点")) return res.status(400).json({ message: error.message });
+    next(error);
+  }
 });
 
 router.post("/", async (req, res, next) => {
   try {
-    const preset = findProgressPreset(typeof req.body.presetId === "string" ? req.body.presetId : "");
-    if (!preset) return res.status(400).json({ message: "プリセットを選択してください" });
-    if (!preset.isAvailable) return res.status(409).json({ message: `${preset.name}は${preset.unavailableReason ?? "準備中"}のため、まだ登録できません` });
-    const target = preset.targets.find((item) => item.id === req.body.targetId);
-    const goalStage = stageFor(preset, req.body.goalStageId);
-    const startingStage = req.body.startingStageId ? stageFor(preset, req.body.startingStageId) : undefined;
-    if (!target || !goalStage || (req.body.startingStageId && !startingStage)) return res.status(400).json({ message: "対象または段階の選択が不正です" });
-    const startIndex = startingStage ? preset.stages.findIndex((stage) => stage.id === startingStage.id) : -1;
+    const base = findProgressPreset(typeof req.body.presetId === "string" ? req.body.presetId : "");
+    if (!base) return res.status(400).json({ message: "プリセットを選択してください" });
+    if (!base.isAvailable) return res.status(409).json({ message: `${base.name}は${base.unavailableReason ?? "準備中"}のため、まだ登録できません` });
+    const target = base.targets.find((item) => item.id === req.body.targetId);
+    if (!target) return res.status(400).json({ message: "対象の選択が不正です" });
+    const preset = resolveProgressPreset(base, target.id);
+    const goalStage = stageFor(preset, typeof req.body.goalStageId === "string" ? req.body.goalStageId : preset.stages.at(-1)?.id ?? "");
+    if (!goalStage) return res.status(400).json({ message: "最終ゴールの選択が不正です" });
+
+    let completedStageIds = parseStringArray(req.body.completedStageIds) ?? [];
+    if (!completedStageIds.length && typeof req.body.startingStageId === "string") {
+      completedStageIds = collectRequiredStageIds(preset, req.body.startingStageId)
+        .filter((id) => stageFor(preset, id)?.kind === "stage");
+    }
+    const dependencyErrors = validateCompletedStageIds(preset, completedStageIds);
+    if (dependencyErrors.length) return res.status(409).json({ message: "前提中継点が未完了です", errors: dependencyErrors });
+
     const goal = await prisma.progressGoal.create({
       data: {
-        presetId: preset.id, presetVersion: preset.version, presetName: preset.name,
-        targetId: target.id, targetName: target.name,
+        presetId: preset.id,
+        presetVersion: preset.version,
+        presetName: preset.name,
+        targetId: target.id,
+        targetName: target.name,
         selection: typeof req.body.selection === "object" && req.body.selection ? req.body.selection : {},
-        goalStageId: goalStage.id, startingStageId: startingStage?.id, ownerId: ownerId(req),
-        stages: startIndex >= 0 ? { create: preset.stages.slice(0, startIndex + 1).map((stage) => ({ stageId: stage.id, isManuallyDone: true, completedAt: new Date() })) } : undefined
+        goalStageId: goalStage.id,
+        startingStageId: null,
+        ownerId: ownerId(req),
+        stages: completedStageIds.length
+          ? { create: completedStageIds.map((stageId) => ({ stageId, isManuallyDone: true, completedAt: new Date() })) }
+          : undefined
       },
       include: { stages: true, conditions: true }
     });
@@ -154,17 +221,81 @@ router.post("/", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.post("/:id/preview", async (req, res, next) => {
+  try {
+    const goal = await findGoal(req.params.id, ownerId(req));
+    if (!goal) return res.status(404).json({ message: "進捗目標が見つかりません" });
+    const preset = definitionForGoal(goal);
+    if (!preset) return res.status(409).json({ message: "保存時のプリセット定義が見つかりません" });
+    const completedStageIds = parseStringArray(req.body.completedStageIds);
+    if (!completedStageIds) return res.status(400).json({ message: "完了済み中継点の形式が不正です" });
+    const dependencyErrors = validateCompletedStageIds(preset, completedStageIds);
+    const overrides = new Map<string, number>();
+    if (req.body.inventoryOverrides !== undefined) {
+      if (!Array.isArray(req.body.inventoryOverrides)) return res.status(400).json({ message: "所持数の形式が不正です" });
+      for (const item of req.body.inventoryOverrides) {
+        const ownedCount = parseCount(item?.ownedCount);
+        if (typeof item?.itemKey !== "string" || ownedCount === null) return res.status(400).json({ message: "所持数の形式が不正です" });
+        overrides.set(item.itemKey, ownedCount);
+      }
+    }
+    const targetStageId = typeof req.body.targetStageId === "string" ? req.body.targetStageId : undefined;
+    res.json({
+      goal: await serializeGoal(goal, { completedStageIds, inventoryOverrides: overrides, targetStageId }),
+      dependencyErrors
+    });
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes("未知の中継点") || error.message.includes("集約目標") || error.message.includes("目標中継点"))) {
+      return res.status(400).json({ message: error.message });
+    }
+    next(error);
+  }
+});
+
+router.put("/:id/progress", async (req, res, next) => {
+  try {
+    const goal = await findGoal(req.params.id, ownerId(req));
+    if (!goal) return res.status(404).json({ message: "進捗目標が見つかりません" });
+    const preset = definitionForGoal(goal);
+    if (!preset) return res.status(409).json({ message: "保存時のプリセット定義が見つかりません" });
+    const completedStageIds = parseStringArray(req.body.completedStageIds);
+    if (!completedStageIds) return res.status(400).json({ message: "完了済み中継点の形式が不正です" });
+    const dependencyErrors = validateCompletedStageIds(preset, completedStageIds);
+    if (dependencyErrors.length) return res.status(409).json({ message: "前提中継点が未完了です", errors: dependencyErrors });
+    const now = new Date();
+    await prisma.$transaction(async (transaction) => {
+      await transaction.progressStageProgress.deleteMany({ where: { goalId: goal.id } });
+      if (completedStageIds.length) {
+        await transaction.progressStageProgress.createMany({
+          data: completedStageIds.map((stageId) => ({ goalId: goal.id, stageId, isManuallyDone: true, completedAt: now }))
+        });
+      }
+      await transaction.progressGoal.update({ where: { id: goal.id }, data: { updatedAt: now } });
+    });
+    res.json({ goal: await serializeGoal((await findGoal(goal.id, ownerId(req)))!) });
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes("未知の中継点") || error.message.includes("集約目標"))) {
+      return res.status(400).json({ message: error.message });
+    }
+    next(error);
+  }
+});
+
 router.patch("/:id/inventory/:itemKey", async (req, res, next) => {
   try {
     const goal = await findGoal(req.params.id, ownerId(req));
     if (!goal) return res.status(404).json({ message: "進捗目標が見つかりません" });
-    const preset = findProgressPreset(goal.presetId);
+    const preset = definitionForGoal(goal);
     const requirement = preset?.stages.flatMap((stage) => stage.requirements).find((item) => item.itemKey === req.params.itemKey);
     const ownedCount = parseCount(req.body.ownedCount);
     if (!requirement || ownedCount === null) return res.status(400).json({ message: "所持数は上限内の0以上の整数で入力してください" });
-    await prisma.userItemInventory.upsert({ where: { ownerId_itemKey: { ownerId: ownerId(req), itemKey: requirement.itemKey } }, update: { ownedCount }, create: { ownerId: ownerId(req), itemKey: requirement.itemKey, itemName: requirement.itemName, ownedCount } });
+    await prisma.userItemInventory.upsert({
+      where: { ownerId_itemKey: { ownerId: ownerId(req), itemKey: requirement.itemKey } },
+      update: { itemName: requirement.itemName, ownedCount },
+      create: { ownerId: ownerId(req), itemKey: requirement.itemKey, itemName: requirement.itemName, ownedCount }
+    });
     await prisma.progressGoal.update({ where: { id: goal.id }, data: { updatedAt: new Date() } });
-    res.json({ goal: await serializeGoal(await findGoal(goal.id, ownerId(req))) });
+    res.json({ goal: await serializeGoal((await findGoal(goal.id, ownerId(req)))!) });
   } catch (error) { next(error); }
 });
 
@@ -172,20 +303,29 @@ router.patch("/:id/conditions/:conditionId", async (req, res, next) => {
   try {
     const goal = await findGoal(req.params.id, ownerId(req));
     if (!goal) return res.status(404).json({ message: "進捗目標が見つかりません" });
-    const condition = findProgressPreset(goal.presetId) && conditionFor(findProgressPreset(goal.presetId)!, req.params.conditionId);
+    const preset = definitionForGoal(goal);
+    const condition = preset && conditionFor(preset, req.params.conditionId);
     if (!condition) return res.status(400).json({ message: "条件が見つかりません" });
     if (condition.kind === "shared-number") {
       const value = parseCount(req.body.numericValue);
       if (value === null) return res.status(400).json({ message: "数値は上限内の0以上の整数で入力してください" });
-      await prisma.userProgressSharedValue.upsert({ where: { ownerId_valueKey: { ownerId: ownerId(req), valueKey: condition.sharedValueKey ?? "" } }, update: { value }, create: { ownerId: ownerId(req), valueKey: condition.sharedValueKey ?? "", value } });
+      await prisma.userProgressSharedValue.upsert({
+        where: { ownerId_valueKey: { ownerId: ownerId(req), valueKey: condition.sharedValueKey ?? "" } },
+        update: { value },
+        create: { ownerId: ownerId(req), valueKey: condition.sharedValueKey ?? "", value }
+      });
     } else {
       const isChecked = condition.kind === "check" ? req.body.isChecked === true : undefined;
       const numericValue = condition.kind === "goal-number" ? parseCount(req.body.numericValue) : undefined;
       if (condition.kind === "goal-number" && numericValue === null) return res.status(400).json({ message: "数値は上限内の0以上の整数で入力してください" });
-      await prisma.progressConditionProgress.upsert({ where: { goalId_conditionId: { goalId: goal.id, conditionId: condition.id } }, update: { ...(isChecked !== undefined ? { isChecked } : {}), ...(numericValue !== undefined ? { numericValue } : {}) }, create: { goalId: goal.id, conditionId: condition.id, isChecked: isChecked ?? false, numericValue: numericValue ?? null } });
+      await prisma.progressConditionProgress.upsert({
+        where: { goalId_conditionId: { goalId: goal.id, conditionId: condition.id } },
+        update: { ...(isChecked !== undefined ? { isChecked } : {}), ...(numericValue !== undefined ? { numericValue } : {}) },
+        create: { goalId: goal.id, conditionId: condition.id, isChecked: isChecked ?? false, numericValue: numericValue ?? null }
+      });
     }
     await prisma.progressGoal.update({ where: { id: goal.id }, data: { updatedAt: new Date() } });
-    res.json({ goal: await serializeGoal(await findGoal(goal.id, ownerId(req))) });
+    res.json({ goal: await serializeGoal((await findGoal(goal.id, ownerId(req)))!) });
   } catch (error) { next(error); }
 });
 
@@ -193,15 +333,24 @@ router.post("/:id/stages/:stageId/complete", async (req, res, next) => {
   try {
     const goal = await findGoal(req.params.id, ownerId(req));
     if (!goal) return res.status(404).json({ message: "進捗目標が見つかりません" });
-    const serialized = await serializeGoal(goal);
-    const stage = serialized && "stages" in serialized
-      ? (serialized.stages as Array<{ id: string; isEligible: boolean; isManuallyDone: boolean }>).find((item) => item.id === req.params.stageId)
-      : undefined;
-    if (!stage) return res.status(400).json({ message: "段階が見つかりません" });
-    if (!stage.isEligible && !stage.isManuallyDone) return res.status(409).json({ message: "必要素材と条件を満たしてから完了してください" });
-    await prisma.progressStageProgress.upsert({ where: { goalId_stageId: { goalId: goal.id, stageId: req.params.stageId } }, update: { isManuallyDone: true, completedAt: new Date() }, create: { goalId: goal.id, stageId: req.params.stageId, isManuallyDone: true, completedAt: new Date() } });
-    res.json({ goal: await serializeGoal(await findGoal(goal.id, ownerId(req))) });
-  } catch (error) { next(error); }
+    const preset = definitionForGoal(goal);
+    if (!preset || !stageFor(preset, req.params.stageId)) return res.status(400).json({ message: "中継点が見つかりません" });
+    const completedStageIds = goal.stages.filter((item) => item.isManuallyDone).map((item) => item.stageId);
+    completedStageIds.push(req.params.stageId);
+    const dependencyErrors = validateCompletedStageIds(preset, completedStageIds);
+    if (dependencyErrors.length) return res.status(409).json({ message: "前提中継点が未完了です", errors: dependencyErrors });
+    await prisma.progressStageProgress.upsert({
+      where: { goalId_stageId: { goalId: goal.id, stageId: req.params.stageId } },
+      update: { isManuallyDone: true, completedAt: new Date() },
+      create: { goalId: goal.id, stageId: req.params.stageId, isManuallyDone: true, completedAt: new Date() }
+    });
+    res.json({ goal: await serializeGoal((await findGoal(goal.id, ownerId(req)))!) });
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes("未知の中継点") || error.message.includes("集約目標"))) {
+      return res.status(400).json({ message: error.message });
+    }
+    next(error);
+  }
 });
 
 router.delete("/:id", async (req, res, next) => {
