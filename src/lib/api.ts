@@ -241,7 +241,15 @@ export type ProgressPreset = {
   selectionLabel?: string;
   selectionOptions?: string[];
   targets: { id: string; name: string }[];
-  stages: { id: string; name: string }[];
+  groups: { id: string; name: string; sortOrder: number }[];
+  stages: {
+    id: string;
+    name: string;
+    groupId: string;
+    kind: "stage" | "milestone";
+    dependsOn: string[];
+    note?: string;
+  }[];
   isAvailable: boolean;
   unavailableReason?: string;
 };
@@ -249,9 +257,14 @@ export type ProgressPreset = {
 export type ProgressGoalStage = {
   id: string;
   name: string;
+  groupId: string;
+  kind: "stage" | "milestone";
+  dependsOn: string[];
+  note?: string;
   isManuallyDone: boolean;
-  isEligible: boolean;
   isDone: boolean;
+  canComplete: boolean;
+  missingDependencyIds: string[];
   requirements: {
     itemKey: string;
     itemName: string;
@@ -280,12 +293,26 @@ export type ProgressGoal = {
   targetName: string;
   selection: Record<string, unknown>;
   goalStageId: string;
+  targetStageId: string;
+  availableTargetStageIds: string[];
   startingStageId: string | null;
   stages: ProgressGoalStage[];
+  completedStageIds: string[];
   completedCount: number;
   totalStageCount: number;
   progressRate: number;
   currentStage: ProgressGoalStage | null;
+  calculation: {
+    requiredStageIds: string[];
+    pendingStageIds: string[];
+    requirements: {
+      itemKey: string;
+      itemName: string;
+      requiredCount: number;
+      ownedCount: number;
+      shortage: number;
+    }[];
+  };
   createdAt: string;
   updatedAt: string;
 };
@@ -988,8 +1015,19 @@ export const api = {
     request<void>(`/api/material-goals/presets/${presetId}`, { method: "DELETE" }),
   progressPresets: () => request<{ presets: ProgressPreset[] }>("/api/progress-goals/presets"),
   progressGoals: () => request<{ goals: ProgressGoal[] }>("/api/progress-goals"),
-  createProgressGoal: (goal: { presetId: string; targetId: string; goalStageId: string; startingStageId?: string; selection?: Record<string, string> }) =>
+  createProgressGoal: (goal: { presetId: string; targetId: string; goalStageId: string; completedStageIds?: string[]; selection?: Record<string, string> }) =>
     request<{ goal: ProgressGoal }>("/api/progress-goals", { method: "POST", json: goal }),
+  progressGoal: (goalId: string, targetStageId?: string) =>
+    request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}${toQuery({ targetStageId })}`),
+  previewProgressGoal: (
+    goalId: string,
+    value: { completedStageIds: string[]; inventoryOverrides?: { itemKey: string; ownedCount: number }[]; targetStageId?: string }
+  ) => request<{ goal: ProgressGoal; dependencyErrors: { stageId: string; missingDependencyIds: string[] }[] }>(
+    `/api/progress-goals/${goalId}/preview`,
+    { method: "POST", json: value }
+  ),
+  saveProgressStages: (goalId: string, completedStageIds: string[]) =>
+    request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/progress`, { method: "PUT", json: { completedStageIds } }),
   updateProgressInventory: (goalId: string, itemKey: string, ownedCount: number) =>
     request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/inventory/${encodeURIComponent(itemKey)}`, { method: "PATCH", json: { ownedCount } }),
   updateProgressCondition: (goalId: string, conditionId: string, value: { isChecked?: boolean; numericValue?: number }) =>
