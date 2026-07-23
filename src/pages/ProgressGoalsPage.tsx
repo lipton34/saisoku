@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, CircleAlert, ListChecks, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { FormEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, CircleAlert, ListChecks, PackageOpen, Pencil, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { api, type ProgressGoal, type ProgressPreset } from "../lib/api";
 
@@ -9,6 +9,75 @@ function dependencyClosure(preset: ProgressPreset, stageId: string, found = new 
   found.add(stageId);
   stage.dependsOn.forEach((id) => dependencyClosure(preset, id, found));
   return found;
+}
+
+type MaterialRequirement = ProgressGoal["calculation"]["requirements"][number];
+type MaterialTab = "shortage" | "arcarum" | "battle" | "other" | "all";
+
+const materialTabs: Array<{ id: MaterialTab; label: string }> = [
+  { id: "shortage", label: "不足素材" },
+  { id: "arcarum", label: "アーカルム" },
+  { id: "battle", label: "属性・マルチ" },
+  { id: "other", label: "共通・その他" },
+  { id: "all", label: "すべて" }
+];
+
+function materialCategory(itemKey: string): Exclude<MaterialTab, "shortage" | "all"> {
+  if (/(sephira|astra|idea|veritas|verum|haze|bright|fragment|new-world)/.test(itemKey)) return "arcarum";
+  if (/(anima|magna|element|psyche|jewel|rubble|tragedy|insular|gale-rock|thunder-wheel|todestrieb|stone-fragment)/.test(itemKey)) return "battle";
+  return "other";
+}
+
+function ProgressModal({
+  title,
+  description,
+  size = "medium",
+  onClose,
+  children,
+  footer,
+  nested = false,
+  disableEscape = false
+}: {
+  title: string;
+  description?: string;
+  size?: "small" | "medium" | "wide";
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+  nested?: boolean;
+  disableEscape?: boolean;
+}) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (disableEscape) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [disableEscape, onClose]);
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, []);
+
+  return <div className={`progress-modal-backdrop${nested ? " nested" : ""}`} onMouseDown={onClose}>
+    <section className={`progress-modal progress-modal--${size}`} aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()} ref={dialogRef} role="dialog" tabIndex={-1}>
+      <header className="progress-modal-header">
+        <div><h2 id={titleId}>{title}</h2>{description && <p>{description}</p>}</div>
+        <button aria-label={`${title}を閉じる`} className="icon-button" onClick={onClose} title="閉じる" type="button"><X size={18} /></button>
+      </header>
+      <div className="progress-modal-body">{children}</div>
+      {footer && <footer className="progress-modal-footer">{footer}</footer>}
+    </section>
+  </div>;
 }
 
 function ProgressGoalEditor({
@@ -28,6 +97,10 @@ function ProgressGoalEditor({
   const [preview, setPreview] = useState(goal);
   const [dependencyErrors, setDependencyErrors] = useState<{ stageId: string; missingDependencyIds: string[] }[]>([]);
   const [saving, setSaving] = useState(false);
+  const [isMaterialOpen, setIsMaterialOpen] = useState(false);
+  const [materialTab, setMaterialTab] = useState<MaterialTab>("shortage");
+  const [editingMaterial, setEditingMaterial] = useState<MaterialRequirement | null>(null);
+  const [editingCount, setEditingCount] = useState("");
 
   const hasProgressChanges = useMemo(() => {
     const saved = new Set(goal.completedStageIds);
@@ -39,6 +112,18 @@ function ProgressGoalEditor({
   );
   const hasInventoryChanges = Object.entries(inventory).some(([key, value]) => savedInventory.get(key) !== value);
   const isDirty = hasProgressChanges || hasInventoryChanges;
+  const materialItems = preview.calculation.requirements.map((item) => ({
+    ...item,
+    ownedCount: inventory[item.itemKey] ?? item.ownedCount,
+    shortage: Math.max(item.requiredCount - (inventory[item.itemKey] ?? item.ownedCount), 0)
+  }));
+  const shortageItems = materialItems.filter((item) => item.shortage > 0);
+  const enteredCount = materialItems.filter((item) => item.ownedCount > 0).length;
+  const visibleMaterialItems = materialItems.filter((item) => {
+    if (materialTab === "all") return true;
+    if (materialTab === "shortage") return item.shortage > 0;
+    return materialCategory(item.itemKey) === materialTab;
+  });
 
   useEffect(() => {
     setDraftCompleted(new Set(goal.completedStageIds));
@@ -79,6 +164,18 @@ function ProgressGoalEditor({
     setInventory(Object.fromEntries(goal.calculation.requirements.map((item) => [item.itemKey, item.ownedCount])));
     setPreview(goal);
     setDependencyErrors([]);
+  }
+
+  function openMaterialInput(item: MaterialRequirement) {
+    setEditingMaterial(item);
+    setEditingCount(String(inventory[item.itemKey] ?? item.ownedCount));
+  }
+
+  function applyMaterialInput() {
+    if (!editingMaterial) return;
+    const ownedCount = Math.min(9_999_999, Math.max(0, Number(editingCount) || 0));
+    setInventory((current) => ({ ...current, [editingMaterial.itemKey]: ownedCount }));
+    setEditingMaterial(null);
   }
 
   function toggleStage(stageId: string, checked: boolean) {
@@ -161,15 +258,18 @@ function ProgressGoalEditor({
     </div>}
 
     <section className="progress-material-summary">
-      <h4>目標中継点までの不足素材</h4>
-      {preview.calculation.requirements.length === 0
+      <div className="progress-material-summary-heading">
+        <div><h4>目標中継点までの素材</h4><p>不足 {shortageItems.length}種類・入力済み {enteredCount}/{materialItems.length}種類</p></div>
+        <button className="secondary-button" disabled={materialItems.length === 0} onClick={() => setIsMaterialOpen(true)} type="button"><PackageOpen size={16} />素材を確認・入力</button>
+      </div>
+      {materialItems.length === 0
         ? <div className="empty-state">この中継点までの必要素材はありません。</div>
-        : <div className="progress-material-grid">{preview.calculation.requirements.map((item) =>
-          <label className="progress-material-card" key={item.itemKey}>
-            <span><strong>{item.itemName}</strong><small>必要 {item.requiredCount}・不足 {item.shortage}</small></span>
-            <span className="progress-owned-input"><input aria-label={`${item.itemName}の所持数`} min={0} max={9_999_999} type="number" value={inventory[item.itemKey] ?? item.ownedCount} onChange={(event) => setInventory((current) => ({ ...current, [item.itemKey]: Math.max(0, Number(event.target.value) || 0) }))} /><small>所持</small></span>
-          </label>
-        )}</div>}
+        : <div className="progress-material-preview">{shortageItems.slice(0, 4).map((item) =>
+          <button className="progress-material-preview-row" key={item.itemKey} onClick={() => { setIsMaterialOpen(true); openMaterialInput(item); }} type="button">
+            <span><strong>{item.itemName}</strong><small>所持 {item.ownedCount} / 必要 {item.requiredCount}</small></span>
+            <span>不足 {item.shortage}</span>
+          </button>
+        )}{shortageItems.length === 0 && <div className="empty-state compact">表示中の素材はすべて充足しています。</div>}</div>}
     </section>
 
     <div className="progress-tree" aria-label="進捗中継点ツリー">
@@ -202,6 +302,48 @@ function ProgressGoalEditor({
       <button className="secondary-button" disabled={!isDirty || saving} onClick={resetDraft} type="button"><RotateCcw size={17} />キャンセル</button>
       <button className="primary-button" disabled={!isDirty || saving || dependencyErrors.length > 0} onClick={() => void save()} type="button"><Save size={17} />{saving ? "保存中…" : "変更を保存"}</button>
     </div>
+
+    {isMaterialOpen && <ProgressModal
+      description="タブで素材を絞り込み、素材行を選択して所持数を入力します。"
+      disableEscape={Boolean(editingMaterial)}
+      footer={<button className="primary-button" onClick={() => setIsMaterialOpen(false)} type="button">入力を反映して閉じる</button>}
+      onClose={() => setIsMaterialOpen(false)}
+      size="wide"
+      title="素材を確認・入力"
+    >
+      <div className="progress-material-tabs" aria-label="素材カテゴリ" role="tablist">
+        {materialTabs.map((tab) => {
+          const count = tab.id === "shortage"
+            ? shortageItems.length
+            : tab.id === "all"
+              ? materialItems.length
+              : materialItems.filter((item) => materialCategory(item.itemKey) === tab.id).length;
+          return <button aria-selected={materialTab === tab.id} className={materialTab === tab.id ? "active" : ""} key={tab.id} onClick={() => setMaterialTab(tab.id)} role="tab" type="button">{tab.label}<span>{count}</span></button>;
+        })}
+      </div>
+      {visibleMaterialItems.length === 0
+        ? <div className="empty-state">このカテゴリに表示する素材はありません。</div>
+        : <div className="progress-material-dialog-grid">{visibleMaterialItems.map((item) =>
+          <button className="progress-material-dialog-row" key={item.itemKey} onClick={() => openMaterialInput(item)} type="button">
+            <span><strong>{item.itemName}</strong><small>所持 {item.ownedCount} / 必要 {item.requiredCount}</small></span>
+            <span className={item.shortage > 0 ? "shortage" : "complete"}>{item.shortage > 0 ? `不足 ${item.shortage}` : "充足"}</span>
+            <Pencil aria-hidden="true" size={14} />
+          </button>
+        )}</div>}
+    </ProgressModal>}
+
+    {editingMaterial && <ProgressModal
+      footer={<><button className="secondary-button" onClick={() => setEditingCount("0")} type="button">0にする</button><button className="secondary-button" onClick={() => setEditingMaterial(null)} type="button">キャンセル</button><button className="primary-button" onClick={applyMaterialInput} type="button">反映</button></>}
+      nested
+      onClose={() => setEditingMaterial(null)}
+      size="small"
+      title={editingMaterial.itemName}
+    >
+      <div className="progress-number-editor">
+        <div><span>必要数</span><strong>{editingMaterial.requiredCount}</strong></div>
+        <label>現在の所持数<input autoFocus inputMode="numeric" max={9_999_999} min={0} onChange={(event) => setEditingCount(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") applyMaterialInput(); }} pattern="[0-9]*" type="number" value={editingCount} /></label>
+      </div>
+    </ProgressModal>}
   </div>;
 }
 
@@ -214,6 +356,9 @@ export function ProgressGoalsPage() {
   const [initialByGroup, setInitialByGroup] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createStep, setCreateStep] = useState(1);
+  const [creating, setCreating] = useState(false);
   const openGoalId = searchParams.get("goalId");
 
   const selectedPreset = useMemo(() => presets.find((preset) => preset.id === presetId), [presetId, presets]);
@@ -260,6 +405,7 @@ export function ProgressGoalsPage() {
         if (selectedPreset.stages.find((stage) => stage.id === id)?.kind === "stage") completed.add(id);
       });
     });
+    setCreating(true);
     try {
       const data = await api.createProgressGoal({
         presetId,
@@ -269,9 +415,22 @@ export function ProgressGoalsPage() {
       });
       setGoals((current) => [data.goal, ...current]);
       setSearchParams({ goalId: data.goal.id, targetStageId: data.goal.targetStageId });
+      setIsCreateOpen(false);
+      setCreateStep(1);
+      setInitialByGroup({});
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "目標の登録に失敗しました");
+    } finally {
+      setCreating(false);
     }
+  }
+
+  function closeCreateModal() {
+    const hasInput = createStep > 1 || Object.values(initialByGroup).some(Boolean);
+    if (hasInput && !window.confirm("入力中の登録内容を破棄して閉じますか？")) return;
+    setIsCreateOpen(false);
+    setCreateStep(1);
+    setInitialByGroup({});
   }
 
   async function openGoal(goal: ProgressGoal) {
@@ -301,28 +460,11 @@ export function ProgressGoalsPage() {
   }
 
   return <div className="page-stack">
-    <section className="page-heading"><div><p className="eyebrow">Progress</p><h2>必要数の進捗</h2><p>十賢者の現在状態から、目標中継点までの不足素材を確認できます。</p></div></section>
+    <section className="page-heading"><div><p className="eyebrow">Progress</p><h2>必要数の進捗</h2><p>十賢者の現在状態から、目標中継点までの不足素材を確認できます。</p></div><button className="primary-button" disabled={!presets.some((preset) => preset.isAvailable)} onClick={() => { setCreateStep(1); setIsCreateOpen(true); }} type="button"><Plus size={18} />目標を登録</button></section>
 
     {error && <div className="form-error" role="alert"><CircleAlert size={18} />{error}</div>}
 
     <section className="progress-page-layout">
-      <form className="panel progress-create-form" onSubmit={createGoal}>
-        <div className="section-heading"><div><p className="eyebrow">New Goal</p><h2>目標を追加</h2></div><Plus size={22} /></div>
-        {presets.some((preset) => preset.isAvailable) ? <>
-          <label>プリセット<select required value={presetId} onChange={(event) => setPresetId(event.target.value)}>{presets.filter((preset) => preset.isAvailable).map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
-          <label>{selectedPreset?.targetLabel ?? "対象"}<select required value={targetId} onChange={(event) => setTargetId(event.target.value)}>{selectedPreset?.targets.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label>
-          <div className="progress-initial-scroll" aria-label="工程グループごとの現在状態">
-            {selectedPreset?.groups.map((group) => <label key={group.id}>{group.name}
-              <select value={initialByGroup[group.id] ?? ""} onChange={(event) => setInitialByGroup((current) => ({ ...current, [group.id]: event.target.value }))}>
-                <option value="">未着手</option>
-                {selectedPreset.stages.filter((stage) => stage.groupId === group.id && stage.kind === "stage").map((stage) => <option key={stage.id} value={stage.id}>{stage.name}まで完了</option>)}
-              </select>
-            </label>)}
-          </div>
-          <button className="primary-button" type="submit"><Plus size={18} />登録する</button>
-        </> : <div className="empty-state">利用可能なプリセットはありません。</div>}
-      </form>
-
       <div className="panel progress-goal-panel">
         <div className="section-heading"><div><p className="eyebrow">Goals</p><h2>登録済みの目標</h2></div><ListChecks size={22} /></div>
         {loading ? <div className="empty-state">読み込み中です…</div> : goals.length === 0 ? <div className="empty-state">登録済みの進捗目標はありません。</div> : <div className="progress-goal-list">{goals.map((goal) => {
@@ -340,5 +482,43 @@ export function ProgressGoalsPage() {
     </section>
 
     <section className="panel"><div className="section-heading"><div><p className="eyebrow">Preset status</p><h2>プリセットデータ</h2></div></div><div className="preset-chip-list">{presets.map((preset) => <div className="preset-chip" key={`${preset.id}-${preset.version}`}><div><strong>{preset.name} v{preset.version}</strong><span>{preset.targets.length ? `${preset.targetLabel}を選択` : "対象を確認中"}・{preset.groups.map((group) => group.name).join(" / ")}</span><small>{preset.isAvailable ? "利用可能" : `確認中：${preset.unavailableReason}`}</small></div></div>)}</div></section>
+
+    {isCreateOpen && selectedPreset && <ProgressModal
+      description="PCとモバイルで同じ手順を使い、現在状態まで設定して登録します。"
+      footer={<>
+        <button className="secondary-button" onClick={closeCreateModal} type="button">キャンセル</button>
+        <span className="progress-modal-footer-spacer" />
+        {createStep > 1 && <button className="secondary-button" onClick={() => setCreateStep((current) => current - 1)} type="button">戻る</button>}
+        {createStep < 3
+          ? <button className="primary-button" disabled={createStep === 1 && !targetId} onClick={() => setCreateStep((current) => current + 1)} type="button">次へ</button>
+          : <button className="primary-button" disabled={creating} form="progress-create-form" type="submit"><Plus size={17} />{creating ? "登録中…" : "登録する"}</button>}
+      </>}
+      onClose={closeCreateModal}
+      size="wide"
+      title="目標を登録"
+    >
+      <div className="progress-create-steps" aria-label={`登録手順 ${createStep}/3`}>
+        {["対象", "現在状態", "確認"].map((label, index) => <div className={createStep === index + 1 ? "active" : createStep > index + 1 ? "complete" : ""} key={label}><span>{index + 1}</span><strong>{label}</strong></div>)}
+      </div>
+      <form id="progress-create-form" onSubmit={createGoal}>
+        {createStep === 1 && <div className="progress-modal-form-grid">
+          <label>プリセット<select required value={presetId} onChange={(event) => setPresetId(event.target.value)}>{presets.filter((preset) => preset.isAvailable).map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
+          <label>{selectedPreset.targetLabel}<select required value={targetId} onChange={(event) => setTargetId(event.target.value)}>{selectedPreset.targets.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label>
+        </div>}
+        {createStep === 2 && <div className="progress-modal-stage-grid" aria-label="工程グループごとの現在状態">
+          {selectedPreset.groups.map((group) => <label key={group.id}>{group.name}
+            <select value={initialByGroup[group.id] ?? ""} onChange={(event) => setInitialByGroup((current) => ({ ...current, [group.id]: event.target.value }))}>
+              <option value="">未着手</option>
+              {selectedPreset.stages.filter((stage) => stage.groupId === group.id && stage.kind === "stage").map((stage) => <option key={stage.id} value={stage.id}>{stage.name}まで完了</option>)}
+            </select>
+          </label>)}
+        </div>}
+        {createStep === 3 && <div className="progress-create-confirm">
+          <div><span>プリセット</span><strong>{selectedPreset.name}</strong></div>
+          <div><span>{selectedPreset.targetLabel}</span><strong>{selectedPreset.targets.find((target) => target.id === targetId)?.name}</strong></div>
+          <div className="wide"><span>現在状態</span><ul>{selectedPreset.groups.map((group) => <li key={group.id}><span>{group.name}</span><strong>{selectedPreset.stages.find((stage) => stage.id === initialByGroup[group.id])?.name ?? "未着手"}</strong></li>)}</ul></div>
+        </div>}
+      </form>
+    </ProgressModal>}
   </div>;
 }
