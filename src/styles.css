@@ -1817,6 +1817,88 @@ a {
   min-width: 0;
 }
 
+/* 必要数の進捗: 長い段階名・素材名でもカード外へはみ出させない。 */
+.material-goal-header .text-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+  align-items: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.material-goal-header .text-button > div,
+.material-goal-header h3,
+.progress-stage strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.progress-stage {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.progress-stage .task-title-line {
+  justify-content: space-between;
+}
+
+.progress-condition {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f4f7fa;
+  overflow-wrap: anywhere;
+}
+
+.progress-condition input[type="number"] {
+  grid-column: 2;
+  max-width: 140px;
+}
+
+.progress-preset-list {
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 2px 2px 8px;
+  scrollbar-width: thin;
+}
+
+.progress-preset-list .preset-chip {
+  flex: 0 0 min(300px, calc(100vw - 72px));
+  max-width: none;
+}
+
+.progress-preset-list .preset-chip > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 6px 8px;
+}
+
+.progress-preset-list .preset-chip strong,
+.progress-preset-list .preset-chip span,
+.progress-preset-list .preset-chip small {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .empty-state {
   padding: 16px;
   border-radius: 8px;
