@@ -1562,7 +1562,9 @@ a {
   gap: 10px;
 }
 
-.progress-material-summary-heading {
+.progress-material-summary-heading,
+.progress-stage-summary-heading,
+.progress-initial-summary-heading {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -1570,14 +1572,51 @@ a {
   justify-content: space-between;
 }
 
-.progress-material-summary h4 {
+.progress-material-summary h4,
+.progress-stage-summary h4,
+.progress-initial-summary h3 {
   margin: 0;
 }
 
-.progress-material-summary p {
+.progress-material-summary p,
+.progress-stage-summary p,
+.progress-initial-summary p {
   margin: 3px 0 0;
   color: #657688;
   font-size: 0.78rem;
+}
+
+.progress-stage-summary,
+.progress-initial-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.progress-stage-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 220px));
+  gap: 7px;
+  justify-content: start;
+}
+
+.progress-stage-summary-grid > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f2f5f7;
+}
+
+.progress-stage-summary-grid span {
+  color: #657688;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.progress-stage-summary-grid strong {
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
 .progress-material-preview {
@@ -1912,18 +1951,35 @@ a {
   background: #fff;
 }
 
-.progress-tree-group > summary {
+.progress-tree-group-heading {
   display: flex;
   gap: 10px;
   align-items: center;
   justify-content: space-between;
   min-height: 44px;
   padding: 10px 12px;
-  cursor: pointer;
   font-weight: 900;
 }
 
-.progress-tree-group > summary small {
+.progress-tree-group-heading label {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.progress-tree-group-heading input {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+}
+
+.progress-tree-group-heading span {
+  overflow-wrap: anywhere;
+}
+
+.progress-tree-group-heading small {
   color: #657688;
 }
 
@@ -2033,7 +2089,8 @@ a {
   .progress-modal-stage-grid,
   .progress-material-dialog-grid,
   .progress-create-confirm,
-  .progress-material-preview {
+  .progress-material-preview,
+  .progress-stage-summary-grid {
     grid-template-columns: 1fr;
   }
 

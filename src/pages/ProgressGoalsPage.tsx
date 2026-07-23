@@ -97,6 +97,8 @@ function ProgressGoalEditor({
   const [preview, setPreview] = useState(goal);
   const [dependencyErrors, setDependencyErrors] = useState<{ stageId: string; missingDependencyIds: string[] }[]>([]);
   const [saving, setSaving] = useState(false);
+  const [isProgressOpen, setIsProgressOpen] = useState(false);
+  const [progressModalSnapshot, setProgressModalSnapshot] = useState<Set<string> | null>(null);
   const [isMaterialOpen, setIsMaterialOpen] = useState(false);
   const [materialTab, setMaterialTab] = useState<MaterialTab>("shortage");
   const [editingMaterial, setEditingMaterial] = useState<MaterialRequirement | null>(null);
@@ -203,7 +205,55 @@ function ProgressGoalEditor({
     });
   }
 
-  async function save() {
+  function toggleGroup(groupId: string, checked: boolean) {
+    const groupStageIds = goal.stages
+      .filter((stage) => stage.groupId === groupId && stage.kind === "stage")
+      .map((stage) => stage.id);
+    setDraftCompleted((current) => {
+      const next = new Set(current);
+      if (checked) {
+        groupStageIds.forEach((stageId) => {
+          dependencyClosure(goal.preset, stageId).forEach((dependencyId) => {
+            if (goal.stages.find((stage) => stage.id === dependencyId)?.kind === "stage") next.add(dependencyId);
+          });
+        });
+        return next;
+      }
+      groupStageIds.forEach((stageId) => next.delete(stageId));
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const stage of goal.stages) {
+          const hasMissingDependency = [...dependencyClosure(goal.preset, stage.id)].some(
+            (id) => id !== stage.id && goal.stages.find((item) => item.id === id)?.kind === "stage" && !next.has(id)
+          );
+          if (next.has(stage.id) && hasMissingDependency) {
+            next.delete(stage.id);
+            changed = true;
+          }
+        }
+      }
+      return next;
+    });
+  }
+
+  function openProgressEditor() {
+    setProgressModalSnapshot(new Set(draftCompleted));
+    setIsProgressOpen(true);
+  }
+
+  function closeProgressEditor() {
+    const changedInModal = progressModalSnapshot && (
+      progressModalSnapshot.size !== draftCompleted.size
+      || [...progressModalSnapshot].some((id) => !draftCompleted.has(id))
+    );
+    if (changedInModal && !window.confirm("モーダル内の未保存の進捗変更を破棄しますか？")) return;
+    if (progressModalSnapshot) setDraftCompleted(new Set(progressModalSnapshot));
+    setProgressModalSnapshot(null);
+    setIsProgressOpen(false);
+  }
+
+  async function save(closeProgressModal = false) {
     setSaving(true);
     onError("");
     try {
@@ -211,6 +261,10 @@ function ProgressGoalEditor({
       await Promise.all(inventoryChanges.map(([itemKey, ownedCount]) => api.updateProgressInventory(goal.id, itemKey, ownedCount)));
       const response = await api.saveProgressStages(goal.id, [...draftCompleted]);
       onChange(response.goal);
+      if (closeProgressModal) {
+        setProgressModalSnapshot(null);
+        setIsProgressOpen(false);
+      }
     } catch (caught) {
       onError(caught instanceof Error ? caught.message : "進捗を保存できませんでした");
     } finally {
@@ -272,36 +326,68 @@ function ProgressGoalEditor({
         )}{shortageItems.length === 0 && <div className="empty-state compact">表示中の素材はすべて充足しています。</div>}</div>}
     </section>
 
-    <div className="progress-tree" aria-label="進捗中継点ツリー">
-      <div className="progress-tree-goal"><strong>{goal.stages.find((stage) => stage.id === goal.goalStageId)?.name}</strong><span>最終ゴール</span></div>
-      {[...goal.preset.groups].sort((a, b) => b.sortOrder - a.sortOrder).map((group) => {
-        const stages = preview.stages.filter((stage) => stage.groupId === group.id);
-        const normalStages = stages.filter((stage) => stage.kind === "stage");
-        return <details className="progress-tree-group" key={group.id} open>
-          <summary><span>{group.name}</span><small>{normalStages.filter((stage) => draftCompleted.has(stage.id)).length}/{normalStages.length}</small></summary>
-          <div className="progress-tree-stage-list">
-            {[...stages].reverse().map((stage) => {
-              const checked = stage.kind === "milestone" ? stage.isDone : draftCompleted.has(stage.id);
-              const missingNames = stage.missingDependencyIds.map((id) => stageNames.get(id)).filter(Boolean);
-              return <div className={`progress-tree-stage${checked ? " done" : ""}`} key={stage.id}>
-                <label>
-                  {stage.kind === "stage"
-                    ? <input type="checkbox" checked={checked} disabled={!checked && !stage.canComplete} onChange={(event) => toggleStage(stage.id, event.target.checked)} />
-                    : <span className="progress-milestone-icon" aria-hidden="true"><Check size={15} /></span>}
-                  <span><strong>{stage.name}</strong>{stage.note && <small>{stage.note}</small>}{!checked && missingNames.length > 0 && <small>前提：{missingNames.join("、")}</small>}</span>
-                </label>
-                {stage.kind === "milestone" && <span className="pill">自動判定</span>}
-              </div>;
-            })}
-          </div>
-        </details>;
-      })}
-    </div>
+    <section className="progress-stage-summary">
+      <div className="progress-stage-summary-heading">
+        <div><h4>系統別の現在進捗</h4><p>中継点の完了状態は専用画面でまとめて変更できます。</p></div>
+        <button className="secondary-button" onClick={openProgressEditor} type="button"><ListChecks size={16} />進捗を編集</button>
+      </div>
+      <div className="progress-stage-summary-grid">
+        {[...goal.preset.groups].sort((a, b) => a.sortOrder - b.sortOrder).map((group) => {
+          const normalStages = preview.stages.filter((stage) => stage.groupId === group.id && stage.kind === "stage");
+          return <div key={group.id}><span>{group.name}</span><strong>{normalStages.filter((stage) => draftCompleted.has(stage.id)).length}/{normalStages.length}</strong></div>;
+        })}
+      </div>
+    </section>
 
     <div className="progress-editor-actions">
       <button className="secondary-button" disabled={!isDirty || saving} onClick={resetDraft} type="button"><RotateCcw size={17} />キャンセル</button>
       <button className="primary-button" disabled={!isDirty || saving || dependencyErrors.length > 0} onClick={() => void save()} type="button"><Save size={17} />{saving ? "保存中…" : "変更を保存"}</button>
     </div>
+
+    {isProgressOpen && <ProgressModal
+      description="下位の中継点から順に表示しています。系統名のチェックで、前提を含めてまとめて変更できます。"
+      footer={<><button className="secondary-button" disabled={saving} onClick={closeProgressEditor} type="button">キャンセル</button><span className="progress-modal-footer-spacer" /><button className="primary-button" disabled={!hasProgressChanges || saving || dependencyErrors.length > 0} onClick={() => void save(true)} type="button"><Save size={17} />{saving ? "保存中…" : "進捗を保存"}</button></>}
+      onClose={closeProgressEditor}
+      size="wide"
+      title="系統・中継点の進捗を編集"
+    >
+      {dependencyErrors.length > 0 && <div className="form-error">
+        <CircleAlert size={17} />
+        前提が未完了の中継点があります。下位の中継点から順に完了してください。
+      </div>}
+      <div className="progress-tree" aria-label="進捗中継点ツリー">
+        {[...goal.preset.groups].sort((a, b) => a.sortOrder - b.sortOrder).map((group) => {
+          const stages = preview.stages.filter((stage) => stage.groupId === group.id);
+          const normalStages = stages.filter((stage) => stage.kind === "stage");
+          const completedCount = normalStages.filter((stage) => draftCompleted.has(stage.id)).length;
+          const groupChecked = normalStages.length > 0 && completedCount === normalStages.length;
+          return <section className="progress-tree-group" key={group.id}>
+            <div className="progress-tree-group-heading">
+              <label>
+                <input checked={groupChecked} disabled={normalStages.length === 0} onChange={(event) => toggleGroup(group.id, event.target.checked)} type="checkbox" />
+                <span>{group.name}</span>
+              </label>
+              <small>{completedCount}/{normalStages.length}</small>
+            </div>
+            <div className="progress-tree-stage-list">
+              {stages.map((stage) => {
+                const checked = stage.kind === "milestone" ? stage.isDone : draftCompleted.has(stage.id);
+                const missingNames = stage.missingDependencyIds.map((id) => stageNames.get(id)).filter(Boolean);
+                return <div className={`progress-tree-stage${checked ? " done" : ""}`} key={stage.id}>
+                  <label>
+                    {stage.kind === "stage"
+                      ? <input type="checkbox" checked={checked} disabled={!checked && !stage.canComplete} onChange={(event) => toggleStage(stage.id, event.target.checked)} />
+                      : <span className="progress-milestone-icon" aria-hidden="true"><Check size={15} /></span>}
+                    <span><strong>{stage.name}</strong>{stage.note && <small>{stage.note}</small>}{!checked && missingNames.length > 0 && <small>前提：{missingNames.join("、")}</small>}</span>
+                  </label>
+                  {stage.kind === "milestone" && <span className="pill">自動判定</span>}
+                </div>;
+              })}
+            </div>
+          </section>;
+        })}
+      </div>
+    </ProgressModal>}
 
     {isMaterialOpen && <ProgressModal
       description="タブで素材を絞り込み、素材行を選択して所持数を入力します。"
@@ -357,6 +443,8 @@ export function ProgressGoalsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isInitialProgressOpen, setIsInitialProgressOpen] = useState(false);
+  const [initialProgressSnapshot, setInitialProgressSnapshot] = useState<Record<string, string>>({});
   const [createStep, setCreateStep] = useState(1);
   const [creating, setCreating] = useState(false);
   const openGoalId = searchParams.get("goalId");
@@ -433,6 +521,16 @@ export function ProgressGoalsPage() {
     setInitialByGroup({});
   }
 
+  function openInitialProgressModal() {
+    setInitialProgressSnapshot({ ...initialByGroup });
+    setIsInitialProgressOpen(true);
+  }
+
+  function cancelInitialProgressModal() {
+    setInitialByGroup(initialProgressSnapshot);
+    setIsInitialProgressOpen(false);
+  }
+
   async function openGoal(goal: ProgressGoal) {
     if (openGoalId === goal.id) {
       setSearchParams({}, { replace: true });
@@ -485,6 +583,7 @@ export function ProgressGoalsPage() {
 
     {isCreateOpen && selectedPreset && <ProgressModal
       description="PCとモバイルで同じ手順を使い、現在状態まで設定して登録します。"
+      disableEscape={isInitialProgressOpen}
       footer={<>
         <button className="secondary-button" onClick={closeCreateModal} type="button">キャンセル</button>
         <span className="progress-modal-footer-spacer" />
@@ -493,7 +592,7 @@ export function ProgressGoalsPage() {
           ? <button className="primary-button" disabled={createStep === 1 && !targetId} onClick={() => setCreateStep((current) => current + 1)} type="button">次へ</button>
           : <button className="primary-button" disabled={creating} form="progress-create-form" type="submit"><Plus size={17} />{creating ? "登録中…" : "登録する"}</button>}
       </>}
-      onClose={closeCreateModal}
+      onClose={isInitialProgressOpen ? () => undefined : closeCreateModal}
       size="wide"
       title="目標を登録"
     >
@@ -505,20 +604,42 @@ export function ProgressGoalsPage() {
           <label>プリセット<select required value={presetId} onChange={(event) => setPresetId(event.target.value)}>{presets.filter((preset) => preset.isAvailable).map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
           <label>{selectedPreset.targetLabel}<select required value={targetId} onChange={(event) => setTargetId(event.target.value)}>{selectedPreset.targets.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label>
         </div>}
-        {createStep === 2 && <div className="progress-modal-stage-grid" aria-label="工程グループごとの現在状態">
-          {selectedPreset.groups.map((group) => <label key={group.id}>{group.name}
-            <select value={initialByGroup[group.id] ?? ""} onChange={(event) => setInitialByGroup((current) => ({ ...current, [group.id]: event.target.value }))}>
-              <option value="">未着手</option>
-              {selectedPreset.stages.filter((stage) => stage.groupId === group.id && stage.kind === "stage").map((stage) => <option key={stage.id} value={stage.id}>{stage.name}まで完了</option>)}
-            </select>
-          </label>)}
-        </div>}
+        {createStep === 2 && <section className="progress-initial-summary">
+          <div className="progress-initial-summary-heading">
+            <div><h3>工程グループごとの現在状態</h3><p>専用画面で全系統の現在地点をまとめて設定します。</p></div>
+            <button className="secondary-button" onClick={openInitialProgressModal} type="button"><ListChecks size={16} />現在進捗を設定</button>
+          </div>
+          <div className="progress-stage-summary-grid">
+            {[...selectedPreset.groups].sort((a, b) => a.sortOrder - b.sortOrder).map((group) => <div key={group.id}>
+              <span>{group.name}</span>
+              <strong>{selectedPreset.stages.find((stage) => stage.id === initialByGroup[group.id])?.name ?? "未着手"}</strong>
+            </div>)}
+          </div>
+        </section>}
         {createStep === 3 && <div className="progress-create-confirm">
           <div><span>プリセット</span><strong>{selectedPreset.name}</strong></div>
           <div><span>{selectedPreset.targetLabel}</span><strong>{selectedPreset.targets.find((target) => target.id === targetId)?.name}</strong></div>
           <div className="wide"><span>現在状態</span><ul>{selectedPreset.groups.map((group) => <li key={group.id}><span>{group.name}</span><strong>{selectedPreset.stages.find((stage) => stage.id === initialByGroup[group.id])?.name ?? "未着手"}</strong></li>)}</ul></div>
         </div>}
       </form>
+    </ProgressModal>}
+
+    {isInitialProgressOpen && selectedPreset && <ProgressModal
+      description="全系統の現在地点を設定します。ここでは登録内容へ反映し、DBへの保存は最後の「登録する」で行います。"
+      footer={<><button className="secondary-button" onClick={cancelInitialProgressModal} type="button">キャンセル</button><span className="progress-modal-footer-spacer" /><button className="primary-button" onClick={() => setIsInitialProgressOpen(false)} type="button">登録内容に反映</button></>}
+      nested
+      onClose={cancelInitialProgressModal}
+      size="wide"
+      title="現在進捗を設定"
+    >
+      <div className="progress-modal-stage-grid" aria-label="工程グループごとの現在状態">
+        {[...selectedPreset.groups].sort((a, b) => a.sortOrder - b.sortOrder).map((group) => <label key={group.id}>{group.name}
+          <select value={initialByGroup[group.id] ?? ""} onChange={(event) => setInitialByGroup((current) => ({ ...current, [group.id]: event.target.value }))}>
+            <option value="">未着手</option>
+            {selectedPreset.stages.filter((stage) => stage.groupId === group.id && stage.kind === "stage").map((stage) => <option key={stage.id} value={stage.id}>{stage.name}まで完了</option>)}
+          </select>
+        </label>)}
+      </div>
     </ProgressModal>}
   </div>;
 }
