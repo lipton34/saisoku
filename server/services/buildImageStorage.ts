@@ -86,7 +86,25 @@ export async function removeBuildImagesFromStorage(images: { storageBucket: stri
       if (paths.length === 0) {
         return;
       }
-      await client.storage.from(bucket).remove(paths);
+      const { error } = await client.storage.from(bucket).remove(paths);
+      if (error) {
+        throw new Error(`画像削除に失敗しました: ${error.message}`);
+      }
     })
   );
+}
+
+export async function copyBuildImageInStorage(params: {
+  bucket: string;
+  sourcePath: string;
+  destinationPath: string;
+}) {
+  const client = requireStorageClient();
+  await ensureBucket(client, params.bucket);
+  const { error } = await client.storage.from(params.bucket).copy(params.sourcePath, params.destinationPath);
+  if (error) {
+    throw new Error(`画像コピーに失敗しました: ${error.message}`);
+  }
+  const { data } = client.storage.from(params.bucket).getPublicUrl(params.destinationPath);
+  return { publicUrl: data.publicUrl };
 }

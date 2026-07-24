@@ -153,7 +153,7 @@ async function serializeGoal(
 async function findGoal(id: string, owner: string) {
   return prisma.progressGoal.findFirst({
     where: { id, ownerId: owner },
-    include: { stages: true, conditions: true }
+    include: { stages: true, conditions: true, boardGoal: true }
   });
 }
 
@@ -165,8 +165,8 @@ router.get("/", async (req, res, next) => {
   try {
     const goals = await prisma.progressGoal.findMany({
       where: { ownerId: ownerId(req) },
-      include: { stages: true, conditions: true },
-      orderBy: { updatedAt: "desc" }
+      include: { stages: true, conditions: true, boardGoal: true },
+      orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }]
     });
     res.json({ goals: await Promise.all(goals.map((goal) => serializeGoal(goal))) });
   } catch (error) { next(error); }
@@ -203,25 +203,81 @@ router.post("/", async (req, res, next) => {
     const dependencyErrors = validateCompletedStageIds(preset, completedStageIds);
     if (dependencyErrors.length) return res.status(409).json({ message: "前提中継点が未完了です", errors: dependencyErrors });
 
-    const goal = await prisma.progressGoal.create({
-      data: {
-        presetId: preset.id,
-        presetVersion: preset.version,
-        presetName: preset.name,
-        targetId: target.id,
-        targetName: target.name,
-        selection: typeof req.body.selection === "object" && req.body.selection ? req.body.selection : {},
-        goalStageId: goalStage.id,
-        startingStageId: null,
-        ownerId: ownerId(req),
-        stages: completedStageIds.length
-          ? { create: completedStageIds.map((stageId) => ({ stageId, isManuallyDone: true, completedAt: new Date() })) }
-          : undefined
-      },
-      include: { stages: true, conditions: true }
+    const userId = ownerId(req);
+    const sortOrder = await prisma.progressGoal.count({ where: { ownerId: userId } });
+    const goal = await prisma.$transaction(async (transaction) => {
+      const created = await transaction.progressGoal.create({
+        data: {
+          presetId: preset.id,
+          presetVersion: preset.version,
+          presetName: preset.name,
+          targetId: target.id,
+          targetName: target.name,
+          selection: typeof req.body.selection === "object" && req.body.selection ? req.body.selection : {},
+          goalStageId: goalStage.id,
+          startingStageId: null,
+          sortOrder,
+          ownerId: userId,
+          stages: completedStageIds.length
+            ? { create: completedStageIds.map((stageId) => ({ stageId, isManuallyDone: true, completedAt: new Date() })) }
+            : undefined
+        }
+      });
+      if (req.body.showOnBoard !== false) {
+        await transaction.goal.create({
+          data: {
+            title: target.name,
+            visibility: "personal",
+            boardStatus: "unset",
+            ownerId: userId,
+            sourceProgressGoalId: created.id
+          }
+        });
+      }
+      return transaction.progressGoal.findUniqueOrThrow({
+        where: { id: created.id },
+        include: { stages: true, conditions: true, boardGoal: true }
+      });
     });
     res.status(201).json({ goal: await serializeGoal(goal) });
   } catch (error) { next(error); }
+});
+
+router.put("/order", async (req, res, next) => {
+  try {
+    const goalIds = Array.isArray(req.body.goalIds) ? req.body.goalIds.filter((id: unknown) => typeof id === "string") : [];
+    const ownedCount = await prisma.progressGoal.count({ where: { id: { in: goalIds }, ownerId: ownerId(req) } });
+    if (ownedCount !== goalIds.length) return res.status(400).json({ message: "並び順を更新できません" });
+    await prisma.$transaction(
+      goalIds.map((id: string, sortOrder: number) => prisma.progressGoal.update({ where: { id }, data: { sortOrder } }))
+    );
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/:id/board-link", async (req, res, next) => {
+  try {
+    const progressGoal = await prisma.progressGoal.findFirst({
+      where: { id: req.params.id, ownerId: ownerId(req) },
+      include: { boardGoal: true }
+    });
+    if (!progressGoal) return res.status(404).json({ message: "進捗目標が見つかりません" });
+    if (progressGoal.boardGoal) return res.json({ goal: progressGoal.boardGoal });
+    const goal = await prisma.goal.create({
+      data: {
+        title: progressGoal.targetName,
+        visibility: "personal",
+        boardStatus: "unset",
+        ownerId: ownerId(req),
+        sourceProgressGoalId: progressGoal.id
+      }
+    });
+    res.status(201).json({ goal });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.post("/:id/preview", async (req, res, next) => {

@@ -175,6 +175,9 @@ export function GuildWarGoalsPage() {
   const [bosses, setBosses] = useState<GuildWarBossMaster[]>([]);
   const [speeds, setSpeeds] = useState<Record<number, SpeedDraft>>({});
   const [activeDaySortOrder, setActiveDaySortOrder] = useState(1);
+  const [activeTab, setActiveTab] = useState<"goal" | "speed" | "result">("goal");
+  const [activeBossLevel, setActiveBossLevel] = useState(90);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -190,6 +193,9 @@ export function GuildWarGoalsPage() {
       data.plan.days.some((day) => day.sortOrder === current) ? current : data.plan.days[0]?.sortOrder ?? 1
     );
     setBosses(data.bossMasters);
+    setActiveBossLevel((current) =>
+      data.bossMasters.some((boss) => boss.bossLevel === current) ? current : data.bossMasters[0]?.bossLevel ?? 90
+    );
     setSpeeds(
       Object.fromEntries(
         data.bossMasters.map((boss) => [boss.bossLevel, speedDraftFromApi(boss, data.plan.speeds)])
@@ -209,6 +215,15 @@ export function GuildWarGoalsPage() {
   useEffect(() => {
     void loadPlan();
   }, []);
+  useEffect(() => {
+    function warnBeforeUnload(event: BeforeUnloadEvent) {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const bossByLevel = useMemo(() => new Map(bosses.map((boss) => [boss.bossLevel, boss])), [bosses]);
 
@@ -325,6 +340,7 @@ export function GuildWarGoalsPage() {
         }))
       });
       applyPlan(data);
+      setHasUnsavedChanges(false);
       setNotice("古戦場目標を保存しました。");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "古戦場目標の保存に失敗しました");
@@ -350,6 +366,7 @@ export function GuildWarGoalsPage() {
   }
 
   function updateSpeed(bossLevel: number, patch: Partial<SpeedDraft>) {
+    setHasUnsavedChanges(true);
     setSpeeds((current) => ({
       ...current,
       [bossLevel]: {
@@ -368,24 +385,30 @@ export function GuildWarGoalsPage() {
   }
 
   function updateDay(index: number, patch: Partial<DayDraft>) {
+    setHasUnsavedChanges(true);
     setDays((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
   }
 
   function clearDayTargets() {
+    setHasUnsavedChanges(true);
     setDays((current) => current.map((day) => ({ ...day, targetContribution: "" })));
     setNotice("日程別目標を全てクリアしました。保存すると反映されます。");
     setError("");
   }
 
   return (
-    <div className="page-stack guild-war-page">
+    <div className="page-stack guild-war-page" data-view={activeTab}>
       <section className="page-heading">
         <div>
           <p className="eyebrow">Guild War</p>
-          <h2>古戦場目標計算</h2>
-          <p>日程別の貢献度目標から、必要討伐数・肉数・250専用素材・討伐時間を見積もります。</p>
+          <h1>古戦場</h1>
         </div>
       </section>
+      <div className="segmented guild-war-main-tabs" role="tablist" aria-label="古戦場の表示">
+        <button aria-selected={activeTab === "goal"} className={activeTab === "goal" ? "active" : ""} onClick={() => setActiveTab("goal")} role="tab" type="button">目標</button>
+        <button aria-selected={activeTab === "speed"} className={activeTab === "speed" ? "active" : ""} onClick={() => setActiveTab("speed")} role="tab" type="button">討伐速度</button>
+        <button aria-selected={activeTab === "result"} className={activeTab === "result" ? "active" : ""} onClick={() => setActiveTab("result")} role="tab" type="button">計算結果</button>
+      </div>
 
       <section className="stat-grid guild-war-stat-grid">
         <div className="stat-tile">
@@ -413,7 +436,7 @@ export function GuildWarGoalsPage() {
         </section>
       )}
 
-      <form className="guild-war-form" onSubmit={savePlan}>
+      <form className="guild-war-form" id="guild-war-form" onChange={() => setHasUnsavedChanges(true)} onSubmit={savePlan}>
         <section className="panel">
           <div className="section-heading">
             <div>
@@ -469,16 +492,12 @@ export function GuildWarGoalsPage() {
             メモ
             <textarea onChange={(event) => setMemo(event.target.value)} rows={3} value={memo} />
           </label>
-          <div className="button-row">
-            <button className="primary-button" disabled={isSaving} type="submit">
-              <Save size={18} />
-              保存
+          <details className="guild-war-operation-menu">
+            <summary>操作</summary>
+            <button className="secondary-button" disabled={isSaving || !planId} onClick={() => { if (window.confirm("古戦場の入力値をリセットしますか？")) void resetPlan(); }} type="button">
+              <RotateCcw size={18} />リセット
             </button>
-            <button className="secondary-button" disabled={isSaving || !planId} onClick={resetPlan} type="button">
-              <RotateCcw size={18} />
-              リセット
-            </button>
-          </div>
+          </details>
         </section>
 
         <section className="panel">
@@ -492,6 +511,9 @@ export function GuildWarGoalsPage() {
               日程別目標を全てクリア
             </button>
           </div>
+          <div className="guild-war-tabs" role="tablist" aria-label="編集する日程を選択">
+            {days.map((day) => <button aria-selected={day.sortOrder === activeDaySortOrder} className={day.sortOrder === activeDaySortOrder ? "active" : ""} key={day.sortOrder} onClick={() => setActiveDaySortOrder(day.sortOrder)} role="tab" type="button">{day.dayLabel}</button>)}
+          </div>
           <div className="table-scroll">
             <table className="data-table guild-war-day-table">
               <thead>
@@ -503,7 +525,7 @@ export function GuildWarGoalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {days.map((day, index) => (
+                {days.map((day, index) => ({ day, index })).filter(({ day }) => day.sortOrder === activeDaySortOrder).map(({ day, index }) => (
                   <tr key={day.sortOrder}>
                     <td>{day.dayLabel}</td>
                     <td>
@@ -599,7 +621,10 @@ export function GuildWarGoalsPage() {
             </div>
           </div>
           <div className="speed-grid">
-            {bosses.map((boss) => {
+            <div className="guild-war-tabs" role="tablist" aria-label="HELLを選択">
+              {bosses.map((boss) => <button aria-selected={boss.bossLevel === activeBossLevel} className={boss.bossLevel === activeBossLevel ? "active" : ""} key={boss.bossLevel} onClick={() => setActiveBossLevel(boss.bossLevel)} role="tab" type="button">{boss.name}</button>)}
+            </div>
+            {bosses.filter((boss) => boss.bossLevel === activeBossLevel).map((boss) => {
               const draft = speeds[boss.bossLevel] ?? {
                 bossLevel: boss.bossLevel,
                 minutes: "",
@@ -710,7 +735,7 @@ export function GuildWarGoalsPage() {
         </section>
       </form>
 
-      <section className="panel">
+      <section className="panel guild-war-results-panel">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Result</p>
@@ -878,6 +903,7 @@ export function GuildWarGoalsPage() {
         <p>250HELLは通常肉ではなく専用素材で計算しています。</p>
         <p>250HELLの実際の解禁には、団内での200HELL討伐数などの条件があります。</p>
       </section>
+      {activeTab !== "result" ? <button className={hasUnsavedChanges ? "floating-save-action is-dirty" : "floating-save-action"} disabled={isSaving} form="guild-war-form" type="submit"><Save size={19} />{isSaving ? "保存中…" : "保存"}</button> : null}
     </div>
   );
 }

@@ -7,14 +7,14 @@ Saisoku is a private GBF crew utility, not a public strategy database. It organi
 The current application includes:
 
 - cookie-based registration/login
-- daily, weekly, and one-time tasks
-- material goals and presets
-- build presets, posts, search, detail, copy, and screenshots
+- one-counter round goals with optional personal-board links
+- image-and-notes build posts, private drafts, search, editing, and screenshots
 - GBF character, weapon, summon, job, material, and quest masters
-- shared goals, proposals, a Kanban board, and linked resources
+- private and crew goals, a three-state board, linked round/progress goals, and sub-tasks
 - Guild War planning and calculations
 - official-news ingestion and event scheduling
-- a staged progress-goal foundation
+- staged progress management
+- a mobile-first shared header, five-item bottom navigation, and archive
 
 Do not describe the repository as an initial task-only app or as a collection of placeholder pages.
 
@@ -29,6 +29,8 @@ Before feature work, read documents in this order:
 5. the current code, Prisma schema, migrations, and recent Git history
 
 For any change to `/progress-goals`, progress preset definitions, staged material calculations, or user progress inventory, `docs/23_progress_preset_feature.md` is the required feature specification and must be read before `docs/preset.md`. Keep behavior decisions in that specification; use `docs/preset.md` for researched material counts and sources.
+
+For the mobile-first feature reorganization, navigation, goals, round goals, builds, archive behavior, deletions, and migration decisions, `docs/27_mobile_first_feature_reorganization.md` is the required feature specification.
 
 `docs/01_overall_policy.md` is the product baseline for scope, image handling, external references, and Supabase Free constraints. Later feature documents can refine that baseline, such as allowing a small number of build screenshots, but must not silently discard its intent.
 
@@ -208,7 +210,7 @@ When browser tooling is available, inspect the changed route at all required wid
 
 ## 11. Images and external information
 
-- Keep selection-based build registration available even when screenshots are supported.
+- Build registration is image-and-notes based. Do not restore the removed character, weapon, summon, job selection workflow or build presets without an explicit product-policy revision.
 - Build screenshots are limited to five images per build and 5MB per file; accepted types are JPEG, PNG, and WebP.
 - Keep list pages lightweight. Do not render many full-resolution screenshots in lists.
 - Store managed images in Saisoku-controlled storage rather than hotlinking external assets.

@@ -20,6 +20,9 @@
     "news:fetch:month": "TMPDIR=/tmp tsx server/scripts/fetchOfficialNews.ts month",
     "news:reanalyze": "TMPDIR=/tmp tsx server/scripts/fetchOfficialNews.ts reanalyze",
     "news:debug:summary": "TMPDIR=/tmp tsx server/scripts/debugOfficialNewsSummary.ts",
+    "migration:preflight-mobile-reorganization": "TMPDIR=/tmp tsx server/scripts/preflightMobileReorganization.ts",
+    "migration:postflight-mobile-reorganization": "TMPDIR=/tmp tsx server/scripts/postflightMobileReorganization.ts",
+    "migration:remove-legacy-build-images": "TMPDIR=/tmp tsx server/scripts/removeLegacyBuildImages.ts",
     "prisma:studio": "prisma studio"
   },
   "prisma": {

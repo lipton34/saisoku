@@ -7,13 +7,14 @@ import { fileURLToPath } from "node:url";
 import { attachUser } from "./middleware/requireAuth.js";
 import { authRouter } from "./routes/auth.js";
 import { buildMastersRouter } from "./routes/buildMasters.js";
-import { buildsRouter } from "./routes/builds.js";
+import { buildDraftsRouter, buildsRouter } from "./routes/builds.js";
 import { eventOccurrencesRouter } from "./routes/eventOccurrences.js";
 import { eventNotesRouter } from "./routes/eventNotes.js";
 import { eventSeriesRouter } from "./routes/eventSeries.js";
 import { guildWarGoalsRouter } from "./routes/guildWarGoals.js";
-import { materialGoalsRouter } from "./routes/materialGoals.js";
+import { goalsRouter } from "./routes/goals.js";
 import { progressGoalsRouter } from "./routes/progressGoals.js";
+import { roundGoalsRouter } from "./routes/roundGoals.js";
 import {
   newsFetchLogsRouter,
   newsItemsRouter,
@@ -21,8 +22,6 @@ import {
   sourceArticlesRouter
 } from "./routes/officialNews.js";
 import { officialNewsFetchRouter } from "./routes/officialNewsFetch.js";
-import { sharedGoalsRouter } from "./routes/sharedGoals.js";
-import { tasksRouter } from "./routes/tasks.js";
 
 dotenv.config();
 
@@ -51,19 +50,19 @@ app.use(attachUser);
 app.use("/api/auth", authRouter);
 app.use("/api/build-masters", buildMastersRouter);
 app.use("/api/builds", buildsRouter);
+app.use("/api/build-drafts", buildDraftsRouter);
 app.use("/api/event-notes", eventNotesRouter);
 app.use("/api/event-occurrences", eventOccurrencesRouter);
 app.use("/api/event-series", eventSeriesRouter);
 app.use("/api/guild-war-goals", guildWarGoalsRouter);
-app.use("/api/material-goals", materialGoalsRouter);
+app.use("/api/goals", goalsRouter);
 app.use("/api/progress-goals", progressGoalsRouter);
+app.use("/api/round-goals", roundGoalsRouter);
 app.use("/api/news", officialNewsRouter);
 app.use("/api/news-fetch-logs", newsFetchLogsRouter);
 app.use("/api/news-items", newsItemsRouter);
 app.use("/api/official-news", officialNewsFetchRouter);
 app.use("/api/source-articles", sourceArticlesRouter);
-app.use("/api/shared-goals", sharedGoalsRouter);
-app.use("/api/tasks", tasksRouter);
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ message: "API route not found" });

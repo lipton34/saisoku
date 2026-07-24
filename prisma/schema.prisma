@@ -8,12 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum RepeatType {
-  daily
-  weekly
-  once
-}
-
 enum GbfMasterKind {
   character
   weapon
@@ -76,116 +70,57 @@ enum ExtractedNewsInfoStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  displayName  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  tasks        Task[]
-  materialGoals MaterialGoal[]
-  materialPresets MaterialPreset[]
-  progressGoals ProgressGoal[]
-  itemInventories UserItemInventory[]
+  id                   String                    @id @default(cuid())
+  username             String                    @unique
+  passwordHash         String
+  displayName          String?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  roundGoals           RoundGoal[]
+  progressGoals        ProgressGoal[]
+  itemInventories      UserItemInventory[]
   progressSharedValues UserProgressSharedValue[]
-  buildPosts   BuildPost[]
-  guildWarGoalPlans GuildWarGoalPlan[]
-  sharedGoals  SharedGoal[] @relation("SharedGoalOwner")
-  proposedGoals SharedGoal[] @relation("SharedGoalProposer")
-  sentGoalProposals GoalProposal[] @relation("GoalProposalProposer")
-  receivedGoalProposals GoalProposal[] @relation("GoalProposalTarget")
+  buildPosts           BuildPost[]
+  buildDrafts          BuildDraft[]
+  guildWarGoalPlans    GuildWarGoalPlan[]
+  goals                Goal[]
 }
 
-model Task {
-  id           String     @id @default(cuid())
+model RoundGoal {
+  id           String   @id @default(cuid())
   title        String
-  description  String?
-  category     String     @default("日課")
-  repeatType   RepeatType @default(daily)
-  dueDate      DateTime?
-  resetHourJst Int        @default(5)
-  isCompleted  Boolean    @default(false)
-  completedAt  DateTime?
-  ownerId      String
-  owner        User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  targetCount  Int      @map("target_count")
+  currentCount Int      @default(0) @map("current_count")
+  note         String?
+  sortOrder    Int      @default(0) @map("sort_order")
+  ownerId      String   @map("owner_id")
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  boardGoal    Goal?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  @@index([ownerId, isCompleted])
-  @@index([ownerId, repeatType])
-}
-
-model MaterialGoal {
-  id        String         @id @default(cuid())
-  title     String
-  questName String?
-  note      String?
-  ownerId   String
-  owner     User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  items     MaterialItem[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-
-  @@index([ownerId, updatedAt])
-}
-
-model MaterialItem {
-  id            String       @id @default(cuid())
-  name          String
-  requiredCount Int
-  ownedCount    Int          @default(0)
-  note          String?
-  goalId        String
-  goal          MaterialGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  @@index([goalId])
-}
-
-model MaterialPreset {
-  id        String               @id @default(cuid())
-  name      String
-  questName String?
-  note      String?
-  ownerId   String
-  owner     User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  items     MaterialPresetItem[]
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-
-  @@index([ownerId, updatedAt])
-}
-
-model MaterialPresetItem {
-  id            String         @id @default(cuid())
-  name          String
-  requiredCount Int
-  note          String?
-  presetId      String
-  preset        MaterialPreset @relation(fields: [presetId], references: [id], onDelete: Cascade)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  @@index([presetId])
+  @@index([ownerId, sortOrder])
+  @@map("round_goals")
 }
 
 model ProgressGoal {
-  id              String                     @id @default(cuid())
-  presetId        String                     @map("preset_id")
-  presetVersion   Int                        @map("preset_version")
-  presetName      String                     @map("preset_name")
-  targetId        String                     @map("target_id")
-  targetName      String                     @map("target_name")
-  selection       Json                       @default("{}")
-  goalStageId     String                     @map("goal_stage_id")
-  startingStageId String?                    @map("starting_stage_id")
-  ownerId         String                     @map("owner_id")
-  owner           User                       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id              String                      @id @default(cuid())
+  presetId        String                      @map("preset_id")
+  presetVersion   Int                         @map("preset_version")
+  presetName      String                      @map("preset_name")
+  targetId        String                      @map("target_id")
+  targetName      String                      @map("target_name")
+  selection       Json                        @default("{}")
+  goalStageId     String                      @map("goal_stage_id")
+  startingStageId String?                     @map("starting_stage_id")
+  sortOrder       Int                         @default(0) @map("sort_order")
+  ownerId         String                      @map("owner_id")
+  owner           User                        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  boardGoal       Goal?
   stages          ProgressStageProgress[]
   conditions      ProgressConditionProgress[]
-  createdAt       DateTime                   @default(now()) @map("created_at")
-  updatedAt       DateTime                   @updatedAt @map("updated_at")
+  createdAt       DateTime                    @default(now()) @map("created_at")
+  updatedAt       DateTime                    @updatedAt @map("updated_at")
 
   @@index([ownerId, updatedAt])
   @@index([ownerId, presetId, targetId, goalStageId])
@@ -193,14 +128,14 @@ model ProgressGoal {
 }
 
 model UserItemInventory {
-  id        String   @id @default(cuid())
-  ownerId   String   @map("owner_id")
-  itemKey   String   @map("item_key")
-  itemName  String   @map("item_name")
-  ownedCount Int     @default(0) @map("owned_count")
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(cuid())
+  ownerId    String   @map("owner_id")
+  itemKey    String   @map("item_key")
+  itemName   String   @map("item_name")
+  ownedCount Int      @default(0) @map("owned_count")
+  owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@unique([ownerId, itemKey])
   @@index([ownerId, itemName])
@@ -221,14 +156,14 @@ model UserProgressSharedValue {
 }
 
 model ProgressStageProgress {
-  id              String       @id @default(cuid())
-  goalId          String       @map("goal_id")
-  stageId         String       @map("stage_id")
-  isManuallyDone  Boolean      @default(false) @map("is_manually_done")
-  completedAt     DateTime?    @map("completed_at")
-  goal            ProgressGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
+  id             String       @id @default(cuid())
+  goalId         String       @map("goal_id")
+  stageId        String       @map("stage_id")
+  isManuallyDone Boolean      @default(false) @map("is_manually_done")
+  completedAt    DateTime?    @map("completed_at")
+  goal           ProgressGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
   @@unique([goalId, stageId])
   @@index([goalId])
@@ -236,14 +171,14 @@ model ProgressStageProgress {
 }
 
 model ProgressConditionProgress {
-  id          String       @id @default(cuid())
-  goalId      String       @map("goal_id")
-  conditionId String       @map("condition_id")
-  isChecked   Boolean      @default(false) @map("is_checked")
-  numericValue Int?        @map("numeric_value")
-  goal        ProgressGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
+  id           String       @id @default(cuid())
+  goalId       String       @map("goal_id")
+  conditionId  String       @map("condition_id")
+  isChecked    Boolean      @default(false) @map("is_checked")
+  numericValue Int?         @map("numeric_value")
+  goal         ProgressGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
 
   @@unique([goalId, conditionId])
   @@index([goalId])
@@ -251,146 +186,116 @@ model ProgressConditionProgress {
 }
 
 model BuildPost {
-  id                  String   @id @default(cuid())
-  title               String
-  category            String
-  questName           String
-  element             String
-  purpose             String
-  operationType       String
-  verificationStatus  String
-  overview            String?
-  protagonistJob      String?
-  characterDetails    Json     @default("[]")
-  summonDetails       Json     @default("[]")
-  weaponDetails       Json     @default("[]")
-  characters          String[] @default([])
-  summons             String[] @default([])
-  weapons             String[] @default([])
-  requiredParts       String[] @default([])
-  recommendedParts    String[] @default([])
-  substitutableParts  String[] @default([])
-  freeSlots           String[] @default([])
-  substituteNotes     String?
-  cautions            String?
-  role                String?
-  omenNotes           String?
-  actionNotes         String?
-  failurePoints       String?
-  farmingGoal         String?
-  raidRole            String?
-  blueChest           String?
-  clearTime           String?
-  stability           String?
-  prerequisites       String?
-  weaponTarget        String?
-  rescueTiming        String?
-  farmingCautions     String?
-  referenceUrls       Json     @default("[]")
-  sourcePresetId      String?
-  sourcePresetName    String?
-  changeMemo          String?
-  ownerId             String
-  owner               User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  images              BuildPostImage[]
-  goalLinks           GoalBuildLink[]
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                String           @id @default(cuid())
+  title             String
+  normalizedTitle   String           @unique @map("normalized_title")
+  questName         String?          @map("quest_name")
+  overview          String?
+  supplementalNotes String?          @map("supplemental_notes")
+  referenceUrl      String?          @map("reference_url")
+  ownerId           String           @map("owner_id")
+  owner             User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  images            BuildPostImage[]
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
 
+  @@index([updatedAt])
   @@index([ownerId, updatedAt])
-  @@index([ownerId, category, questName, element])
+  @@map("build_posts")
 }
 
 model BuildPostImage {
-  id           String    @id @default(cuid())
-  buildPostId  String
-  imageType    String
-  storageBucket String   @default("gbf-build-screenshots")
-  storagePath  String
-  publicUrl    String?
-  originalName String?
-  mimeType     String?
-  sizeBytes    Int?
-  displayOrder Int       @default(0)
-  buildPost    BuildPost @relation(fields: [buildPostId], references: [id], onDelete: Cascade)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  buildPostId   String    @map("build_post_id")
+  storageBucket String    @default("gbf-build-screenshots") @map("storage_bucket")
+  storagePath   String    @map("storage_path")
+  publicUrl     String?   @map("public_url")
+  originalName  String?   @map("original_name")
+  mimeType      String?   @map("mime_type")
+  sizeBytes     Int?      @map("size_bytes")
+  displayOrder  Int       @default(0) @map("display_order")
+  buildPost     BuildPost @relation(fields: [buildPostId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@index([buildPostId, displayOrder])
   @@map("build_post_images")
 }
 
-model SharedGoal {
-  id                 String        @id @default(cuid())
-  title              String
-  category           String
-  description        String?
-  targetValue        Float?
-  currentValue       Float?
-  unit               String?
-  details            Json          @default("{}")
-  progressRate       Float?
-  status             String        @default("未達成")
-  boardStatus        String        @default("later")
-  priority           String        @default("medium")
-  effort             String        @default("normal")
-  dueDate            DateTime?
-  beginnerRecommended Boolean      @default(false)
-  sortOrder          Int           @default(0)
-  memo               String?
-  sourceProposalId   String?       @unique
-  sourceProposal     GoalProposal? @relation("GoalSourceProposal", fields: [sourceProposalId], references: [id], onDelete: SetNull)
-  proposedByUserId   String?
-  proposedByUser     User?         @relation("SharedGoalProposer", fields: [proposedByUserId], references: [id], onDelete: SetNull)
-  ownerId            String
-  owner              User          @relation("SharedGoalOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  acceptedProposal   GoalProposal? @relation("GoalProposalAcceptedGoal")
-  buildLinks         GoalBuildLink[]
-  requiredItems      GoalRequiredItem[]
-  raidTargets        GoalRaidTarget[]
-  subTasks           GoalSubTask[]
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+model BuildDraft {
+  id                String            @id @default(cuid())
+  title             String?
+  questName         String?           @map("quest_name")
+  overview          String?
+  supplementalNotes String?           @map("supplemental_notes")
+  referenceUrl      String?           @map("reference_url")
+  ownerId           String            @map("owner_id")
+  owner             User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  images            BuildDraftImage[]
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
 
-  @@index([ownerId, status])
-  @@index([ownerId, boardStatus, sortOrder])
-  @@index([priority])
-  @@index([effort])
-  @@index([category, status])
-  @@index([dueDate])
-  @@map("shared_goals")
+  @@index([ownerId, updatedAt])
+  @@map("build_drafts")
 }
 
-model GoalBuildLink {
-  id        String     @id @default(cuid())
-  goalId    String
-  buildId   String
-  note      String?
-  goal      SharedGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  build     BuildPost  @relation(fields: [buildId], references: [id], onDelete: Cascade)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+model BuildDraftImage {
+  id            String     @id @default(cuid())
+  buildDraftId  String     @map("build_draft_id")
+  storageBucket String     @default("gbf-build-screenshots") @map("storage_bucket")
+  storagePath   String     @map("storage_path")
+  publicUrl     String?    @map("public_url")
+  originalName  String?    @map("original_name")
+  mimeType      String?    @map("mime_type")
+  sizeBytes     Int?       @map("size_bytes")
+  displayOrder  Int        @default(0) @map("display_order")
+  buildDraft    BuildDraft @relation(fields: [buildDraftId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  @@unique([goalId, buildId])
-  @@index([goalId])
-  @@index([buildId])
-  @@map("goal_build_links")
+  @@index([buildDraftId, displayOrder])
+  @@map("build_draft_images")
+}
+
+model Goal {
+  id                   String             @id @default(cuid())
+  title                String
+  description          String?
+  memo                 String?
+  visibility           String             @default("personal")
+  boardStatus          String             @default("unset") @map("board_status")
+  sortOrder            Int                @default(0) @map("sort_order")
+  ownerId              String             @map("owner_id")
+  owner                User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  sourceRoundGoalId    String?            @unique @map("source_round_goal_id")
+  sourceRoundGoal      RoundGoal?         @relation(fields: [sourceRoundGoalId], references: [id], onDelete: Cascade)
+  sourceProgressGoalId String?            @unique @map("source_progress_goal_id")
+  sourceProgressGoal   ProgressGoal?      @relation(fields: [sourceProgressGoalId], references: [id], onDelete: Cascade)
+  requiredItems        GoalRequiredItem[]
+  raidTargets          GoalRaidTarget[]
+  subTasks             GoalSubTask[]
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  @@index([ownerId, visibility, boardStatus, sortOrder])
+  @@index([visibility, boardStatus, sortOrder])
+  @@map("goals")
 }
 
 model GoalRequiredItem {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   goalId        String
   masterItemId  String?
-  itemKind      String        @default("weapon")
+  itemKind      String         @default("weapon")
   name          String
-  requiredCount Int           @default(1)
-  currentCount  Int           @default(0)
-  importance    String        @default("必須")
+  requiredCount Int            @default(1)
+  currentCount  Int            @default(0)
+  importance    String         @default("必須")
   note          String?
-  goal          SharedGoal    @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  goal          Goal           @relation(fields: [goalId], references: [id], onDelete: Cascade)
   masterItem    GbfMasterItem? @relation(fields: [masterItemId], references: [id], onDelete: SetNull)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([goalId])
   @@index([masterItemId])
@@ -398,81 +303,55 @@ model GoalRequiredItem {
 }
 
 model GoalRaidTarget {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   goalId       String
   questName    String
-  runType      String     @default("other")
-  targetCount  Int        @default(0)
-  currentCount Int        @default(0)
+  runType      String   @default("other")
+  targetCount  Int      @default(0)
+  currentCount Int      @default(0)
   note         String?
-  goal         SharedGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  goal         Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([goalId])
   @@map("goal_raid_targets")
 }
 
 model GoalSubTask {
-  id        String     @id @default(cuid())
+  id        String   @id @default(cuid())
   goalId    String
   title     String
-  isDone    Boolean    @default(false)
-  sortOrder Int        @default(0)
-  goal      SharedGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  isDone    Boolean  @default(false)
+  sortOrder Int      @default(0)
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([goalId])
   @@map("goal_sub_tasks")
 }
 
-model GoalProposal {
-  id             String      @id @default(cuid())
-  proposerUserId String
-  proposer       User        @relation("GoalProposalProposer", fields: [proposerUserId], references: [id], onDelete: Cascade)
-  targetUserId   String
-  targetUser     User        @relation("GoalProposalTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
-  title          String
-  category       String
-  description    String?
-  targetValue    Float?
-  unit           String?
-  details        Json        @default("{}")
-  dueDate        DateTime?
-  proposalMemo   String?
-  status         String      @default("提案中")
-  acceptedGoalId String?     @unique
-  acceptedGoal   SharedGoal? @relation("GoalProposalAcceptedGoal", fields: [acceptedGoalId], references: [id], onDelete: SetNull)
-  sourcedGoal    SharedGoal? @relation("GoalSourceProposal")
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-
-  @@index([targetUserId, status])
-  @@index([proposerUserId, status])
-  @@map("goal_proposals")
-}
-
 model GbfMasterItem {
-  id            String           @id
-  kind          GbfMasterKind
-  name          String
-  displayName   String?
-  element       String?
-  rarity        String?
-  category      String?
-  thumbnailPath String?
-  thumbnailUrl  String?
-  description   String?
-  note          String?
-  tags          String[]         @default([])
-  metadata      Json             @default("{}")
-  sortOrder     Int              @default(0)
-  isActive      Boolean          @default(true)
-  aliases       GbfMasterAlias[]
+  id                String             @id
+  kind              GbfMasterKind
+  name              String
+  displayName       String?
+  element           String?
+  rarity            String?
+  category          String?
+  thumbnailPath     String?
+  thumbnailUrl      String?
+  description       String?
+  note              String?
+  tags              String[]           @default([])
+  metadata          Json               @default("{}")
+  sortOrder         Int                @default(0)
+  isActive          Boolean            @default(true)
+  aliases           GbfMasterAlias[]
   goalRequiredItems GoalRequiredItem[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@index([kind, isActive, sortOrder])
   @@index([kind, name])
@@ -510,14 +389,14 @@ model GuildWarGoalPlan {
 }
 
 model GuildWarGoalDay {
-  id                 String           @id @default(cuid())
-  planId             String
-  plan               GuildWarGoalPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  dayLabel           String
-  targetContribution BigInt           @default(0)
-  currentContribution BigInt          @default(0)
-  sortOrder          Int
-  memo               String?
+  id                  String           @id @default(cuid())
+  planId              String
+  plan                GuildWarGoalPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  dayLabel            String
+  targetContribution  BigInt           @default(0)
+  currentContribution BigInt           @default(0)
+  sortOrder           Int
+  memo                String?
 
   @@unique([planId, sortOrder])
   @@index([planId])
@@ -542,17 +421,17 @@ model GuildWarBossMaster {
 }
 
 model GuildWarBossSpeed {
-  id               String           @id @default(cuid())
-  planId           String
-  plan             GuildWarGoalPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  bossLevel        Int
-  clearTimeSeconds Int?
+  id                     String           @id @default(cuid())
+  planId                 String
+  plan                   GuildWarGoalPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  bossLevel              Int
+  clearTimeSeconds       Int?
   targetClearTimeSeconds Int?
-  targetRuns       Int              @default(0)
-  playStyle        String           @default("未指定")
-  memo             String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  targetRuns             Int              @default(0)
+  playStyle              String           @default("未指定")
+  memo                   String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 
   @@unique([planId, bossLevel])
   @@index([planId])
@@ -560,20 +439,20 @@ model GuildWarBossSpeed {
 }
 
 model SourceArticle {
-  id              String                @id @default(cuid())
+  id              String              @id @default(cuid())
   source          String
-  sourceArticleId String                @map("source_article_id")
+  sourceArticleId String              @map("source_article_id")
   slug            String?
   title           String
-  officialUrl     String                @map("official_url")
-  publishedAt     DateTime?             @map("published_at")
-  categoryIds     Int[]                 @default([]) @map("category_ids")
-  categorySlugs   String[]              @default([]) @map("category_slugs")
-  articleType     SourceArticleType     @default(other) @map("article_type")
-  fetchedAt       DateTime              @default(now()) @map("fetched_at")
-  lastCheckedAt   DateTime              @default(now()) @map("last_checked_at")
-  contentHash     String?               @map("content_hash")
-  status          SourceArticleStatus   @default(active)
+  officialUrl     String              @map("official_url")
+  publishedAt     DateTime?           @map("published_at")
+  categoryIds     Int[]               @default([]) @map("category_ids")
+  categorySlugs   String[]            @default([]) @map("category_slugs")
+  articleType     SourceArticleType   @default(other) @map("article_type")
+  fetchedAt       DateTime            @default(now()) @map("fetched_at")
+  lastCheckedAt   DateTime            @default(now()) @map("last_checked_at")
+  contentHash     String?             @map("content_hash")
+  status          SourceArticleStatus @default(active)
   extractedItems  ExtractedNewsItem[]
 
   @@unique([source, sourceArticleId])
@@ -681,28 +560,28 @@ model EventOccurrence {
 }
 
 model EventNote {
-  id              String             @id @default(cuid())
-  eventKey        String             @map("event_key")
-  newsItemId      String?            @map("news_item_id")
-  newsItem        ExtractedNewsItem? @relation(fields: [newsItemId], references: [id], onDelete: SetNull)
-  eventOccurrenceId String?          @map("event_occurrence_id")
-  eventOccurrence EventOccurrence?   @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
-  eventSeriesId   String?            @map("event_series_id")
-  eventSeries     EventSeries?       @relation(fields: [eventSeriesId], references: [id], onDelete: SetNull)
-  title           String
-  minimumGoals    String?            @map("minimum_goals")
-  targetWeapons   String?            @map("target_weapons")
-  targetSummons   String?            @map("target_summons")
-  targetItems     String?            @map("target_items")
-  farmingNotes    String?            @map("farming_notes")
-  cautionNotes    String?            @map("caution_notes")
-  freeMemo        String?            @map("free_memo")
-  sourceNoteId    String?            @map("source_note_id")
-  sourceNote      EventNote?         @relation("EventNoteCopies", fields: [sourceNoteId], references: [id], onDelete: SetNull)
-  copiedNotes     EventNote[]        @relation("EventNoteCopies")
-  links           EventNoteLink[]
-  createdAt       DateTime           @default(now()) @map("created_at")
-  updatedAt       DateTime           @updatedAt @map("updated_at")
+  id                String             @id @default(cuid())
+  eventKey          String             @map("event_key")
+  newsItemId        String?            @map("news_item_id")
+  newsItem          ExtractedNewsItem? @relation(fields: [newsItemId], references: [id], onDelete: SetNull)
+  eventOccurrenceId String?            @map("event_occurrence_id")
+  eventOccurrence   EventOccurrence?   @relation(fields: [eventOccurrenceId], references: [id], onDelete: Cascade)
+  eventSeriesId     String?            @map("event_series_id")
+  eventSeries       EventSeries?       @relation(fields: [eventSeriesId], references: [id], onDelete: SetNull)
+  title             String
+  minimumGoals      String?            @map("minimum_goals")
+  targetWeapons     String?            @map("target_weapons")
+  targetSummons     String?            @map("target_summons")
+  targetItems       String?            @map("target_items")
+  farmingNotes      String?            @map("farming_notes")
+  cautionNotes      String?            @map("caution_notes")
+  freeMemo          String?            @map("free_memo")
+  sourceNoteId      String?            @map("source_note_id")
+  sourceNote        EventNote?         @relation("EventNoteCopies", fields: [sourceNoteId], references: [id], onDelete: SetNull)
+  copiedNotes       EventNote[]        @relation("EventNoteCopies")
+  links             EventNoteLink[]
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
 
   @@index([newsItemId])
   @@index([eventOccurrenceId])

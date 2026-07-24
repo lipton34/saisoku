@@ -1,162 +1,208 @@
-import { Boxes, CalendarCheck2, ChevronRight, FilePlus2, Flag, Flame, ListChecks, Map, Newspaper, Swords } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { TaskList } from "../components/TaskList";
-import { api, type SharedGoal, type Task } from "../lib/api";
+import { Filter, MoreVertical, Plus, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../components/AuthContext";
+import { api, type Goal, type GoalBoardState } from "../lib/api";
 
-const toolCards = [
-  { title: "タスク", description: "日課や週課を登録し、完了・未完了を切り替えて管理", icon: CalendarCheck2, href: "/tasks" },
-  { title: "素材メモ", description: "素材ごとの必要数・所持数・優先度を記録して進捗確認", icon: Boxes, href: "/materials" },
-  { title: "目標共有", description: "団員の周回・編成目標を共有し、提案や準備状況を確認", icon: Flag, href: "/goals" },
-  { title: "古戦場計算", description: "日別の目標貢献度からHELL討伐数や必要時間を計算", icon: Flame, href: "/guild-war-goals" },
-  { title: "公式NEWS", description: "取り込んだ公式お知らせの表示、表示切替、メモ登録", icon: Newspaper, href: "/official-news" },
-  { title: "イベント予定", description: "公式NEWS由来のイベント日程と自分用メモを確認", icon: Map, href: "/event-schedule" },
-  { title: "編成一覧・検索", description: "投稿済みの高難易度・周回向け編成を検索して詳細確認", icon: Swords, href: "/builds/search" },
-  { title: "編成投稿", description: "プリセットや候補リストを使って編成メモを登録", icon: FilePlus2, href: "/builds/post" },
-  { title: "ロードマップ", description: "実装済み・開発中・今後追加予定の機能を確認", icon: Map, href: "/roadmap" }
+const statuses: { value: GoalBoardState; label: string }[] = [
+  { value: "unset", label: "未設定" },
+  { value: "now", label: "今やる" },
+  { value: "later", label: "後でやる" }
 ];
 
 export function HomePage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [goals, setGoals] = useState<SharedGoal[]>([]);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [scope, setScope] = useState<"personal" | "crew">("personal");
+  const [status, setStatus] = useState<GoalBoardState>("unset");
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [selected, setSelected] = useState<Goal | null>(null);
+  const [detailTab, setDetailTab] = useState<"overview" | "tasks">("overview");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [keyword, setKeyword] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "normal" | "round" | "progress">("all");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newSubTask, setNewSubTask] = useState("");
   const [error, setError] = useState("");
 
-  async function loadTasks() {
+  async function load(nextScope = scope) {
     try {
-      const data = await api.tasks();
-      setTasks(data.tasks);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "タスクの取得に失敗しました");
-    }
-  }
-
-  async function loadGoals() {
-    try {
-      const data = await api.sharedGoals();
+      const data = await api.goals(nextScope);
       setGoals(data.goals);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "団内目標の取得に失敗しました");
+      setSelected((current) => data.goals.find((goal) => goal.id === current?.id) ?? null);
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "目標を読み込めませんでした");
     }
   }
 
   useEffect(() => {
-    void loadTasks();
-    void loadGoals();
-  }, []);
+    void load(scope);
+  }, [scope]);
 
-  async function completeTask(task: Task) {
-    const data = await api.completeTask(task.id);
-    setTasks((current) => current.map((item) => (item.id === task.id ? data.task : item)));
+  const visibleGoals = useMemo(
+    () =>
+      goals.filter((goal) => {
+        if (goal.boardStatus !== status) return false;
+        if (keyword && !`${goal.title} ${goal.description ?? ""} ${goal.memo ?? ""}`.toLowerCase().includes(keyword.toLowerCase())) return false;
+        if (sourceFilter === "round" && !goal.sourceRoundGoalId) return false;
+        if (sourceFilter === "progress" && !goal.sourceProgressGoalId) return false;
+        if (sourceFilter === "normal" && (goal.sourceRoundGoalId || goal.sourceProgressGoalId)) return false;
+        return true;
+      }),
+    [goals, keyword, sourceFilter, status]
+  );
+
+  function openGoal(goal: Goal) {
+    if (goal.sourceRoundGoalId) {
+      navigate("/round-goals");
+      return;
+    }
+    if (goal.sourceProgressGoalId) {
+      navigate("/progress-goals");
+      return;
+    }
+    setDetailTab("overview");
+    setSelected(goal);
   }
 
-  async function reopenTask(task: Task) {
-    const data = await api.reopenTask(task.id);
-    setTasks((current) => current.map((item) => (item.id === task.id ? data.task : item)));
+  async function changeStatus(goal: Goal, boardStatus: GoalBoardState) {
+    try {
+      await api.updateGoal(goal.id, { boardStatus });
+      await load();
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "状態を変更できませんでした");
+    }
   }
 
-  const priorityTasks = tasks.filter((task) => !task.isCompleted).slice(0, 5);
-  const latestGoals = goals.slice(0, 5);
+  async function createGoal(event: React.FormEvent) {
+    event.preventDefault();
+    try {
+      await api.createGoal({ title: newTitle, description: newDescription });
+      setNewTitle("");
+      setNewDescription("");
+      setCreateOpen(false);
+      setScope("personal");
+      setStatus("unset");
+      await load("personal");
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "目標を作成できませんでした");
+    }
+  }
+
+  async function removeGoal(goal: Goal) {
+    const message = goal.sourceRoundGoalId || goal.sourceProgressGoalId
+      ? "目標ボードとの連携を解除します。元のデータは残ります。"
+      : "この目標を削除します。";
+    if (!window.confirm(message)) return;
+    try {
+      if (goal.sourceRoundGoalId || goal.sourceProgressGoalId) await api.unlinkGoalSource(goal.id);
+      else await api.deleteGoal(goal.id);
+      setSelected(null);
+      await load();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "削除できませんでした");
+    }
+  }
+
+  async function publish(goal: Goal) {
+    if (!window.confirm("団内目標にすると個人目標へ戻せません。団内へ公開しますか？")) return;
+    try {
+      await api.updateGoal(goal.id, { visibility: "crew", confirmCrewPublish: true });
+      setSelected(null);
+      await load();
+    } catch (publishError) {
+      setError(publishError instanceof Error ? publishError.message : "団内へ公開できませんでした");
+    }
+  }
+
+  async function addSubTask(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selected || !newSubTask.trim()) return;
+    try {
+      await api.createGoalSubTask(selected.id, newSubTask);
+      setNewSubTask("");
+      await load();
+    } catch (taskError) {
+      setError(taskError instanceof Error ? taskError.message : "サブタスクを追加できませんでした");
+    }
+  }
 
   return (
-    <div className="page-stack">
-      <section className="home-hero">
-        <div>
-          <p className="eyebrow">Today&apos;s Rotation</p>
-          <h2>今日やることを、迷わず回収。</h2>
-          <p>日課・週課を見ながら、次に足す攻略ツールへすぐ移動できます。</p>
-        </div>
-        <div className="hero-actions">
-          <Link className="primary-button hero-action" to="/tasks">
-            <ListChecks size={18} />
-            タスクを登録
-          </Link>
-          <Link className="secondary-button hero-action" to="/goals?tab=new">
-            <Flag size={18} />
-            団内目標を登録
-          </Link>
-        </div>
+    <div className="page-stack goal-home-page">
+      <section className="page-heading goal-home-heading">
+        <div><p className="eyebrow">Goals</p><h1>目標</h1></div>
+        <button aria-label="絞り込み" className="icon-button" onClick={() => setFilterOpen(true)} title="絞り込み" type="button"><Filter size={19} /></button>
       </section>
 
-      {error && <p className="form-error">{error}</p>}
+      <div className="segmented goal-scope-tabs" role="tablist" aria-label="目標の公開範囲">
+        <button aria-selected={scope === "personal"} className={scope === "personal" ? "active" : ""} onClick={() => setScope("personal")} role="tab" type="button">個人目標</button>
+        <button aria-selected={scope === "crew"} className={scope === "crew" ? "active" : ""} onClick={() => setScope("crew")} role="tab" type="button">団内目標</button>
+      </div>
+      <div className="segmented goal-status-tabs" role="tablist" aria-label="目標の状態">
+        {statuses.map((item) => <button aria-selected={status === item.value} className={status === item.value ? "active" : ""} key={item.value} onClick={() => setStatus(item.value)} role="tab" type="button">{item.label}</button>)}
+      </div>
+      {error ? <p className="form-error" role="alert">{error}</p> : null}
 
-      <section className="content-grid">
-        <div className="panel">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Open Tasks</p>
-              <h2>優先タスク</h2>
-            </div>
-            <Link className="text-link" to="/tasks">
-              すべて見る
-              <ChevronRight size={16} />
-            </Link>
-          </div>
-          <TaskList compact onComplete={completeTask} onReopen={reopenTask} tasks={priorityTasks} />
-        </div>
-
-        <div className="panel">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Crew Goals</p>
-              <h2>団内目標</h2>
-            </div>
-            <Link className="text-link" to="/goals">
-              すべて見る
-              <ChevronRight size={16} />
-            </Link>
-          </div>
-          <div className="mini-list goal-mini-list">
-            {latestGoals.length === 0 ? (
-              <div className="empty-state">団内目標はまだありません。</div>
-            ) : (
-              latestGoals.map((goal) => (
-                <Link className="mini-item goal-mini-item" key={goal.id} to="/goals">
-                  <span>{goal.title}</span>
-                  <small>
-                    {displayGoalOwner(goal)} / {goal.category} / {goalProgress(goal)}
-                  </small>
-                </Link>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="tool-grid" aria-label="機能一覧">
-        {toolCards.map((tool) => {
-          const Icon = tool.icon;
+      <section className="goal-board-column">
+        {visibleGoals.length === 0 ? <div className="panel empty-state"><p>この状態の目標はありません。</p></div> : visibleGoals.map((goal) => {
+          const ownGoal = goal.ownerId === user?.id;
+          const kind = goal.sourceRoundGoalId ? "round" : goal.sourceProgressGoalId ? "progress" : "normal";
           return (
-            <Link className="tool-card" key={tool.title} to={tool.href}>
-              <Icon size={22} />
-              <div>
-                <h3>{tool.title}</h3>
-                <p>{tool.description}</p>
-              </div>
-              <ChevronRight size={18} />
-            </Link>
+            <article className={`panel goal-board-card goal-kind-${kind}`} key={goal.id}>
+              <button className="goal-card-main" onClick={() => openGoal(goal)} type="button">
+                <span><strong>{goal.title}</strong>{kind !== "normal" ? <small>{kind === "round" ? "周回目標" : "進捗管理"}</small> : null}</span>
+                {goal.description ? <p>{goal.description}</p> : null}
+                {scope === "crew" ? <small>作成者: {goal.owner.displayName ?? goal.owner.username}</small> : null}
+              </button>
+              {ownGoal ? (
+                <div className="goal-card-actions">
+                  <select aria-label={`${goal.title}の状態`} onChange={(event) => void changeStatus(goal, event.target.value as GoalBoardState)} value={goal.boardStatus}>
+                    {statuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                  <details className="card-menu"><summary aria-label={`${goal.title}の操作`}><MoreVertical size={18} /></summary><div>
+                    {!goal.sourceRoundGoalId && !goal.sourceProgressGoalId ? <button onClick={() => navigate(`/goal-editor/${goal.id}`)} type="button">編集</button> : null}
+                    <button className="danger-text" onClick={() => void removeGoal(goal)} type="button">{goal.sourceRoundGoalId || goal.sourceProgressGoalId ? "連携解除" : "削除"}</button>
+                  </div></details>
+                </div>
+              ) : null}
+            </article>
           );
         })}
       </section>
+
+      <button aria-label="目標を作成" className="floating-action" onClick={() => setCreateOpen(true)} type="button"><Plus size={23} /></button>
+
+      {createOpen ? <div className="modal-backdrop" onMouseDown={() => setCreateOpen(false)}><form aria-modal="true" className="panel compact-dialog" onMouseDown={(event) => event.stopPropagation()} onSubmit={createGoal} role="dialog">
+        <div className="section-heading"><h2>目標を作成</h2><button aria-label="閉じる" className="icon-button" onClick={() => setCreateOpen(false)} type="button"><X size={18} /></button></div>
+        <label>タイトル<input autoFocus onChange={(event) => setNewTitle(event.target.value)} required value={newTitle} /></label>
+        <label>概要<textarea onChange={(event) => setNewDescription(event.target.value)} rows={4} value={newDescription} /></label>
+        <p className="form-hint">個人目標の「未設定」に追加されます。</p>
+        <div className="dialog-actions"><button className="secondary-button" onClick={() => setCreateOpen(false)} type="button">キャンセル</button><button className="primary-button" type="submit">作成</button></div>
+      </form></div> : null}
+
+      {filterOpen ? <div className="modal-backdrop" onMouseDown={() => setFilterOpen(false)}><section aria-modal="true" className="panel compact-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog">
+        <div className="section-heading"><h2>絞り込み</h2><button aria-label="閉じる" className="icon-button" onClick={() => setFilterOpen(false)} type="button"><X size={18} /></button></div>
+        <label>キーワード<input onChange={(event) => setKeyword(event.target.value)} value={keyword} /></label>
+        <label>目標の種類<select onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)} value={sourceFilter}><option value="all">すべて</option><option value="normal">通常目標</option><option value="round">周回目標</option><option value="progress">進捗管理</option></select></label>
+        <div className="dialog-actions"><button className="secondary-button" onClick={() => { setKeyword(""); setSourceFilter("all"); }} type="button">解除</button><button className="primary-button" onClick={() => setFilterOpen(false)} type="button">適用</button></div>
+      </section></div> : null}
+
+      {selected ? <div className="modal-backdrop" onMouseDown={() => setSelected(null)}><section aria-modal="true" className="panel goal-detail-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog">
+        <div className="section-heading"><div><h2>{selected.title}</h2><p>{selected.visibility === "crew" ? "団内目標" : "個人目標"}</p></div><button aria-label="閉じる" className="icon-button" onClick={() => setSelected(null)} type="button"><X size={18} /></button></div>
+        <div className="segmented"><button className={detailTab === "overview" ? "active" : ""} onClick={() => setDetailTab("overview")} type="button">概要・関連情報</button><button className={detailTab === "tasks" ? "active" : ""} onClick={() => setDetailTab("tasks")} type="button">サブタスク</button></div>
+        {detailTab === "overview" ? <div className="goal-detail-content">
+          {selected.description ? <p>{selected.description}</p> : <p className="muted-text">概要はありません。</p>}
+          {selected.memo ? <p>{selected.memo}</p> : null}
+          {selected.requiredItems.length || selected.raidTargets.length ? <div><h3>関連情報</h3>{selected.requiredItems.map((item) => <p key={item.id}>{item.name} {item.currentCount} / {item.requiredCount}</p>)}{selected.raidTargets.map((target) => <p key={target.id}>{target.questName} {target.currentCount} / {target.targetCount}</p>)}</div> : null}
+        </div> : <div className="goal-subtask-list">
+          {selected.subTasks.map((task) => <label className="checkbox-field" key={task.id}><input checked={task.isDone} disabled={selected.ownerId !== user?.id} onChange={() => void api.updateGoalSubTaskNew(selected.id, task.id, { isDone: !task.isDone }).then(() => load())} type="checkbox" />{task.title}</label>)}
+          {selected.ownerId === user?.id ? <form className="inline-form" onSubmit={addSubTask}><label className="sr-only" htmlFor="new-sub-task">サブタスク</label><input id="new-sub-task" onChange={(event) => setNewSubTask(event.target.value)} placeholder="サブタスクを追加" value={newSubTask} /><button className="secondary-button" type="submit">追加</button></form> : null}
+        </div>}
+        {selected.ownerId === user?.id ? <div className="dialog-actions">{selected.visibility === "personal" ? <button className="secondary-button" onClick={() => void publish(selected)} type="button">団内へ公開</button> : null}<button className="primary-button" onClick={() => navigate(`/goal-editor/${selected.id}`)} type="button">編集</button></div> : null}
+      </section></div> : null}
     </div>
   );
-}
-
-function displayGoalOwner(goal: SharedGoal) {
-  return goal.owner.displayName || goal.owner.username || "不明";
-}
-
-function goalProgress(goal: SharedGoal) {
-  if (goal.category === "周回" && goal.targetValue !== null && goal.currentValue !== null) {
-    return `${goal.currentValue}/${goal.targetValue}`;
-  }
-
-  if (goal.category === "編成") {
-    const details = goal.details ?? {};
-    const missingCount = [...(details.characters ?? []), ...(details.weapons ?? []), ...(details.summons ?? [])].filter(
-      (part) => !part.owned
-    ).length;
-    return missingCount > 0 ? `未所持 ${missingCount}件` : "準備OK";
-  }
-
-  return goal.status;
 }

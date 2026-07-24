@@ -1,19 +1,21 @@
 import { Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ArchivePage } from "./pages/ArchivePage";
+import { BuildDetailPage } from "./pages/BuildDetailPage";
+import { BuildDraftsPage } from "./pages/BuildDraftsPage";
+import { BuildEditorPage } from "./pages/BuildEditorPage";
 import { BuildsPage } from "./pages/BuildsPage";
 import { EventSchedulePage } from "./pages/EventSchedulePage";
-import { GoalDetailPage } from "./pages/GoalDetailPage";
-import { GoalsPage } from "./pages/GoalsPage";
 import { GuildWarGoalsPage } from "./pages/GuildWarGoalsPage";
+import { GoalEditorPage } from "./pages/GoalEditorPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
-import { MaterialsPage } from "./pages/MaterialsPage";
-import { ProgressGoalsPage } from "./pages/ProgressGoalsPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { OfficialNewsPage } from "./pages/OfficialNewsPage";
-import { RoadmapPage } from "./pages/RoadmapPage";
-import { TasksPage } from "./pages/TasksPage";
-import { ToolPlaceholderPage } from "./pages/ToolPlaceholderPage";
+import { ProgressGoalsPage } from "./pages/ProgressGoalsPage";
+import { RoundGoalEditorPage } from "./pages/RoundGoalEditorPage";
+import { RoundGoalsPage } from "./pages/RoundGoalsPage";
 
 export function App() {
   return (
@@ -22,22 +24,25 @@ export function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
-          <Route path="/builds" element={<BuildsPage mode="search" />} />
-          <Route path="/builds/search" element={<BuildsPage mode="search" />} />
-          <Route path="/builds/post" element={<BuildsPage mode="form" />} />
-          <Route path="/builds/:sourceType/:buildId" element={<BuildsPage />} />
-          <Route path="/event-schedule" element={<EventSchedulePage />} />
-          <Route path="/goals" element={<GoalsPage />} />
-          <Route path="/goals/:goalId" element={<GoalDetailPage />} />
-          <Route path="/guild-war-goals" element={<GuildWarGoalsPage />} />
-          <Route path="/materials" element={<MaterialsPage />} />
+          <Route path="/goal-editor/:goalId" element={<GoalEditorPage />} />
+          <Route path="/round-goals" element={<RoundGoalsPage />} />
+          <Route path="/round-goals/new" element={<RoundGoalEditorPage />} />
+          <Route path="/round-goals/:goalId/edit" element={<RoundGoalEditorPage />} />
           <Route path="/progress-goals" element={<ProgressGoalsPage />} />
+          <Route path="/builds" element={<BuildsPage />} />
+          <Route path="/builds/new" element={<BuildEditorPage mode="post" />} />
+          <Route path="/builds/drafts" element={<BuildDraftsPage />} />
+          <Route path="/builds/drafts/:draftId" element={<BuildEditorPage mode="draft" />} />
+          <Route path="/builds/:buildId/edit" element={<BuildEditorPage mode="edit" />} />
+          <Route path="/builds/:buildId" element={<BuildDetailPage />} />
+          <Route path="/guild-war-goals" element={<GuildWarGoalsPage />} />
+          <Route path="/archive" element={<ArchivePage />} />
+          <Route path="/event-schedule" element={<EventSchedulePage />} />
           <Route path="/official-news" element={<OfficialNewsPage />} />
-          <Route path="/roadmap" element={<RoadmapPage />} />
-          <Route path="/tasks" element={<TasksPage />} />
-          <Route path="/tools/:toolId" element={<ToolPlaceholderPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

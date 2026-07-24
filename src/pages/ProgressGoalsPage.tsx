@@ -1,5 +1,5 @@
 import { FormEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, CircleAlert, ListChecks, PackageOpen, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, CircleAlert, ListChecks, PackageOpen, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { api, type ProgressGoal, type ProgressPreset } from "../lib/api";
 
@@ -526,6 +526,7 @@ export function ProgressGoalsPage() {
   const [initialProgressSnapshot, setInitialProgressSnapshot] = useState<Record<string, string>>({});
   const [createStep, setCreateStep] = useState(1);
   const [creating, setCreating] = useState(false);
+  const [showOnBoard, setShowOnBoard] = useState(true);
   const openGoalId = searchParams.get("goalId");
 
   const selectedPreset = useMemo(() => presets.find((preset) => preset.id === presetId), [presetId, presets]);
@@ -578,7 +579,8 @@ export function ProgressGoalsPage() {
         presetId,
         targetId,
         goalStageId: selectedPreset.stages.at(-1)?.id ?? "",
-        completedStageIds: [...completed]
+        completedStageIds: [...completed],
+        showOnBoard
       });
       setGoals((current) => [data.goal, ...current]);
       setSearchParams({ goalId: data.goal.id, targetStageId: data.goal.targetStageId });
@@ -626,7 +628,7 @@ export function ProgressGoalsPage() {
   }
 
   async function deleteGoal(goal: ProgressGoal) {
-    if (!window.confirm(`「${goal.preset.name} ${goal.targetName}」を削除しますか？`)) return;
+    if (!window.confirm(`「${goal.targetName}」を削除しますか？目標ボードとの連携も削除されます。`)) return;
     try {
       await api.deleteProgressGoal(goal.id);
       setGoals((current) => current.filter((item) => item.id !== goal.id));
@@ -636,19 +638,35 @@ export function ProgressGoalsPage() {
     }
   }
 
+  async function moveGoal(index: number, direction: -1 | 1) {
+    const destination = index + direction;
+    if (destination < 0 || destination >= goals.length) return;
+    const reordered = [...goals];
+    [reordered[index], reordered[destination]] = [reordered[destination], reordered[index]];
+    setGoals(reordered);
+    try {
+      await api.reorderProgressGoals(reordered.map((goal) => goal.id));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "並び順を更新できませんでした");
+      await load();
+    }
+  }
+
   return <div className="page-stack">
-    <section className="page-heading"><div><p className="eyebrow">Progress</p><h2>必要数の進捗</h2><p>十賢者の現在状態から、目標中継点までの不足素材を確認できます。</p></div><button className="primary-button" disabled={!presets.some((preset) => preset.isAvailable)} onClick={() => { setCreateStep(1); setIsCreateOpen(true); }} type="button"><Plus size={18} />目標を登録</button></section>
+    <section className="page-heading"><div><p className="eyebrow">Progress</p><h1>進捗管理</h1></div></section>
 
     {error && <div className="form-error" role="alert"><CircleAlert size={18} />{error}</div>}
 
     <section className="progress-page-layout">
       <div className="panel progress-goal-panel">
         <div className="section-heading"><div><p className="eyebrow">Goals</p><h2>登録済みの目標</h2></div><ListChecks size={22} /></div>
-        {loading ? <div className="empty-state">読み込み中です…</div> : goals.length === 0 ? <div className="empty-state">登録済みの進捗目標はありません。</div> : <div className="progress-goal-list">{goals.map((goal) => {
+        {loading ? <div className="empty-state">読み込み中です…</div> : goals.length === 0 ? <div className="empty-state">登録済みの進捗目標はありません。</div> : <div className="progress-goal-list">{goals.map((goal, index) => {
           const isOpen = openGoalId === goal.id;
           return <article className="progress-goal-card" key={goal.id}>
             <div className="progress-goal-card-header">
-              <button className="text-button" onClick={() => void openGoal(goal)} type="button"><div><h3>{goal.preset.name}：{goal.targetName}</h3><div className="task-meta"><span>{goal.completedCount}/{goal.totalStageCount}中継点</span><span>次：{goal.currentStage?.name ?? "完了"}</span></div></div><ChevronDown className={isOpen ? "rotated" : ""} size={18} /></button>
+              <button className="text-button" onClick={() => void openGoal(goal)} type="button"><div><h3>{goal.targetName}</h3><div className="progress-goal-meta"><span>{goal.completedCount}/{goal.totalStageCount}中継点</span><span>次：{goal.currentStage?.name ?? "完了"}</span>{goal.boardGoal ? <span>目標ボード連携中</span> : null}</div></div><ChevronDown className={isOpen ? "rotated" : ""} size={18} /></button>
+              <button aria-label="上へ移動" className="icon-button" disabled={index === 0} onClick={() => void moveGoal(index, -1)} title="上へ移動" type="button"><ArrowUp size={16} /></button>
+              <button aria-label="下へ移動" className="icon-button" disabled={index === goals.length - 1} onClick={() => void moveGoal(index, 1)} title="下へ移動" type="button"><ArrowDown size={16} /></button>
               <button aria-label="目標を削除" className="icon-button danger" onClick={() => void deleteGoal(goal)} title="目標を削除" type="button"><Trash2 size={17} /></button>
             </div>
             <div className="progress-bar" aria-label={`進捗率${goal.progressRate}%`}><span style={{ width: `${goal.progressRate}%` }} /></div>
@@ -657,9 +675,9 @@ export function ProgressGoalsPage() {
         })}</div>}
       </div>
     </section>
+    <button aria-label="進捗目標を登録" className="floating-action" disabled={!presets.some((preset) => preset.isAvailable)} onClick={() => { setCreateStep(1); setIsCreateOpen(true); }} type="button"><Plus size={23} /></button>
 
     {isCreateOpen && selectedPreset && <ProgressModal
-      description="PCとモバイルで同じ手順を使い、現在状態まで設定して登録します。"
       disableEscape={isInitialProgressOpen}
       footer={<>
         <button className="secondary-button" onClick={closeCreateModal} type="button">キャンセル</button>
@@ -697,6 +715,7 @@ export function ProgressGoalsPage() {
           <div><span>プリセット</span><strong>{selectedPreset.name}</strong></div>
           <div><span>{selectedPreset.targetLabel}</span><strong>{selectedPreset.targets.find((target) => target.id === targetId)?.name}</strong></div>
           <div className="wide"><span>現在状態</span><ul>{selectedPreset.groups.map((group) => <li key={group.id}><span>{group.name}</span><strong>{selectedPreset.stages.find((stage) => stage.id === initialByGroup[group.id])?.name ?? "未着手"}</strong></li>)}</ul></div>
+          <label className="checkbox-field wide"><input checked={showOnBoard} onChange={(event) => setShowOnBoard(event.target.checked)} type="checkbox" />目標ボードに表示</label>
         </div>}
       </form>
     </ProgressModal>}

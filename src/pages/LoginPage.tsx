@@ -42,7 +42,7 @@ export function LoginPage() {
           <div className="brand-mark large">
             <Swords size={28} />
           </div>
-          <p className="eyebrow">Crew Task Hub</p>
+          <p className="eyebrow">Crew Utility Hub</p>
           <h1>Saisoku</h1>
           <p>日課、週課、イベント準備をひとつの場所で確認する身内向け攻略サポート。</p>
           <div className="login-feature">
