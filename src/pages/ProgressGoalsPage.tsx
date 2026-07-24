@@ -1,5 +1,5 @@
 import { FormEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, CircleAlert, ListChecks, PackageOpen, Pencil, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, CircleAlert, ListChecks, PackageOpen, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { api, type ProgressGoal, type ProgressPreset } from "../lib/api";
 
@@ -21,6 +21,12 @@ const materialTabs: Array<{ id: MaterialTab; label: string }> = [
   { id: "other", label: "共通・その他" },
   { id: "all", label: "すべて" }
 ];
+
+const progressGroupDescriptions: Record<string, string> = {
+  "arcarum-summon": "召喚石の交換から5凸まで",
+  "foundation-weapon": "礎武器の交換から5凸まで",
+  domain: "第1解放から全解放まで"
+};
 
 function materialCategory(itemKey: string): Exclude<MaterialTab, "shortage" | "all"> {
   if (/(sephira|astra|idea|veritas|verum|haze|bright|fragment|new-world)/.test(itemKey)) return "arcarum";
@@ -83,11 +89,13 @@ function ProgressModal({
 function ProgressGoalEditor({
   goal,
   onChange,
-  onError
+  onError,
+  suppressFloatingAction
 }: {
   goal: ProgressGoal;
   onChange: (goal: ProgressGoal) => void;
   onError: (message: string) => void;
+  suppressFloatingAction: boolean;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [draftCompleted, setDraftCompleted] = useState(() => new Set(goal.completedStageIds));
@@ -99,7 +107,14 @@ function ProgressGoalEditor({
   const [saving, setSaving] = useState(false);
   const [isProgressOpen, setIsProgressOpen] = useState(false);
   const [progressModalSnapshot, setProgressModalSnapshot] = useState<Set<string> | null>(null);
+  const [openGroupIds, setOpenGroupIds] = useState<Set<string>>(new Set());
   const [isMaterialOpen, setIsMaterialOpen] = useState(false);
+  const [materialInventorySnapshot, setMaterialInventorySnapshot] = useState<Record<string, number> | null>(null);
+  const [pinnedMaterialKeys, setPinnedMaterialKeys] = useState(() => goal.pinnedMaterialKeys);
+  const [pinnedMaterialSnapshot, setPinnedMaterialSnapshot] = useState<string[] | null>(null);
+  const [savingMaterials, setSavingMaterials] = useState(false);
+  const [pinnedPage, setPinnedPage] = useState(0);
+  const [pinnedPageSize, setPinnedPageSize] = useState(4);
   const [materialTab, setMaterialTab] = useState<MaterialTab>("shortage");
   const [editingMaterial, setEditingMaterial] = useState<MaterialRequirement | null>(null);
   const [editingCount, setEditingCount] = useState("");
@@ -113,14 +128,20 @@ function ProgressGoalEditor({
     [goal.calculation.requirements]
   );
   const hasInventoryChanges = Object.entries(inventory).some(([key, value]) => savedInventory.get(key) !== value);
-  const isDirty = hasProgressChanges || hasInventoryChanges;
+  const hasPinnedMaterialChanges = goal.pinnedMaterialKeys.length !== pinnedMaterialKeys.length
+    || goal.pinnedMaterialKeys.some((key) => !pinnedMaterialKeys.includes(key));
+  const isDirty = hasProgressChanges || hasInventoryChanges || hasPinnedMaterialChanges;
   const materialItems = preview.calculation.requirements.map((item) => ({
     ...item,
     ownedCount: inventory[item.itemKey] ?? item.ownedCount,
     shortage: Math.max(item.requiredCount - (inventory[item.itemKey] ?? item.ownedCount), 0)
   }));
   const shortageItems = materialItems.filter((item) => item.shortage > 0);
-  const enteredCount = materialItems.filter((item) => item.ownedCount > 0).length;
+  const pinnedMaterialItems = pinnedMaterialKeys
+    .map((itemKey) => materialItems.find((item) => item.itemKey === itemKey))
+    .filter((item): item is MaterialRequirement & { shortage: number } => Boolean(item));
+  const pinnedPageCount = Math.max(1, Math.ceil(pinnedMaterialItems.length / pinnedPageSize));
+  const visiblePinnedItems = pinnedMaterialItems.slice(pinnedPage * pinnedPageSize, (pinnedPage + 1) * pinnedPageSize);
   const visibleMaterialItems = materialItems.filter((item) => {
     if (materialTab === "all") return true;
     if (materialTab === "shortage") return item.shortage > 0;
@@ -131,8 +152,23 @@ function ProgressGoalEditor({
     setDraftCompleted(new Set(goal.completedStageIds));
     setPreview(goal);
     setInventory(Object.fromEntries(goal.calculation.requirements.map((item) => [item.itemKey, item.ownedCount])));
+    setPinnedMaterialKeys(goal.pinnedMaterialKeys);
+    setPinnedPage(0);
     setDependencyErrors([]);
   }, [goal.id, goal.updatedAt, goal.targetStageId]);
+
+  useEffect(() => {
+    function updatePageSize() {
+      setPinnedPageSize(window.innerWidth >= 1180 ? 8 : window.innerWidth >= 768 ? 6 : 4);
+    }
+    updatePageSize();
+    window.addEventListener("resize", updatePageSize);
+    return () => window.removeEventListener("resize", updatePageSize);
+  }, []);
+
+  useEffect(() => {
+    setPinnedPage((current) => Math.min(current, pinnedPageCount - 1));
+  }, [pinnedPageCount]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -161,16 +197,47 @@ function ProgressGoalEditor({
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [isDirty]);
 
-  function resetDraft() {
-    setDraftCompleted(new Set(goal.completedStageIds));
-    setInventory(Object.fromEntries(goal.calculation.requirements.map((item) => [item.itemKey, item.ownedCount])));
-    setPreview(goal);
-    setDependencyErrors([]);
-  }
-
   function openMaterialInput(item: MaterialRequirement) {
     setEditingMaterial(item);
     setEditingCount(String(inventory[item.itemKey] ?? item.ownedCount));
+  }
+
+  function openMaterialEditor() {
+    setMaterialInventorySnapshot({ ...inventory });
+    setPinnedMaterialSnapshot([...pinnedMaterialKeys]);
+    setIsMaterialOpen(true);
+  }
+
+  function closeMaterialEditor() {
+    if (materialInventorySnapshot) setInventory(materialInventorySnapshot);
+    if (pinnedMaterialSnapshot) setPinnedMaterialKeys(pinnedMaterialSnapshot);
+    setMaterialInventorySnapshot(null);
+    setPinnedMaterialSnapshot(null);
+    setIsMaterialOpen(false);
+  }
+
+  function togglePinnedMaterial(itemKey: string, checked: boolean) {
+    setPinnedMaterialKeys((current) => checked
+      ? current.includes(itemKey) || current.length >= 8 ? current : [...current, itemKey]
+      : current.filter((key) => key !== itemKey));
+  }
+
+  async function saveMaterialSettings() {
+    setSavingMaterials(true);
+    onError("");
+    try {
+      const inventoryChanges = Object.entries(inventory).filter(([key, value]) => savedInventory.get(key) !== value);
+      await Promise.all(inventoryChanges.map(([itemKey, ownedCount]) => api.updateProgressInventory(goal.id, itemKey, ownedCount)));
+      const response = await api.saveProgressPinnedMaterials(goal.id, pinnedMaterialKeys, goal.targetStageId);
+      onChange(response.goal);
+      setMaterialInventorySnapshot(null);
+      setPinnedMaterialSnapshot(null);
+      setIsMaterialOpen(false);
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : "所持数と掲示素材を保存できませんでした");
+    } finally {
+      setSavingMaterials(false);
+    }
   }
 
   function applyMaterialInput() {
@@ -239,6 +306,10 @@ function ProgressGoalEditor({
 
   function openProgressEditor() {
     setProgressModalSnapshot(new Set(draftCompleted));
+    const firstIncompleteGroup = [...goal.preset.groups]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .find((group) => goal.stages.some((stage) => stage.groupId === group.id && stage.kind === "stage" && !draftCompleted.has(stage.id)));
+    setOpenGroupIds(new Set(firstIncompleteGroup ? [firstIncompleteGroup.id] : []));
     setIsProgressOpen(true);
   }
 
@@ -286,8 +357,6 @@ function ProgressGoalEditor({
     }
   }
 
-  const stageNames = new Map(goal.stages.map((stage) => [stage.id, stage.name]));
-
   return <div className="progress-editor">
     <div className="progress-editor-toolbar">
       <label>目標中継点
@@ -301,9 +370,7 @@ function ProgressGoalEditor({
     </div>
 
     <div className="progress-summary-grid">
-      <div><span>進捗</span><strong>{preview.completedCount}/{preview.totalStageCount}</strong></div>
       <div><span>進捗率</span><strong>{preview.progressRate}%</strong></div>
-      <div><span>表示先</span><strong>{preview.stages.find((stage) => stage.id === preview.targetStageId)?.name}</strong></div>
     </div>
 
     {dependencyErrors.length > 0 && <div className="form-error">
@@ -313,36 +380,32 @@ function ProgressGoalEditor({
 
     <section className="progress-material-summary">
       <div className="progress-material-summary-heading">
-        <div><h4>目標中継点までの素材</h4><p>不足 {shortageItems.length}種類・入力済み {enteredCount}/{materialItems.length}種類</p></div>
-        <button className="secondary-button" disabled={materialItems.length === 0} onClick={() => setIsMaterialOpen(true)} type="button"><PackageOpen size={16} />素材を確認・入力</button>
+        <button className="secondary-button" disabled={materialItems.length === 0} onClick={openMaterialEditor} type="button"><PackageOpen size={16} />所持数を設定</button>
+        <span className="progress-shortage-count">不足 {shortageItems.length}種類</span>
       </div>
-      {materialItems.length === 0
-        ? <div className="empty-state">この中継点までの必要素材はありません。</div>
-        : <div className="progress-material-preview">{shortageItems.slice(0, 4).map((item) =>
-          <button className="progress-material-preview-row" key={item.itemKey} onClick={() => { setIsMaterialOpen(true); openMaterialInput(item); }} type="button">
+      {pinnedMaterialItems.length > 0 && <div
+        className="progress-pinned-materials"
+        onTouchEnd={(event) => {
+          const start = Number(event.currentTarget.dataset.touchStart ?? 0);
+          const distance = event.changedTouches[0]?.clientX - start;
+          if (Math.abs(distance) < 45) return;
+          setPinnedPage((current) => distance < 0 ? Math.min(current + 1, pinnedPageCount - 1) : Math.max(current - 1, 0));
+        }}
+        onTouchStart={(event) => { event.currentTarget.dataset.touchStart = String(event.touches[0]?.clientX ?? 0); }}
+      >
+        <div className="progress-material-preview">{visiblePinnedItems.map((item) =>
+          <button className="progress-material-preview-row" key={item.itemKey} onClick={() => { openMaterialEditor(); openMaterialInput(item); }} type="button">
             <span><strong>{item.itemName}</strong><small>所持 {item.ownedCount} / 必要 {item.requiredCount}</small></span>
-            <span>不足 {item.shortage}</span>
+            <span>{item.shortage > 0 ? `不足 ${item.shortage}` : "充足"}</span>
           </button>
-        )}{shortageItems.length === 0 && <div className="empty-state compact">表示中の素材はすべて充足しています。</div>}</div>}
+        )}</div>
+        {pinnedPageCount > 1 && <nav aria-label="掲示素材のページ" className="progress-material-pagination">
+          {Array.from({ length: pinnedPageCount }, (_, index) => <button aria-current={pinnedPage === index ? "page" : undefined} className={pinnedPage === index ? "active" : ""} key={index} onClick={() => setPinnedPage(index)} type="button">{index + 1}</button>)}
+        </nav>}
+      </div>}
     </section>
 
-    <section className="progress-stage-summary">
-      <div className="progress-stage-summary-heading">
-        <div><h4>系統別の現在進捗</h4><p>中継点の完了状態は専用画面でまとめて変更できます。</p></div>
-        <button className="secondary-button" onClick={openProgressEditor} type="button"><ListChecks size={16} />進捗を編集</button>
-      </div>
-      <div className="progress-stage-summary-grid">
-        {[...goal.preset.groups].sort((a, b) => a.sortOrder - b.sortOrder).map((group) => {
-          const normalStages = preview.stages.filter((stage) => stage.groupId === group.id && stage.kind === "stage");
-          return <div key={group.id}><span>{group.name}</span><strong>{normalStages.filter((stage) => draftCompleted.has(stage.id)).length}/{normalStages.length}</strong></div>;
-        })}
-      </div>
-    </section>
-
-    <div className="progress-editor-actions">
-      <button className="secondary-button" disabled={!isDirty || saving} onClick={resetDraft} type="button"><RotateCcw size={17} />キャンセル</button>
-      <button className="primary-button" disabled={!isDirty || saving || dependencyErrors.length > 0} onClick={() => void save()} type="button"><Save size={17} />{saving ? "保存中…" : "変更を保存"}</button>
-    </div>
+    {!suppressFloatingAction && !isProgressOpen && !isMaterialOpen && !editingMaterial && <button className="progress-floating-action primary-button" onClick={openProgressEditor} type="button"><ListChecks size={18} />進捗を更新</button>}
 
     {isProgressOpen && <ProgressModal
       description="下位の中継点から順に表示しています。系統名のチェックで、前提を含めてまとめて変更できます。"
@@ -361,41 +424,45 @@ function ProgressGoalEditor({
           const normalStages = stages.filter((stage) => stage.kind === "stage");
           const completedCount = normalStages.filter((stage) => draftCompleted.has(stage.id)).length;
           const groupChecked = normalStages.length > 0 && completedCount === normalStages.length;
+          const isGroupOpen = openGroupIds.has(group.id);
           return <section className="progress-tree-group" key={group.id}>
             <div className="progress-tree-group-heading">
               <label>
                 <input checked={groupChecked} disabled={normalStages.length === 0} onChange={(event) => toggleGroup(group.id, event.target.checked)} type="checkbox" />
-                <span>{group.name}</span>
+                <span><strong>{group.name}</strong>{progressGroupDescriptions[group.id] && <small>{progressGroupDescriptions[group.id]}</small>}</span>
               </label>
-              <small>{completedCount}/{normalStages.length}</small>
+              <button aria-expanded={isGroupOpen} aria-label={`${group.name}を${isGroupOpen ? "折り畳む" : "開く"}`} className="progress-tree-group-toggle" onClick={() => setOpenGroupIds((current) => {
+                const next = new Set(current);
+                if (next.has(group.id)) next.delete(group.id); else next.add(group.id);
+                return next;
+              })} type="button"><small>{completedCount}/{normalStages.length}</small><ChevronDown className={isGroupOpen ? "rotated" : ""} size={17} /></button>
             </div>
-            <div className="progress-tree-stage-list">
+            {isGroupOpen && <div className="progress-tree-stage-list">
               {stages.map((stage) => {
                 const checked = stage.kind === "milestone" ? stage.isDone : draftCompleted.has(stage.id);
-                const missingNames = stage.missingDependencyIds.map((id) => stageNames.get(id)).filter(Boolean);
                 return <div className={`progress-tree-stage${checked ? " done" : ""}`} key={stage.id}>
                   <label>
                     {stage.kind === "stage"
                       ? <input type="checkbox" checked={checked} disabled={!checked && !stage.canComplete} onChange={(event) => toggleStage(stage.id, event.target.checked)} />
                       : <span className="progress-milestone-icon" aria-hidden="true"><Check size={15} /></span>}
-                    <span><strong>{stage.name}</strong>{stage.note && <small>{stage.note}</small>}{!checked && missingNames.length > 0 && <small>前提：{missingNames.join("、")}</small>}</span>
+                    <span><strong>{stage.name}</strong>{stage.note && <small>{stage.note}</small>}</span>
                   </label>
                   {stage.kind === "milestone" && <span className="pill">自動判定</span>}
                 </div>;
               })}
-            </div>
+            </div>}
           </section>;
         })}
       </div>
     </ProgressModal>}
 
     {isMaterialOpen && <ProgressModal
-      description="タブで素材を絞り込み、素材行を選択して所持数を入力します。"
+      description="素材行から所持数を入力し、「表に掲示」で目標画面へ表示する素材を最大8件まで選べます。"
       disableEscape={Boolean(editingMaterial)}
-      footer={<button className="primary-button" onClick={() => setIsMaterialOpen(false)} type="button">入力を反映して閉じる</button>}
-      onClose={() => setIsMaterialOpen(false)}
+      footer={<><button className="secondary-button" disabled={savingMaterials} onClick={closeMaterialEditor} type="button">キャンセル</button><span className="progress-modal-footer-spacer" /><span className="progress-pinned-count">掲示 {pinnedMaterialKeys.length}/8件</span><button className="primary-button" disabled={savingMaterials} onClick={() => void saveMaterialSettings()} type="button"><Save size={17} />{savingMaterials ? "保存中…" : "設定を保存"}</button></>}
+      onClose={closeMaterialEditor}
       size="wide"
-      title="素材を確認・入力"
+      title="所持数を設定"
     >
       <div className="progress-material-tabs" aria-label="素材カテゴリ" role="tablist">
         {materialTabs.map((tab) => {
@@ -410,11 +477,14 @@ function ProgressGoalEditor({
       {visibleMaterialItems.length === 0
         ? <div className="empty-state">このカテゴリに表示する素材はありません。</div>
         : <div className="progress-material-dialog-grid">{visibleMaterialItems.map((item) =>
-          <button className="progress-material-dialog-row" key={item.itemKey} onClick={() => openMaterialInput(item)} type="button">
-            <span><strong>{item.itemName}</strong><small>所持 {item.ownedCount} / 必要 {item.requiredCount}</small></span>
-            <span className={item.shortage > 0 ? "shortage" : "complete"}>{item.shortage > 0 ? `不足 ${item.shortage}` : "充足"}</span>
-            <Pencil aria-hidden="true" size={14} />
-          </button>
+          <div className="progress-material-dialog-row" key={item.itemKey}>
+            <button className="progress-material-value-button" onClick={() => openMaterialInput(item)} type="button">
+              <span><strong>{item.itemName}</strong><small>所持 {item.ownedCount} / 必要 {item.requiredCount}</small></span>
+              <span className={item.shortage > 0 ? "shortage" : "complete"}>{item.shortage > 0 ? `不足 ${item.shortage}` : "充足"}</span>
+              <Pencil aria-hidden="true" size={14} />
+            </button>
+            <label className="progress-material-pin"><input checked={pinnedMaterialKeys.includes(item.itemKey)} disabled={!pinnedMaterialKeys.includes(item.itemKey) && pinnedMaterialKeys.length >= 8} onChange={(event) => togglePinnedMaterial(item.itemKey, event.target.checked)} type="checkbox" />表に掲示</label>
+          </div>
         )}</div>}
     </ProgressModal>}
 
@@ -573,7 +643,7 @@ export function ProgressGoalsPage() {
               <button aria-label="目標を削除" className="icon-button danger" onClick={() => void deleteGoal(goal)} title="目標を削除" type="button"><Trash2 size={17} /></button>
             </div>
             <div className="progress-bar" aria-label={`進捗率${goal.progressRate}%`}><span style={{ width: `${goal.progressRate}%` }} /></div>
-            {isOpen && <ProgressGoalEditor goal={goal} onChange={replaceGoal} onError={setError} />}
+            {isOpen && <ProgressGoalEditor goal={goal} onChange={replaceGoal} onError={setError} suppressFloatingAction={isCreateOpen || isInitialProgressOpen} />}
           </article>;
         })}</div>}
       </div>

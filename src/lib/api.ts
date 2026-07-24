@@ -292,6 +292,7 @@ export type ProgressGoal = {
   targetId: string;
   targetName: string;
   selection: Record<string, unknown>;
+  pinnedMaterialKeys: string[];
   goalStageId: string;
   targetStageId: string;
   availableTargetStageIds: string[];
@@ -1030,6 +1031,8 @@ export const api = {
     request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/progress`, { method: "PUT", json: { completedStageIds } }),
   updateProgressInventory: (goalId: string, itemKey: string, ownedCount: number) =>
     request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/inventory/${encodeURIComponent(itemKey)}`, { method: "PATCH", json: { ownedCount } }),
+  saveProgressPinnedMaterials: (goalId: string, itemKeys: string[], targetStageId: string) =>
+    request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/pinned-materials`, { method: "PUT", json: { itemKeys, targetStageId } }),
   updateProgressCondition: (goalId: string, conditionId: string, value: { isChecked?: boolean; numericValue?: number }) =>
     request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/conditions/${encodeURIComponent(conditionId)}`, { method: "PATCH", json: value }),
   completeProgressStage: (goalId: string, stageId: string) =>

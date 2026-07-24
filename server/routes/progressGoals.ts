@@ -1,6 +1,8 @@
 import { Router } from "express";
+import { Prisma } from "@prisma/client";
 import { findProgressPreset, type ProgressCondition, type ProgressPreset, resolveProgressPreset, progressPresets } from "../data/progressPresets.js";
 import { calculateProgress, collectRequiredStageIds, isStageDone, validateCompletedStageIds } from "../lib/progressEngine.js";
+import { pinnedMaterialKeysFromSelection, validatePinnedMaterialKeys } from "../lib/progressPinnedMaterials.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
 
@@ -131,6 +133,7 @@ async function serializeGoal(
     targetId: goal.targetId,
     targetName: goal.targetName,
     selection: goal.selection,
+    pinnedMaterialKeys: pinnedMaterialKeysFromSelection(goal.selection),
     goalStageId: goal.goalStageId,
     targetStageId,
     availableTargetStageIds: [...finalRequiredIds],
@@ -297,6 +300,33 @@ router.patch("/:id/inventory/:itemKey", async (req, res, next) => {
     await prisma.progressGoal.update({ where: { id: goal.id }, data: { updatedAt: new Date() } });
     res.json({ goal: await serializeGoal((await findGoal(goal.id, ownerId(req)))!) });
   } catch (error) { next(error); }
+});
+
+router.put("/:id/pinned-materials", async (req, res, next) => {
+  try {
+    const goal = await findGoal(req.params.id, ownerId(req));
+    if (!goal) return res.status(404).json({ message: "進捗目標が見つかりません" });
+    const preset = definitionForGoal(goal);
+    if (!preset) return res.status(409).json({ message: "保存時のプリセット定義が見つかりません" });
+    const knownItemKeys = new Set(preset.stages.flatMap((stage) => stage.requirements.map((item) => item.itemKey)));
+    const result = validatePinnedMaterialKeys(req.body.itemKeys, knownItemKeys);
+    if (!result.keys) return res.status(400).json({ message: result.message });
+    const currentSelection = goal.selection && typeof goal.selection === "object" && !Array.isArray(goal.selection)
+      ? goal.selection as Prisma.JsonObject
+      : {};
+    await prisma.progressGoal.update({
+      where: { id: goal.id },
+      data: {
+        selection: { ...currentSelection, pinnedMaterialKeys: result.keys },
+        updatedAt: new Date()
+      }
+    });
+    const targetStageId = typeof req.body.targetStageId === "string" ? req.body.targetStageId : undefined;
+    res.json({ goal: await serializeGoal((await findGoal(goal.id, ownerId(req)))!, { targetStageId }) });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("目標中継点")) return res.status(400).json({ message: error.message });
+    next(error);
+  }
 });
 
 router.patch("/:id/conditions/:conditionId", async (req, res, next) => {
