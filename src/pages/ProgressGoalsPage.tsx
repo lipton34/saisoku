@@ -489,7 +489,16 @@ function ProgressGoalEditor({
     </ProgressModal>}
 
     {editingMaterial && <ProgressModal
-      footer={<><button className="secondary-button" onClick={() => setEditingCount("0")} type="button">0にする</button><button className="secondary-button" onClick={() => setEditingMaterial(null)} type="button">キャンセル</button><button className="primary-button" onClick={applyMaterialInput} type="button">反映</button></>}
+      footer={<div className="progress-number-footer">
+        <div className="progress-number-shortcuts" aria-label="所持数の入力候補">
+          <button className="secondary-button" onClick={() => setEditingCount("0")} type="button">0</button>
+          <button className="secondary-button" onClick={() => setEditingCount(String(editingMaterial.requiredCount))} type="button">必要数</button>
+        </div>
+        <div className="progress-number-actions">
+          <button className="secondary-button" onClick={() => setEditingMaterial(null)} type="button">キャンセル</button>
+          <button className="primary-button" onClick={applyMaterialInput} type="button">反映</button>
+        </div>
+      </div>}
       nested
       onClose={() => setEditingMaterial(null)}
       size="small"
@@ -648,8 +657,6 @@ export function ProgressGoalsPage() {
         })}</div>}
       </div>
     </section>
-
-    <section className="panel"><div className="section-heading"><div><p className="eyebrow">Preset status</p><h2>プリセットデータ</h2></div></div><div className="preset-chip-list">{presets.map((preset) => <div className="preset-chip" key={`${preset.id}-${preset.version}`}><div><strong>{preset.name} v{preset.version}</strong><span>{preset.targets.length ? `${preset.targetLabel}を選択` : "対象を確認中"}・{preset.groups.map((group) => group.name).join(" / ")}</span><small>{preset.isAvailable ? "利用可能" : `確認中：${preset.unavailableReason}`}</small></div></div>)}</div></section>
 
     {isCreateOpen && selectedPreset && <ProgressModal
       description="PCとモバイルで同じ手順を使い、現在状態まで設定して登録します。"

@@ -1995,6 +1995,26 @@ a {
   gap: 14px;
 }
 
+.progress-number-footer {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progress-number-shortcuts,
+.progress-number-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.progress-number-shortcuts .secondary-button {
+  min-width: 72px;
+}
+
 .progress-number-editor > div {
   display: flex;
   gap: 10px;
@@ -2221,6 +2241,19 @@ a {
   .progress-floating-action {
     right: max(12px, env(safe-area-inset-right));
     bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .progress-number-footer,
+  .progress-number-actions {
+    align-items: stretch;
+  }
+
+  .progress-number-actions {
+    flex: 1 1 100%;
+  }
+
+  .progress-number-actions button {
+    flex: 1 1 120px;
   }
 }
 
