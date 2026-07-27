@@ -5,6 +5,7 @@ import {
   darkOpusProgressPresetVersion1,
   darkOpusTargets
 } from "../data/darkOpusProgressPreset.js";
+import { draconicProgressPreset, draconicTargets } from "../data/draconicProgressPreset.js";
 import { evokerProgressPreset } from "../data/evokerProgressPreset.js";
 import { eternalConfigs, eternalProgressPreset, eternalProgressPresetVersion2 } from "../data/eternalProgressPreset.js";
 import { materialMasterSeeds } from "../data/gbfMasterSeed/materials.js";
@@ -292,6 +293,50 @@ test("終末武器version 1は第3スキル選択を既存目標用に維持す�
     [["material-dark-residue", 5], ["material-genesis-fragment", 30]]
   );
   assert.deepEqual(legacy.stages.at(-1)?.dependsOn, ["transcendence-250", "second-skill", "third-skill"]);
+});
+
+test("ドラゴニックウェポンversion 1は6属性とオリジン化完成までの依存構造を持つ", () => {
+  assert.equal(draconicProgressPreset.id, "draconic");
+  assert.equal(draconicProgressPreset.version, 1);
+  assert.equal(draconicProgressPreset.isAvailable, true);
+  assert.equal(draconicTargets.length, 6);
+  assert.equal(new Set(draconicTargets.map((target) => target.id)).size, 6);
+  assert.equal(new Set(draconicTargets.map((target) => target.name)).size, 6);
+  assert.equal(draconicProgressPreset.fields, undefined);
+  assert.equal(draconicProgressPreset.stages.at(-1)?.id, "goal-origin");
+  assert.equal(findProgressPreset("draconic-weapon", 1), draconicProgressPreset);
+});
+
+test("ドラゴニックウェポン6属性の素材を固定素材IDへ解決できる", () => {
+  for (const target of draconicTargets) {
+    const resolved = resolveProgressPreset(draconicProgressPreset, target.id);
+    assert.deepEqual(validateProgressPreset(resolved), [], target.name);
+    assert.deepEqual(
+      collectRequiredStageIds(resolved, "goal-origin"),
+      resolved.stages.map((stage) => stage.id),
+      target.name
+    );
+    for (const requirement of resolved.stages.flatMap((stage) => stage.requirements)) {
+      assert.equal(progressMaterialNames[requirement.itemKey as keyof typeof progressMaterialNames], requirement.itemName);
+    }
+  }
+});
+
+test("火属性ドラゴニックウェポンは段階別素材を反映しテルマ素材を含めない", () => {
+  const resolved = resolveProgressPreset(draconicProgressPreset, "fire");
+  const requirements = (stageId: string) => new Map(resolved.stages.find((stage) => stage.id === stageId)
+    ?.requirements.map((requirement) => [requirement.itemKey, requirement.requiredCount]));
+  assert.equal(requirements("weapon-obtain").get("material-element-fire"), 666);
+  assert.equal(requirements("weapon-obtain").get("material-weapon-element-harp"), 500);
+  assert.equal(requirements("weapon-uncap-4").get("material-radiance-fire"), 30);
+  assert.equal(requirements("weapon-uncap-5").get("material-ignite-rubble"), 15);
+  assert.equal(requirements("weapon-uncap-5").get("material-fire-scale"), 350);
+  assert.equal(requirements("weapon-origin").get("material-weapon-element-harp"), 1_000);
+  assert.equal(requirements("weapon-origin").get("material-ignite-rubble"), 100);
+  const itemKeys = resolved.stages.flatMap((stage) => stage.requirements.map((requirement) => requirement.itemKey));
+  assert.equal(itemKeys.includes("material-true-dragon-golden-scale"), true);
+  assert.equal(itemKeys.includes("material-fire-halo"), false);
+  assert.equal(itemKeys.includes("material-genesis-fragment"), false);
 });
 
 test("光属性の最終上限解放は共闘素材を火風へ15個ずつ分割する", () => {

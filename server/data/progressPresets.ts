@@ -1,4 +1,5 @@
 import { darkOpusProgressPreset, darkOpusProgressPresetVersion1 } from "./darkOpusProgressPreset.js";
+import { draconicProgressPreset } from "./draconicProgressPreset.js";
 import { eternalProgressPreset, eternalProgressPresetVersion2 } from "./eternalProgressPreset.js";
 import { evokerProgressPreset } from "./evokerProgressPreset.js";
 
@@ -80,7 +81,7 @@ export const progressPresets: ProgressPreset[] = [
   darkOpusProgressPreset,
   eternalProgressPreset,
   evokerProgressPreset,
-  { id: "draconic-weapon", version: 1, name: "ドラゴニックウェポン", targetLabel: "属性", targets: elements, groups: defaultGroup, stages: stages("交換", "4凸", "5凸", "オリジン化"), isAvailable: false, unavailableReason: "必要素材・条件を検証中" },
+  draconicProgressPreset,
   { id: "destruction-weapon", version: 1, name: "破壊武器", targetLabel: "属性", targets: elements, groups: defaultGroup, stages: stages("交換", "4凸", "5凸"), isAvailable: false, unavailableReason: "必要素材・条件を検証中" },
   { id: "origin-class", version: 1, name: "オリジンクラス", targetLabel: "ジョブ", targets: [], groups: defaultGroup, stages: stages("前提クエスト", "取得", "Lv10", "Lv20", "Lv30", "Lv40", "Lv50"), isAvailable: false, unavailableReason: "対象ジョブと必要素材・条件を検証中" },
   { id: "astral-weapon", version: 1, name: "極星器", targetLabel: "武器種", targets: [], groups: defaultGroup, stages: stages("交換", "4凸", "5凸", "覚醒Lv最大"), isAvailable: false, unavailableReason: "対象武器種・覚醒差分を検証中" },
@@ -94,7 +95,9 @@ const progressPresetDefinitions: ProgressPreset[] = [
 ];
 
 export function findProgressPreset(presetId: string, version?: number) {
-  const canonicalId = presetId === "terminus-weapon" ? "dark-opus" : presetId;
+  const canonicalId = presetId === "terminus-weapon"
+    ? "dark-opus"
+    : presetId === "draconic-weapon" ? "draconic" : presetId;
   return progressPresetDefinitions.find((preset) => preset.id === canonicalId && (version === undefined || preset.version === version));
 }
 
