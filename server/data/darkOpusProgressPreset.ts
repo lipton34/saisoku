@@ -83,10 +83,15 @@ function stage(
 function resolvedStages(
   target: DarkOpusTarget,
   selection: Record<string, unknown>,
-  includeThirdSkill: boolean
+  includeThirdSkill: boolean,
+  supportsCount: boolean
 ): ProgressStage[] {
   const config = elementConfigs[target.element];
-  const count = typeof selection.count === "number" && Number.isInteger(selection.count) && selection.count >= 1 && selection.count <= 10
+  const count = supportsCount
+    && typeof selection.count === "number"
+    && Number.isInteger(selection.count)
+    && selection.count >= 1
+    && selection.count <= 10
     ? selection.count
     : 1;
   const thirdSkill = selection.thirdSkill === "超越後の新第3スキル" || selection.thirdSkill === "計算に含めない"
@@ -202,7 +207,8 @@ function resolvedStages(
 function createDarkOpusProgressPreset(
   version: number,
   targets: DarkOpusTarget[],
-  includeThirdSkill: boolean
+  includeThirdSkill: boolean,
+  supportsCount: boolean
 ): ProgressPreset {
   return {
     id: "dark-opus",
@@ -219,17 +225,17 @@ function createDarkOpusProgressPreset(
         options: ["旧第3スキル", "超越後の新第3スキル", "計算に含めない"],
         defaultValue: "旧第3スキル"
       }
-    ] : [{ id: "count", label: "本数", type: "integer", min: 1, max: 10, defaultValue: 1 }],
+    ] : undefined,
     groups: [
       { id: "weapon", name: "本体強化", sortOrder: 1 },
       { id: "skills", name: "スキル", sortOrder: 2 },
       { id: "transcendence", name: "限界超越", sortOrder: 3 }
     ],
-    stages: resolvedStages(targets[0], { count: 1, thirdSkill: "旧第3スキル" }, includeThirdSkill)
+    stages: resolvedStages(targets[0], { count: 1, thirdSkill: "旧第3スキル" }, includeThirdSkill, supportsCount)
       .map((item) => ({ ...item, requirements: [] })),
     resolveStages: (targetId, selection) => {
       const target = targets.find((item) => item.id === targetId);
-      return target ? resolvedStages(target, selection, includeThirdSkill) : [];
+      return target ? resolvedStages(target, selection, includeThirdSkill, supportsCount) : [];
     },
     isAvailable: version === 2
   };
@@ -238,11 +244,13 @@ function createDarkOpusProgressPreset(
 export const darkOpusProgressPresetVersion1 = createDarkOpusProgressPreset(
   1,
   legacyDarkOpusTargets,
+  true,
   true
 );
 
 export const darkOpusProgressPreset = createDarkOpusProgressPreset(
   2,
   darkOpusTargets,
+  false,
   false
 );
