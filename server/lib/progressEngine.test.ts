@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { evokerProgressPreset } from "../data/evokerProgressPreset.js";
+import { eternalConfigs, eternalProgressPreset } from "../data/eternalProgressPreset.js";
 import { materialMasterSeeds } from "../data/gbfMasterSeed/materials.js";
 import { progressMaterialNames } from "../data/progressMaterials.js";
 import { resolveProgressPreset, type ProgressPreset } from "../data/progressPresets.js";
@@ -90,4 +91,110 @@ test("進捗素材マスターは固定ID一覧と一致する", () => {
   for (const item of materialMasterSeeds) {
     assert.equal(progressMaterialNames[item.id as keyof typeof progressMaterialNames], item.name);
   }
+});
+
+test("十天衆version 2は10人とLv150までの依存構造を持つ", () => {
+  assert.equal(eternalConfigs.length, 10);
+  assert.equal(new Set(eternalConfigs.map((config) => config.id)).size, 10);
+  assert.equal(new Set(eternalConfigs.map((config) => config.weaponType)).size, 10);
+  assert.deepEqual(validateProgressPreset(eternalProgressPreset), []);
+  assert.equal(eternalProgressPreset.stages.at(-1)?.id, "transcendence-150");
+  assert.deepEqual(
+    collectRequiredStageIds(eternalProgressPreset, "transcendence-150"),
+    eternalProgressPreset.stages.map((stage) => stage.id)
+  );
+  assert.equal(eternalProgressPreset.isAvailable, true);
+});
+
+test("十天衆10人の検証済み超越素材は固定素材IDへ解決できる", () => {
+  for (const config of eternalConfigs) {
+    const resolved = resolveProgressPreset(eternalProgressPreset, config.id);
+    assert.deepEqual(validateProgressPreset(resolved), [], config.name);
+    for (const requirement of resolved.stages.flatMap((stage) => stage.requirements)) {
+      assert.equal(progressMaterialNames[requirement.itemKey as keyof typeof progressMaterialNames], requirement.itemName);
+    }
+  }
+});
+
+test("光闇のLv110光輪を2属性へ40個ずつ分割する", () => {
+  const song = resolveProgressPreset(eternalProgressPreset, "song");
+  const seox = resolveProgressPreset(eternalProgressPreset, "seox");
+  const haloRequirements = (preset: ProgressPreset) => preset.stages
+    .find((stage) => stage.id === "transcendence-110")
+    ?.requirements.filter((requirement) => requirement.itemKey.endsWith("-halo"));
+  assert.deepEqual(haloRequirements(song)?.map(({ itemKey, requiredCount }) => [itemKey, requiredCount]), [
+    ["material-fire-halo", 40],
+    ["material-wind-halo", 40]
+  ]);
+  assert.deepEqual(haloRequirements(seox)?.map(({ itemKey, requiredCount }) => [itemKey, requiredCount]), [
+    ["material-water-halo", 40],
+    ["material-earth-halo", 40]
+  ]);
+});
+
+test("40箱コースは選択した属性の素材へ置換する", () => {
+  const fire = resolveProgressPreset(eternalProgressPreset, "tien", { value: "火" });
+  const water = resolveProgressPreset(eternalProgressPreset, "tien", { value: "水" });
+  const requirements = (resolved: ProgressPreset) => new Map(
+    resolved.stages.find((stage) => stage.id === "forty-box-element-change")
+      ?.requirements.map((requirement) => [requirement.itemKey, requirement.requiredCount])
+  );
+  assert.equal(requirements(fire).get("material-fire-orb"), 2_500);
+  assert.equal(requirements(fire).get("material-true-anima-fire"), 30);
+  assert.equal(requirements(water).get("material-water-orb"), 2_500);
+  assert.equal(requirements(water).get("material-true-anima-water"), 30);
+  assert.equal(requirements(water).has("material-fire-orb"), false);
+});
+
+test("黄金の依代は対象別の天星の欠片とジョブの証へ置換する", () => {
+  const uno = resolveProgressPreset(eternalProgressPreset, "uno", { value: "火" });
+  const gold = new Map(uno.stages.find((stage) => stage.id === "gold-relic-create")
+    ?.requirements.map((requirement) => [requirement.itemKey, requirement.requiredCount]));
+  assert.equal(gold.get("material-one-star-fragment"), 100);
+  assert.equal(gold.get("material-holy-knight-distinction"), 30);
+  assert.equal(gold.get("material-gold-brick"), 1);
+});
+
+test("十天衆10人と天星器6属性の全組み合わせに未解決素材がない", () => {
+  for (const config of eternalConfigs) {
+    for (const value of eternalProgressPreset.selectionOptions ?? []) {
+      const resolved = resolveProgressPreset(eternalProgressPreset, config.id, { value });
+      assert.deepEqual(validateProgressPreset(resolved), [], `${config.name}/${value}`);
+      for (const requirement of resolved.stages.flatMap((stage) => stage.requirements)) {
+        assert.equal(progressMaterialNames[requirement.itemKey as keyof typeof progressMaterialNames], requirement.itemName);
+      }
+      const emptyMaterialStages = resolved.stages.filter((stage) =>
+        stage.kind === "stage"
+        && stage.id !== "recruited"
+        && stage.requirements.length === 0
+      );
+      assert.deepEqual(emptyMaterialStages, [], `${config.name}/${value}`);
+    }
+  }
+});
+
+test("天星器覚醒第5段階は選択属性80個・他属性20個を要求する", () => {
+  const resolved = resolveProgressPreset(eternalProgressPreset, "seofon", { value: "風" });
+  const requirements = new Map(resolved.stages.find((stage) => stage.id === "revenant-weapon-awaken-5")
+    ?.requirements.map((requirement) => [requirement.itemKey, requirement.requiredCount]));
+  assert.equal(requirements.get("material-storm-eye"), 80);
+  assert.equal(requirements.get("material-prominence-reactor"), 20);
+  assert.equal(requirements.get("material-sea-god-tail"), 20);
+  assert.equal(requirements.get("material-creation-bud"), 20);
+  assert.equal(requirements.get("material-primal-bit-light"), 20);
+  assert.equal(requirements.get("material-black-fog-crystal"), 20);
+});
+
+test("進捗素材マスターの表示名は重複しない", () => {
+  const names = Object.values(progressMaterialNames);
+  assert.equal(new Set(names).size, names.length);
+});
+
+test("光属性の最終上限解放は共闘素材を火風へ15個ずつ分割する", () => {
+  const resolved = resolveProgressPreset(eternalProgressPreset, "song", { value: "火" });
+  const final = new Map(resolved.stages.find((stage) => stage.id === "final-uncap")
+    ?.requirements.map((requirement) => [requirement.itemKey, requirement.requiredCount]));
+  assert.equal(final.get("material-white-soul"), 2);
+  assert.equal(final.get("material-coop-fire-book"), 15);
+  assert.equal(final.get("material-coop-wind-book"), 15);
 });

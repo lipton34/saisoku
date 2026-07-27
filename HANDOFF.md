@@ -73,10 +73,21 @@
 ローカル実装中に以下を確認済み。
 
 - `npm run typecheck`
-- `npm test`（進捗管理12件）
+- `npm test`（進捗管理21件）
 - `npm run build`
 - `npm run prisma:generate`
 - `git diff --check`
+
+2026-07-27、十天衆version 2を追加した。
+
+- 最終ゴールはLv150
+- 最終上限解放は40箱コースのみ
+- 天星器属性変更先を登録・保存し、加入から超越までの対象別素材へ反映
+- 十天衆10人×6属性の素材定義と依存関係を自動テストで確認
+- ゲーム乱舞とVIP de グランブルーファンタジー攻略Wikiを追加照合し、天星器覚醒第3・第5段階はGameWith記載値で確定
+- 十天衆version 2を`isAvailable: true`で利用可能化
+
+本番反映時は、コードのデプロイ前または同じ保守時間内に `npm run prisma:seed` を実行し、追加した進捗素材マスターをDBへupsertする。今回の変更にPrisma schema・migrationの追加はない。
 
 DB migrationを適用したAPI統合確認と、ブラウザでの360px・768px・1280px表示確認は本番反映前に必要。
 

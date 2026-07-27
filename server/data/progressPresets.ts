@@ -44,7 +44,7 @@ export type ProgressPreset = {
   targets: ProgressPresetTarget[];
   groups: ProgressStageGroup[];
   stages: ProgressStage[];
-  resolveStages?: (targetId: string) => ProgressStage[];
+  resolveStages?: (targetId: string, selection: Record<string, unknown>) => ProgressStage[];
   /** Verified requirements are required before a preset can be registered. */
   isAvailable: boolean;
   unavailableReason?: string;
@@ -64,9 +64,6 @@ const stages = (...names: string[]): ProgressStage[] =>
 const defaultGroup: ProgressStageGroup[] = [{ id: "main", name: "進捗", sortOrder: 0 }];
 
 const elements = ["火", "水", "土", "風", "光", "闇"].map((name) => ({ id: name, name }));
-const eternals = ["ウーノ", "ソーン", "サラーサ", "カトル", "フュンフ", "シス", "シエテ", "オクトー", "ニオ", "エッセル"].map(
-  (name) => ({ id: name, name })
-);
 // Requirement data is intentionally unavailable until it has been verified against
 // current in-game information. The UI may display these definitions, but registration
 // is disabled so an empty or inaccurate preset is never published.
@@ -84,7 +81,7 @@ export const progressPresets: ProgressPreset[] = [
     isAvailable: false,
     unavailableReason: "必要素材・条件を検証中"
   },
-  { id: "eternals", version: 1, name: "十天衆", targetLabel: "十天衆", targets: eternals, groups: defaultGroup, stages: stages("加入", "最終", "Lv110", "Lv120", "Lv130", "Lv140", "Lv150"), isAvailable: false, unavailableReason: "必要素材・条件を検証中" },
+  eternalProgressPreset,
   evokerProgressPreset,
   { id: "draconic-weapon", version: 1, name: "ドラゴニックウェポン", targetLabel: "属性", targets: elements, groups: defaultGroup, stages: stages("交換", "4凸", "5凸", "オリジン化"), isAvailable: false, unavailableReason: "必要素材・条件を検証中" },
   { id: "destruction-weapon", version: 1, name: "破壊武器", targetLabel: "属性", targets: elements, groups: defaultGroup, stages: stages("交換", "4凸", "5凸"), isAvailable: false, unavailableReason: "必要素材・条件を検証中" },
@@ -97,7 +94,8 @@ export function findProgressPreset(presetId: string, version?: number) {
   return progressPresets.find((preset) => preset.id === presetId && (version === undefined || preset.version === version));
 }
 
-export function resolveProgressPreset(preset: ProgressPreset, targetId: string): ProgressPreset {
-  return preset.resolveStages ? { ...preset, stages: preset.resolveStages(targetId) } : preset;
+export function resolveProgressPreset(preset: ProgressPreset, targetId: string, selection: Record<string, unknown> = {}): ProgressPreset {
+  return preset.resolveStages ? { ...preset, stages: preset.resolveStages(targetId, selection) } : preset;
 }
 import { evokerProgressPreset } from "./evokerProgressPreset.js";
+import { eternalProgressPreset } from "./eternalProgressPreset.js";

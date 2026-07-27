@@ -54,9 +54,13 @@ function publicPreset(preset: ProgressPreset) {
   };
 }
 
-function definitionForGoal(goal: { presetId: string; presetVersion: number; targetId: string }) {
+function selectionRecord(value: unknown): Prisma.JsonObject {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Prisma.JsonObject : {};
+}
+
+function definitionForGoal(goal: { presetId: string; presetVersion: number; targetId: string; selection: unknown }) {
   const base = findProgressPreset(goal.presetId, goal.presetVersion);
-  return base ? resolveProgressPreset(base, goal.targetId) : undefined;
+  return base ? resolveProgressPreset(base, goal.targetId, selectionRecord(goal.selection)) : undefined;
 }
 
 function conditionState(
@@ -191,7 +195,14 @@ router.post("/", async (req, res, next) => {
     if (!base.isAvailable) return res.status(409).json({ message: `${base.name}は${base.unavailableReason ?? "準備中"}のため、まだ登録できません` });
     const target = base.targets.find((item) => item.id === req.body.targetId);
     if (!target) return res.status(400).json({ message: "対象の選択が不正です" });
-    const preset = resolveProgressPreset(base, target.id);
+    const selection = selectionRecord(req.body.selection);
+    if (base.selectionLabel) {
+      const value = typeof selection.value === "string" ? selection.value : "";
+      if (!base.selectionOptions?.includes(value)) {
+        return res.status(400).json({ message: `${base.selectionLabel}を選択してください` });
+      }
+    }
+    const preset = resolveProgressPreset(base, target.id, selection);
     const goalStage = stageFor(preset, typeof req.body.goalStageId === "string" ? req.body.goalStageId : preset.stages.at(-1)?.id ?? "");
     if (!goalStage) return res.status(400).json({ message: "最終ゴールの選択が不正です" });
 
@@ -213,7 +224,7 @@ router.post("/", async (req, res, next) => {
           presetName: preset.name,
           targetId: target.id,
           targetName: target.name,
-          selection: typeof req.body.selection === "object" && req.body.selection ? req.body.selection : {},
+          selection,
           goalStageId: goalStage.id,
           startingStageId: null,
           sortOrder,

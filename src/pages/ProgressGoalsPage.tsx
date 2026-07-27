@@ -518,6 +518,7 @@ export function ProgressGoalsPage() {
   const [goals, setGoals] = useState<ProgressGoal[]>([]);
   const [presetId, setPresetId] = useState("");
   const [targetId, setTargetId] = useState("");
+  const [selectionValue, setSelectionValue] = useState("");
   const [initialByGroup, setInitialByGroup] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -556,6 +557,7 @@ export function ProgressGoalsPage() {
   useEffect(() => { void load(); }, []);
   useEffect(() => {
     setTargetId(selectedPreset?.targets[0]?.id ?? "");
+    setSelectionValue(selectedPreset?.selectionOptions?.[0] ?? "");
     setInitialByGroup({});
   }, [selectedPreset?.id]);
 
@@ -580,6 +582,7 @@ export function ProgressGoalsPage() {
         targetId,
         goalStageId: selectedPreset.stages.at(-1)?.id ?? "",
         completedStageIds: [...completed],
+        selection: selectedPreset.selectionLabel ? { value: selectionValue } : undefined,
         showOnBoard
       });
       setGoals((current) => [data.goal, ...current]);
@@ -698,6 +701,7 @@ export function ProgressGoalsPage() {
         {createStep === 1 && <div className="progress-modal-form-grid">
           <label>プリセット<select required value={presetId} onChange={(event) => setPresetId(event.target.value)}>{presets.filter((preset) => preset.isAvailable).map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
           <label>{selectedPreset.targetLabel}<select required value={targetId} onChange={(event) => setTargetId(event.target.value)}>{selectedPreset.targets.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label>
+          {selectedPreset.selectionLabel && <label>{selectedPreset.selectionLabel}<select required value={selectionValue} onChange={(event) => setSelectionValue(event.target.value)}>{selectedPreset.selectionOptions?.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>}
         </div>}
         {createStep === 2 && <section className="progress-initial-summary">
           <div className="progress-initial-summary-heading">
@@ -714,6 +718,7 @@ export function ProgressGoalsPage() {
         {createStep === 3 && <div className="progress-create-confirm">
           <div><span>プリセット</span><strong>{selectedPreset.name}</strong></div>
           <div><span>{selectedPreset.targetLabel}</span><strong>{selectedPreset.targets.find((target) => target.id === targetId)?.name}</strong></div>
+          {selectedPreset.selectionLabel && <div><span>{selectedPreset.selectionLabel}</span><strong>{selectionValue}</strong></div>}
           <div className="wide"><span>現在状態</span><ul>{selectedPreset.groups.map((group) => <li key={group.id}><span>{group.name}</span><strong>{selectedPreset.stages.find((stage) => stage.id === initialByGroup[group.id])?.name ?? "未着手"}</strong></li>)}</ul></div>
           <label className="checkbox-field wide"><input checked={showOnBoard} onChange={(event) => setShowOnBoard(event.target.checked)} type="checkbox" />目標ボードに表示</label>
         </div>}
