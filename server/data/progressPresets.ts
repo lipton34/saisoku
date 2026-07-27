@@ -90,12 +90,17 @@ export const progressPresets: ProgressPreset[] = [
   { id: "revanse-weapon", version: 1, name: "レヴァンス武器", targetLabel: "武器", targets: [], groups: defaultGroup, stages: stages("入手", "4凸", "覚醒Lv15", "特殊強化", "覚醒Lv20"), isAvailable: false, unavailableReason: "対象武器・覚醒差分と必要素材を検証中" }
 ];
 
+const progressPresetDefinitions: ProgressPreset[] = [
+  ...progressPresets,
+  eternalProgressPresetVersion2
+];
+
 export function findProgressPreset(presetId: string, version?: number) {
-  return progressPresets.find((preset) => preset.id === presetId && (version === undefined || preset.version === version));
+  return progressPresetDefinitions.find((preset) => preset.id === presetId && (version === undefined || preset.version === version));
 }
 
 export function resolveProgressPreset(preset: ProgressPreset, targetId: string, selection: Record<string, unknown> = {}): ProgressPreset {
   return preset.resolveStages ? { ...preset, stages: preset.resolveStages(targetId, selection) } : preset;
 }
 import { evokerProgressPreset } from "./evokerProgressPreset.js";
-import { eternalProgressPreset } from "./eternalProgressPreset.js";
+import { eternalProgressPreset, eternalProgressPresetVersion2 } from "./eternalProgressPreset.js";

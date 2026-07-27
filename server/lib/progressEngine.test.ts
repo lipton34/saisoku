@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { evokerProgressPreset } from "../data/evokerProgressPreset.js";
-import { eternalConfigs, eternalProgressPreset } from "../data/eternalProgressPreset.js";
+import { eternalConfigs, eternalProgressPreset, eternalProgressPresetVersion2 } from "../data/eternalProgressPreset.js";
 import { materialMasterSeeds } from "../data/gbfMasterSeed/materials.js";
 import { progressMaterialNames } from "../data/progressMaterials.js";
-import { resolveProgressPreset, type ProgressPreset } from "../data/progressPresets.js";
+import { findProgressPreset, progressPresets, resolveProgressPreset, type ProgressPreset } from "../data/progressPresets.js";
 import { calculateProgress, collectRequiredStageIds, validateCompletedStageIds, validateProgressPreset } from "./progressEngine.js";
 
 const preset: ProgressPreset = {
@@ -93,7 +93,7 @@ test("進捗素材マスターは固定ID一覧と一致する", () => {
   }
 });
 
-test("十天衆version 2は10人とLv150までの依存構造を持つ", () => {
+test("十天衆version 3は10人とLv150までの依存構造を持つ", () => {
   assert.equal(eternalConfigs.length, 10);
   assert.equal(new Set(eternalConfigs.map((config) => config.id)).size, 10);
   assert.equal(new Set(eternalConfigs.map((config) => config.weaponType)).size, 10);
@@ -104,6 +104,28 @@ test("十天衆version 2は10人とLv150までの依存構造を持つ", () => {
     eternalProgressPreset.stages.map((stage) => stage.id)
   );
   assert.equal(eternalProgressPreset.isAvailable, true);
+});
+
+test("十天衆version 3は雄偉者たちの矜持を交換素材へ展開しversion 2を維持する", () => {
+  const version3 = resolveProgressPreset(eternalProgressPreset, "uno", { value: "火" });
+  const version2 = resolveProgressPreset(eternalProgressPresetVersion2, "uno", { value: "火" });
+  const requirements = (preset: ProgressPreset) => new Map(
+    preset.stages.find((stage) => stage.id === "transcendence-150")
+      ?.requirements.map((requirement) => [requirement.itemKey, requirement.requiredCount])
+  );
+
+  assert.deepEqual([...requirements(version3).entries()], [
+    ["material-dark-residue", 30],
+    ["material-black-wings", 30],
+    ["material-cunning-horn", 30],
+    ["material-azure-accolade", 1]
+  ]);
+  assert.deepEqual([...requirements(version2).entries()], [
+    ["material-heroic-spirits-pride", 1]
+  ]);
+  assert.equal(eternalProgressPresetVersion2.isAvailable, false);
+  assert.equal(findProgressPreset("eternals", 2), eternalProgressPresetVersion2);
+  assert.equal(progressPresets.some((preset) => preset.id === "eternals" && preset.version === 2), false);
 });
 
 test("十天衆10人の検証済み超越素材は固定素材IDへ解決できる", () => {

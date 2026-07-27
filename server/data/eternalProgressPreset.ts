@@ -54,7 +54,11 @@ function stage(id: string, name: string, groupId: string, dependsOn: string[], r
   return { id, name, groupId, kind: "stage", dependsOn, requirements, conditions: [], note };
 }
 
-function stagesFor(config: EternalConfig, selection: Record<string, unknown> = {}): ProgressStage[] {
+function stagesFor(
+  config: EternalConfig,
+  selection: Record<string, unknown> = {},
+  expandExchangeMaterials = true
+): ProgressStage[] {
   const keys = elementMaterials[config.element];
   const selectedElement = typeof selection.value === "string" && selection.value in selectionMaterials
     ? selectionMaterials[selection.value as keyof typeof selectionMaterials]
@@ -223,29 +227,44 @@ function stagesFor(config: EternalConfig, selection: Record<string, unknown> = {
     r("material-true-dragon-golden-scale", 50)
   ], "別途5,000,000ルピが必要です。"),
   stage("transcendence-150", "限界超越Lv150", "transcendence", ["transcendence-140"], [
-    r("material-heroic-spirits-pride", 1)
-  ], "別途5,000,000ルピが必要です。雄偉者たちの矜持は高難度素材と碧麗の証から交換できます。")
+    ...(expandExchangeMaterials ? [
+      r("material-dark-residue", 30),
+      r("material-black-wings", 30),
+      r("material-cunning-horn", 30),
+      r("material-azure-accolade", 1)
+    ] : [
+      r("material-heroic-spirits-pride", 1)
+    ])
+  ], expandExchangeMaterials
+    ? "雄偉者たちの矜持の交換素材を展開しています。別途5,000,000ルピが必要です。"
+    : "別途5,000,000ルピが必要です。雄偉者たちの矜持は高難度素材と碧麗の証から交換できます。")
   ];
 }
 
-export const eternalProgressPreset: ProgressPreset = {
-  id: "eternals",
-  version: 2,
-  name: "十天衆",
-  targetLabel: "十天衆",
-  selectionLabel: "天星器の属性変更先",
-  selectionOptions: ["火", "水", "土", "風", "光", "闇"],
-  targets: eternalConfigs.map(({ id, name }) => ({ id, name })),
-  groups: [
-    { id: "recruitment-weapon", name: "加入用天星器", sortOrder: 1 },
-    { id: "recruitment", name: "十天衆加入", sortOrder: 2 },
-    { id: "final-uncap", name: "最終上限解放（40箱コース）", sortOrder: 3 },
-    { id: "transcendence", name: "限界超越", sortOrder: 4 }
-  ],
-  stages: stagesFor(eternalConfigs[0]).map((stage) => ({ ...stage, requirements: [] })),
-  resolveStages: (targetId, selection) => {
-    const config = eternalConfigs.find((item) => item.id === targetId);
-    return config ? stagesFor(config, selection) : [];
-  },
-  isAvailable: true
-};
+function eternalPreset(version: number, expandExchangeMaterials: boolean, isAvailable: boolean): ProgressPreset {
+  return {
+    id: "eternals",
+    version,
+    name: "十天衆",
+    targetLabel: "十天衆",
+    selectionLabel: "天星器の属性変更先",
+    selectionOptions: ["火", "水", "土", "風", "光", "闇"],
+    targets: eternalConfigs.map(({ id, name }) => ({ id, name })),
+    groups: [
+      { id: "recruitment-weapon", name: "加入用天星器", sortOrder: 1 },
+      { id: "recruitment", name: "十天衆加入", sortOrder: 2 },
+      { id: "final-uncap", name: "最終上限解放（40箱コース）", sortOrder: 3 },
+      { id: "transcendence", name: "限界超越", sortOrder: 4 }
+    ],
+    stages: stagesFor(eternalConfigs[0]).map((stage) => ({ ...stage, requirements: [] })),
+    resolveStages: (targetId, selection) => {
+      const config = eternalConfigs.find((item) => item.id === targetId);
+      return config ? stagesFor(config, selection, expandExchangeMaterials) : [];
+    },
+    isAvailable
+  };
+}
+
+export const eternalProgressPresetVersion2 = eternalPreset(2, false, false);
+
+export const eternalProgressPreset = eternalPreset(3, true, true);
