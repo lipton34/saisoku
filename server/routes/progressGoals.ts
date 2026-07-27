@@ -46,6 +46,7 @@ function publicPreset(preset: ProgressPreset) {
     targetLabel: preset.targetLabel,
     selectionLabel: preset.selectionLabel,
     selectionOptions: preset.selectionOptions,
+    fields: preset.fields,
     targets: preset.targets,
     groups: preset.groups,
     stages: preset.stages.map(({ id, name, groupId, kind, dependsOn, note }) => ({ id, name, groupId, kind, dependsOn, note })),
@@ -200,6 +201,20 @@ router.post("/", async (req, res, next) => {
       const value = typeof selection.value === "string" ? selection.value : "";
       if (!base.selectionOptions?.includes(value)) {
         return res.status(400).json({ message: `${base.selectionLabel}を選択してください` });
+      }
+    }
+    for (const field of base.fields ?? []) {
+      const value = selection[field.id];
+      if (field.type === "select" && (typeof value !== "string" || !field.options.includes(value))) {
+        return res.status(400).json({ message: `${field.label}を選択してください` });
+      }
+      if (field.type === "integer" && (
+        typeof value !== "number"
+        || !Number.isInteger(value)
+        || value < field.min
+        || value > field.max
+      )) {
+        return res.status(400).json({ message: `${field.label}は${field.min}～${field.max}の整数で入力してください` });
       }
     }
     const preset = resolveProgressPreset(base, target.id, selection);

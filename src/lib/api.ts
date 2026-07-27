@@ -49,6 +49,10 @@ export type ProgressPreset = {
   targetLabel: string;
   selectionLabel?: string;
   selectionOptions?: string[];
+  fields?: Array<
+    | { id: string; label: string; type: "select"; options: string[]; defaultValue: string }
+    | { id: string; label: string; type: "integer"; min: number; max: number; defaultValue: number }
+  >;
   targets: { id: string; name: string }[];
   groups: { id: string; name: string; sortOrder: number }[];
   stages: {
