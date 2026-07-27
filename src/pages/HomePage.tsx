@@ -189,18 +189,20 @@ export function HomePage() {
         <div className="dialog-actions"><button className="secondary-button" onClick={() => { setKeyword(""); setSourceFilter("all"); }} type="button">解除</button><button className="primary-button" onClick={() => setFilterOpen(false)} type="button">適用</button></div>
       </section></div> : null}
 
-      {selected ? <div className="modal-backdrop" onMouseDown={() => setSelected(null)}><section aria-modal="true" className="panel goal-detail-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog">
-        <div className="section-heading"><div><h2>{selected.title}</h2><p>{selected.visibility === "crew" ? "団内目標" : "個人目標"}</p></div><button aria-label="閉じる" className="icon-button" onClick={() => setSelected(null)} type="button"><X size={18} /></button></div>
-        <div className="segmented"><button className={detailTab === "overview" ? "active" : ""} onClick={() => setDetailTab("overview")} type="button">概要・関連情報</button><button className={detailTab === "tasks" ? "active" : ""} onClick={() => setDetailTab("tasks")} type="button">サブタスク</button></div>
-        {detailTab === "overview" ? <div className="goal-detail-content">
-          {selected.description ? <p>{selected.description}</p> : <p className="muted-text">概要はありません。</p>}
-          {selected.memo ? <p>{selected.memo}</p> : null}
-          {selected.requiredItems.length || selected.raidTargets.length ? <div><h3>関連情報</h3>{selected.requiredItems.map((item) => <p key={item.id}>{item.name} {item.currentCount} / {item.requiredCount}</p>)}{selected.raidTargets.map((target) => <p key={target.id}>{target.questName} {target.currentCount} / {target.targetCount}</p>)}</div> : null}
-        </div> : <div className="goal-subtask-list">
-          {selected.subTasks.map((task) => <label className="checkbox-field" key={task.id}><input checked={task.isDone} disabled={selected.ownerId !== user?.id} onChange={() => void api.updateGoalSubTaskNew(selected.id, task.id, { isDone: !task.isDone }).then(() => load())} type="checkbox" />{task.title}</label>)}
-          {selected.ownerId === user?.id ? <form className="inline-form" onSubmit={addSubTask}><label className="sr-only" htmlFor="new-sub-task">サブタスク</label><input id="new-sub-task" onChange={(event) => setNewSubTask(event.target.value)} placeholder="サブタスクを追加" value={newSubTask} /><button className="secondary-button" type="submit">追加</button></form> : null}
-        </div>}
-        {selected.ownerId === user?.id ? <div className="dialog-actions goal-detail-actions"><button className="secondary-button danger-text" onClick={() => void removeGoal(selected)} type="button">削除</button>{selected.visibility === "personal" ? <button className="secondary-button" onClick={() => void publish(selected)} type="button">団内へ公開</button> : null}<button className="primary-button" onClick={() => navigate(`/goal-editor/${selected.id}`)} type="button">編集</button></div> : null}
+      {selected ? <div className="progress-modal-backdrop" onMouseDown={() => setSelected(null)}><section aria-modal="true" className="progress-modal goal-detail-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog">
+        <header className="progress-modal-header"><div><h2>{selected.title}</h2><p>{selected.visibility === "crew" ? "団内目標" : "個人目標"}</p></div><button aria-label="閉じる" className="icon-button" onClick={() => setSelected(null)} type="button"><X size={18} /></button></header>
+        <div className="progress-modal-body">
+          <div className="segmented"><button className={detailTab === "overview" ? "active" : ""} onClick={() => setDetailTab("overview")} type="button">概要・関連情報</button><button className={detailTab === "tasks" ? "active" : ""} onClick={() => setDetailTab("tasks")} type="button">サブタスク</button></div>
+          {detailTab === "overview" ? <div className="goal-detail-content">
+            {selected.description ? <p>{selected.description}</p> : <p className="muted-text">概要はありません。</p>}
+            {selected.memo ? <p>{selected.memo}</p> : null}
+            {selected.requiredItems.length || selected.raidTargets.length ? <div><h3>関連情報</h3>{selected.requiredItems.map((item) => <p key={item.id}>{item.name} {item.currentCount} / {item.requiredCount}</p>)}{selected.raidTargets.map((target) => <p key={target.id}>{target.questName} {target.currentCount} / {target.targetCount}</p>)}</div> : null}
+          </div> : <div className="goal-subtask-list">
+            {selected.subTasks.map((task) => <label className="checkbox-field" key={task.id}><input checked={task.isDone} disabled={selected.ownerId !== user?.id} onChange={() => void api.updateGoalSubTaskNew(selected.id, task.id, { isDone: !task.isDone }).then(() => load())} type="checkbox" />{task.title}</label>)}
+            {selected.ownerId === user?.id ? <form className="inline-form" onSubmit={addSubTask}><label className="sr-only" htmlFor="new-sub-task">サブタスク</label><input id="new-sub-task" onChange={(event) => setNewSubTask(event.target.value)} placeholder="サブタスクを追加" value={newSubTask} /><button className="secondary-button" type="submit">追加</button></form> : null}
+          </div>}
+        </div>
+        {selected.ownerId === user?.id ? <footer className="progress-modal-footer goal-detail-actions"><button className="secondary-button danger-text" onClick={() => void removeGoal(selected)} type="button">削除</button><span className="progress-modal-footer-spacer" />{selected.visibility === "personal" ? <button className="secondary-button" onClick={() => void publish(selected)} type="button">団内へ公開</button> : null}<button className="primary-button" onClick={() => navigate(`/goal-editor/${selected.id}`)} type="button">編集</button></footer> : null}
       </section></div> : null}
     </div>
   );
