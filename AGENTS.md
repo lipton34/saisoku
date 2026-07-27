@@ -222,6 +222,7 @@ When browser tooling is available, inspect the changed route at all required wid
 
 - User-owned modified and untracked files must be preserved.
 - Do not discard changes with `git reset --hard`, `git checkout --`, or equivalent commands.
+- Do not run `git push`. The user performs all pushes to remote repositories.
 - Do not commit `.env`, generated build output, logs, or local IDE files.
 - Do not edit `dist/`, `dist-server/`, or generated Prisma Client files.
 - Use non-destructive, targeted commands and keep unrelated formatting out of the diff.
