@@ -73,7 +73,7 @@
 ローカル実装中に以下を確認済み。
 
 - `npm run typecheck`
-- `npm test`（進捗管理28件）
+- `npm test`（進捗管理29件）
 - `npm run build`
 - `npm run prisma:generate`
 - `git diff --check`
@@ -96,6 +96,12 @@
 - 本数1～10本の素材倍率と、第3スキルの旧・超越後・計算対象外を選択可能
 - 属性、武器種、マグナ2、六竜、恩寵、レヴァンス、ブライト、光輪を対象別素材へ置換
 - 旧ID `terminus-weapon` は読み取りaliasとして維持
+
+同日、確認結果を反映したversion 2を新規登録用に追加した。
+
+- 第3スキルを段階と素材計算から除外
+- 武器名へ「火マグナ」「火神石」のように属性と加護区分を併記
+- version 1は既存目標の読み取り互換用として維持
 
 本番反映時は、コードのデプロイ前または同じ保守時間内に `npm run prisma:seed` を実行し、追加した進捗素材マスターをDBへupsertする。今回の変更にPrisma schema・migrationの追加はない。
 

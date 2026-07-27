@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { darkOpusProgressPreset, darkOpusTargets } from "../data/darkOpusProgressPreset.js";
+import {
+  darkOpusProgressPreset,
+  darkOpusProgressPresetVersion1,
+  darkOpusTargets
+} from "../data/darkOpusProgressPreset.js";
 import { evokerProgressPreset } from "../data/evokerProgressPreset.js";
 import { eternalConfigs, eternalProgressPreset, eternalProgressPresetVersion2 } from "../data/eternalProgressPreset.js";
 import { materialMasterSeeds } from "../data/gbfMasterSeed/materials.js";
@@ -213,26 +217,28 @@ test("進捗素材マスターの表示名は重複しない", () => {
   assert.equal(new Set(names).size, names.length);
 });
 
-test("終末武器version 1は12武器とLv250完成までの依存構造を持つ", () => {
+test("終末武器version 2は属性と加護を含む12武器とLv250完成までの依存構造を持つ", () => {
   assert.equal(darkOpusProgressPreset.id, "dark-opus");
-  assert.equal(darkOpusProgressPreset.version, 1);
+  assert.equal(darkOpusProgressPreset.version, 2);
   assert.equal(darkOpusProgressPreset.isAvailable, true);
   assert.equal(darkOpusTargets.length, 12);
   assert.equal(new Set(darkOpusTargets.map((target) => target.id)).size, 12);
   assert.equal(new Set(darkOpusTargets.map((target) => target.name)).size, 12);
+  assert.equal(darkOpusTargets.find((target) => target.id === "fire-magna")?.name, "永遠拒絶の大鎌：火マグナ");
+  assert.equal(darkOpusTargets.find((target) => target.id === "fire-primal")?.name, "絶対否定の大鎌：火神石");
   assert.equal(darkOpusProgressPreset.stages.at(-1)?.id, "goal-lv250");
-  assert.equal(findProgressPreset("terminus-weapon", 1), darkOpusProgressPreset);
+  assert.deepEqual(darkOpusProgressPreset.fields?.map((field) => field.id), ["count"]);
+  assert.equal(findProgressPreset("terminus-weapon"), darkOpusProgressPreset);
+  assert.equal(findProgressPreset("terminus-weapon", 1), darkOpusProgressPresetVersion1);
 });
 
-test("終末武器12種・本数・第3スキルの全組み合わせに未解決素材がない", () => {
+test("終末武器12種と本数の全組み合わせに未解決素材がない", () => {
   for (const target of darkOpusTargets) {
     for (const count of [1, 10]) {
-      for (const thirdSkill of ["旧第3スキル", "超越後の新第3スキル", "計算に含めない"]) {
-        const resolved = resolveProgressPreset(darkOpusProgressPreset, target.id, { count, thirdSkill });
-        assert.deepEqual(validateProgressPreset(resolved), [], `${target.name}/${count}本/${thirdSkill}`);
-        for (const requirement of resolved.stages.flatMap((stage) => stage.requirements)) {
-          assert.equal(progressMaterialNames[requirement.itemKey as keyof typeof progressMaterialNames], requirement.itemName);
-        }
+      const resolved = resolveProgressPreset(darkOpusProgressPreset, target.id, { count });
+      assert.deepEqual(validateProgressPreset(resolved), [], `${target.name}/${count}本`);
+      for (const requirement of resolved.stages.flatMap((stage) => stage.requirements)) {
+        assert.equal(progressMaterialNames[requirement.itemKey as keyof typeof progressMaterialNames], requirement.itemName);
       }
     }
   }
@@ -272,22 +278,22 @@ test("終末武器の必要素材を選択本数で乗算する", () => {
   assert.equal(requirements("transcendence-250").get("material-end-bringing-black-feather"), 45);
 });
 
-test("終末武器の第3スキル選択で段階とLv250完成条件を切り替える", () => {
-  const legacy = resolveProgressPreset(darkOpusProgressPreset, "water-primal", { count: 1, thirdSkill: "旧第3スキル" });
-  const transcended = resolveProgressPreset(darkOpusProgressPreset, "water-primal", { count: 1, thirdSkill: "超越後の新第3スキル" });
-  const none = resolveProgressPreset(darkOpusProgressPreset, "water-primal", { count: 1, thirdSkill: "計算に含めない" });
+test("終末武器version 2は第3スキルを段階と素材計算に含めない", () => {
+  const resolved = resolveProgressPreset(darkOpusProgressPreset, "water-primal", { count: 1 });
+  assert.equal(resolved.stages.some((stage) => stage.id === "third-skill"), false);
+  assert.deepEqual(resolved.stages.at(-1)?.dependsOn, ["transcendence-250", "second-skill"]);
+  const itemKeys = resolved.stages.flatMap((stage) => stage.requirements.map((requirement) => requirement.itemKey));
+  assert.equal(itemKeys.includes("material-genesis-fragment"), false);
+  assert.equal(itemKeys.includes("material-malice-fragment"), false);
+});
+
+test("終末武器version 1は第3スキル選択を既存目標用に維持する", () => {
+  const legacy = resolveProgressPreset(darkOpusProgressPresetVersion1, "water-primal", { count: 1, thirdSkill: "旧第3スキル" });
   assert.deepEqual(
     legacy.stages.find((stage) => stage.id === "third-skill")?.requirements.map(({ itemKey, requiredCount }) => [itemKey, requiredCount]),
     [["material-dark-residue", 5], ["material-genesis-fragment", 30]]
   );
   assert.deepEqual(legacy.stages.at(-1)?.dependsOn, ["transcendence-250", "second-skill", "third-skill"]);
-  assert.deepEqual(
-    transcended.stages.find((stage) => stage.id === "third-skill")?.requirements.map(({ itemKey, requiredCount }) => [itemKey, requiredCount]),
-    [["material-end-bringing-black-feather", 5], ["material-malice-fragment", 30]]
-  );
-  assert.deepEqual(transcended.stages.at(-1)?.dependsOn, ["transcendence-250", "second-skill", "third-skill"]);
-  assert.deepEqual(none.stages.find((stage) => stage.id === "third-skill")?.requirements, []);
-  assert.deepEqual(none.stages.at(-1)?.dependsOn, ["transcendence-250", "second-skill"]);
 });
 
 test("光属性の最終上限解放は共闘素材を火風へ15個ずつ分割する", () => {

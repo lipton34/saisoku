@@ -1,4 +1,4 @@
-import { darkOpusProgressPreset } from "./darkOpusProgressPreset.js";
+import { darkOpusProgressPreset, darkOpusProgressPresetVersion1 } from "./darkOpusProgressPreset.js";
 import { eternalProgressPreset, eternalProgressPresetVersion2 } from "./eternalProgressPreset.js";
 import { evokerProgressPreset } from "./evokerProgressPreset.js";
 
@@ -89,6 +89,7 @@ export const progressPresets: ProgressPreset[] = [
 
 const progressPresetDefinitions: ProgressPreset[] = [
   ...progressPresets,
+  darkOpusProgressPresetVersion1,
   eternalProgressPresetVersion2
 ];
 

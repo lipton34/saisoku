@@ -53,12 +53,17 @@ const weaponSuffix = {
   dark: "太刀"
 } as const satisfies Record<ElementId, string>;
 
-export const darkOpusTargets = (Object.keys(elementConfigs) as ElementId[]).flatMap((element) => [
+const legacyDarkOpusTargets = (Object.keys(elementConfigs) as ElementId[]).flatMap((element) => [
   { id: `${element}-magna`, name: `永遠拒絶の${weaponSuffix[element]}`, element, series: "magna" as const },
   { id: `${element}-primal`, name: `絶対否定の${weaponSuffix[element]}`, element, series: "primal" as const }
 ]);
 
-type DarkOpusTarget = (typeof darkOpusTargets)[number];
+export const darkOpusTargets = legacyDarkOpusTargets.map((target) => ({
+  ...target,
+  name: `${target.name}：${elementConfigs[target.element].name}${target.series === "magna" ? "マグナ" : "神石"}`
+}));
+
+type DarkOpusTarget = (typeof legacyDarkOpusTargets)[number];
 
 function requirement(itemKey: ProgressMaterialKey, requiredCount: number, count: number): ProgressRequirement {
   return { itemKey, itemName: progressMaterialNames[itemKey], requiredCount: requiredCount * count };
@@ -75,7 +80,11 @@ function stage(
   return { id, name, groupId, kind: "stage", dependsOn, requirements, conditions: [], note };
 }
 
-function resolvedStages(target: DarkOpusTarget, selection: Record<string, unknown>): ProgressStage[] {
+function resolvedStages(
+  target: DarkOpusTarget,
+  selection: Record<string, unknown>,
+  includeThirdSkill: boolean
+): ProgressStage[] {
   const config = elementConfigs[target.element];
   const count = typeof selection.count === "number" && Number.isInteger(selection.count) && selection.count >= 1 && selection.count <= 10
     ? selection.count
@@ -147,19 +156,19 @@ function resolvedStages(target: DarkOpusTarget, selection: Record<string, unknow
   ];
 
   let thirdSkillStageId: string | undefined;
-  if (thirdSkill === "旧第3スキル") {
+  if (includeThirdSkill && thirdSkill === "旧第3スキル") {
     thirdSkillStageId = "third-skill";
     stages.push(stage(thirdSkillStageId, "第3スキル", "skills", ["weapon-uncap-5"], [
       r("material-dark-residue", 5),
       r("material-genesis-fragment", 30)
     ], "渾身・背水・進境のペンデュラムは必要素材が共通です。"));
-  } else if (thirdSkill === "超越後の新第3スキル") {
+  } else if (includeThirdSkill && thirdSkill === "超越後の新第3スキル") {
     thirdSkillStageId = "third-skill";
     stages.push(stage(thirdSkillStageId, "第3スキル", "skills", ["transcendence-210"], [
       r("material-end-bringing-black-feather", 5),
       r("material-malice-fragment", 30)
     ], "絶涯・窮理・天髄のペンデュラムは必要素材が共通です。"));
-  } else {
+  } else if (includeThirdSkill) {
     stages.push(stage("third-skill", "第3スキル（計算対象外）", "skills", ["weapon-uncap-5"], [],
       "第3スキルの素材は必要数とLv250完成条件へ含めません。"));
   }
@@ -190,32 +199,50 @@ function resolvedStages(target: DarkOpusTarget, selection: Record<string, unknow
   return stages;
 }
 
-export const darkOpusProgressPreset: ProgressPreset = {
-  id: "dark-opus",
-  version: 1,
-  name: "終末武器",
-  targetLabel: "終末武器",
-  targets: darkOpusTargets.map(({ id, name }) => ({ id, name })),
-  fields: [
-    { id: "count", label: "本数", type: "integer", min: 1, max: 10, defaultValue: 1 },
-    {
-      id: "thirdSkill",
-      label: "第3スキル",
-      type: "select",
-      options: ["旧第3スキル", "超越後の新第3スキル", "計算に含めない"],
-      defaultValue: "旧第3スキル"
-    }
-  ],
-  groups: [
-    { id: "weapon", name: "本体強化", sortOrder: 1 },
-    { id: "skills", name: "スキル", sortOrder: 2 },
-    { id: "transcendence", name: "限界超越", sortOrder: 3 }
-  ],
-  stages: resolvedStages(darkOpusTargets[0], { count: 1, thirdSkill: "旧第3スキル" })
-    .map((item) => ({ ...item, requirements: [] })),
-  resolveStages: (targetId, selection) => {
-    const target = darkOpusTargets.find((item) => item.id === targetId);
-    return target ? resolvedStages(target, selection) : [];
-  },
-  isAvailable: true
-};
+function createDarkOpusProgressPreset(
+  version: number,
+  targets: DarkOpusTarget[],
+  includeThirdSkill: boolean
+): ProgressPreset {
+  return {
+    id: "dark-opus",
+    version,
+    name: "終末武器",
+    targetLabel: "終末武器",
+    targets: targets.map(({ id, name }) => ({ id, name })),
+    fields: includeThirdSkill ? [
+      { id: "count", label: "本数", type: "integer", min: 1, max: 10, defaultValue: 1 },
+      {
+        id: "thirdSkill",
+        label: "第3スキル",
+        type: "select",
+        options: ["旧第3スキル", "超越後の新第3スキル", "計算に含めない"],
+        defaultValue: "旧第3スキル"
+      }
+    ] : [{ id: "count", label: "本数", type: "integer", min: 1, max: 10, defaultValue: 1 }],
+    groups: [
+      { id: "weapon", name: "本体強化", sortOrder: 1 },
+      { id: "skills", name: "スキル", sortOrder: 2 },
+      { id: "transcendence", name: "限界超越", sortOrder: 3 }
+    ],
+    stages: resolvedStages(targets[0], { count: 1, thirdSkill: "旧第3スキル" }, includeThirdSkill)
+      .map((item) => ({ ...item, requirements: [] })),
+    resolveStages: (targetId, selection) => {
+      const target = targets.find((item) => item.id === targetId);
+      return target ? resolvedStages(target, selection, includeThirdSkill) : [];
+    },
+    isAvailable: version === 2
+  };
+}
+
+export const darkOpusProgressPresetVersion1 = createDarkOpusProgressPreset(
+  1,
+  legacyDarkOpusTargets,
+  true
+);
+
+export const darkOpusProgressPreset = createDarkOpusProgressPreset(
+  2,
+  darkOpusTargets,
+  false
+);
