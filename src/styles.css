@@ -4996,7 +4996,7 @@ textarea {
   right: 0;
   left: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, auto) auto;
   gap: 12px;
   align-items: center;
   min-height: 56px;
@@ -5030,6 +5030,19 @@ textarea {
   white-space: nowrap;
 }
 
+.app-header-archive {
+  grid-column: 3;
+}
+
+.app-header-archive.active {
+  background: #e7f2f5;
+  color: #17647a;
+}
+
+.app-header-user {
+  grid-column: 4;
+}
+
 .bottom-navigation {
   position: fixed;
   z-index: 90;
@@ -5060,6 +5073,10 @@ textarea {
 .bottom-navigation a.active {
   background: #e7f2f5;
   color: #17647a;
+}
+
+.goal-detail-actions .danger-text {
+  margin-right: auto;
 }
 
 .mobile-shell .main-content {

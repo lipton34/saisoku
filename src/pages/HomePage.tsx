@@ -162,10 +162,9 @@ export function HomePage() {
                   <select aria-label={`${goal.title}の状態`} onChange={(event) => void changeStatus(goal, event.target.value as GoalBoardState)} value={goal.boardStatus}>
                     {statuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                   </select>
-                  <details className="card-menu"><summary aria-label={`${goal.title}の操作`}><MoreVertical size={18} /></summary><div>
-                    {!goal.sourceRoundGoalId && !goal.sourceProgressGoalId ? <button onClick={() => navigate(`/goal-editor/${goal.id}`)} type="button">編集</button> : null}
-                    <button className="danger-text" onClick={() => void removeGoal(goal)} type="button">{goal.sourceRoundGoalId || goal.sourceProgressGoalId ? "連携解除" : "削除"}</button>
-                  </div></details>
+                  {!goal.sourceRoundGoalId && !goal.sourceProgressGoalId ? <details className="card-menu"><summary aria-label={`${goal.title}の操作`}><MoreVertical size={18} /></summary><div>
+                    <button onClick={() => navigate(`/goal-editor/${goal.id}`)} type="button">編集</button>
+                  </div></details> : null}
                 </div>
               ) : null}
             </article>
@@ -201,7 +200,7 @@ export function HomePage() {
           {selected.subTasks.map((task) => <label className="checkbox-field" key={task.id}><input checked={task.isDone} disabled={selected.ownerId !== user?.id} onChange={() => void api.updateGoalSubTaskNew(selected.id, task.id, { isDone: !task.isDone }).then(() => load())} type="checkbox" />{task.title}</label>)}
           {selected.ownerId === user?.id ? <form className="inline-form" onSubmit={addSubTask}><label className="sr-only" htmlFor="new-sub-task">サブタスク</label><input id="new-sub-task" onChange={(event) => setNewSubTask(event.target.value)} placeholder="サブタスクを追加" value={newSubTask} /><button className="secondary-button" type="submit">追加</button></form> : null}
         </div>}
-        {selected.ownerId === user?.id ? <div className="dialog-actions">{selected.visibility === "personal" ? <button className="secondary-button" onClick={() => void publish(selected)} type="button">団内へ公開</button> : null}<button className="primary-button" onClick={() => navigate(`/goal-editor/${selected.id}`)} type="button">編集</button></div> : null}
+        {selected.ownerId === user?.id ? <div className="dialog-actions goal-detail-actions"><button className="secondary-button danger-text" onClick={() => void removeGoal(selected)} type="button">削除</button>{selected.visibility === "personal" ? <button className="secondary-button" onClick={() => void publish(selected)} type="button">団内へ公開</button> : null}<button className="primary-button" onClick={() => navigate(`/goal-editor/${selected.id}`)} type="button">編集</button></div> : null}
       </section></div> : null}
     </div>
   );
