@@ -2112,9 +2112,10 @@ a {
 
 .progress-floating-action {
   position: fixed;
-  right: max(20px, env(safe-area-inset-right));
-  bottom: max(20px, env(safe-area-inset-bottom));
-  z-index: 30;
+  right: auto;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  left: max(18px, env(safe-area-inset-left));
+  z-index: 70;
   min-height: 48px;
   box-shadow: 0 8px 24px rgba(24, 39, 51, 0.24);
 }
@@ -2177,8 +2178,9 @@ a {
   }
 
   .progress-floating-action {
-    right: max(12px, env(safe-area-inset-right));
-    bottom: max(12px, env(safe-area-inset-bottom));
+    right: auto;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    left: max(12px, env(safe-area-inset-left));
   }
 
   .progress-number-footer,
