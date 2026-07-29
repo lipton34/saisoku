@@ -1,8 +1,8 @@
-import { Filter, MoreVertical, Plus, X } from "lucide-react";
+import { Filter, LoaderCircle, MoreVertical, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
-import { api, type Goal, type GoalBoardState } from "../lib/api";
+import { api, type Goal, type GoalBoardState, type RoundGoal } from "../lib/api";
 
 const statuses: { value: GoalBoardState; label: string }[] = [
   { value: "unset", label: "未設定" },
@@ -17,6 +17,10 @@ export function HomePage() {
   const [status, setStatus] = useState<GoalBoardState>("unset");
   const [goals, setGoals] = useState<Goal[]>([]);
   const [selected, setSelected] = useState<Goal | null>(null);
+  const [openingGoalId, setOpeningGoalId] = useState<string | null>(null);
+  const [editingRoundGoal, setEditingRoundGoal] = useState<RoundGoal | null>(null);
+  const [roundCurrentCount, setRoundCurrentCount] = useState("");
+  const [savingRoundCount, setSavingRoundCount] = useState(false);
   const [detailTab, setDetailTab] = useState<"overview" | "tasks">("overview");
   const [filterOpen, setFilterOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
@@ -55,17 +59,46 @@ export function HomePage() {
     [goals, keyword, sourceFilter, status]
   );
 
-  function openGoal(goal: Goal) {
-    if (goal.sourceRoundGoalId) {
-      navigate("/round-goals");
+  async function openGoal(goal: Goal) {
+    if (openingGoalId) return;
+    if (goal.sourceRoundGoal) {
+      setEditingRoundGoal(goal.sourceRoundGoal);
+      setRoundCurrentCount(String(goal.sourceRoundGoal.currentCount));
       return;
     }
     if (goal.sourceProgressGoalId) {
-      navigate("/progress-goals");
+      navigate(`/progress-goals?goalId=${encodeURIComponent(goal.sourceProgressGoalId)}`);
       return;
     }
-    setDetailTab("overview");
-    setSelected(goal);
+    setOpeningGoalId(goal.id);
+    try {
+      const response = await api.goal(goal.id);
+      setDetailTab("overview");
+      setSelected(response.goal);
+    } catch (openError) {
+      setError(openError instanceof Error ? openError.message : "目標を開けませんでした");
+    } finally {
+      setOpeningGoalId(null);
+    }
+  }
+
+  async function updateRoundCount() {
+    if (!editingRoundGoal || savingRoundCount) return;
+    const parsedCount = Number(roundCurrentCount);
+    if (!Number.isSafeInteger(parsedCount) || parsedCount < 0) {
+      setError("現在数は0以上の整数で入力してください");
+      return;
+    }
+    setSavingRoundCount(true);
+    try {
+      await api.updateRoundGoal(editingRoundGoal.id, { currentCount: parsedCount });
+      setEditingRoundGoal(null);
+      await load();
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "現在数を更新できませんでした");
+    } finally {
+      setSavingRoundCount(false);
+    }
   }
 
   async function changeStatus(goal: Goal, boardStatus: GoalBoardState) {
@@ -152,10 +185,12 @@ export function HomePage() {
           const kind = goal.sourceRoundGoalId ? "round" : goal.sourceProgressGoalId ? "progress" : "normal";
           return (
             <article className={`panel goal-board-card goal-kind-${kind}`} key={goal.id}>
-              <button className="goal-card-main" onClick={() => openGoal(goal)} type="button">
-                <span><strong>{goal.title}</strong>{kind !== "normal" ? <small>{kind === "round" ? "周回目標" : "進捗管理"}</small> : null}</span>
-                {goal.description ? <p>{goal.description}</p> : null}
-                {scope === "crew" ? <small>作成者: {goal.owner.displayName ?? goal.owner.username}</small> : null}
+              <button aria-busy={openingGoalId === goal.id} className="goal-card-main" disabled={openingGoalId !== null} onClick={() => void openGoal(goal)} type="button">
+                {openingGoalId === goal.id ? <span className="goal-card-loading"><LoaderCircle aria-hidden="true" className="spin" size={19} />読み込み中…</span> : <>
+                  <span><strong>{goal.title}</strong>{kind !== "normal" ? <small>{kind === "round" ? "周回目標" : "進捗管理"}</small> : null}</span>
+                  {goal.description ? <p>{goal.description}</p> : null}
+                  {scope === "crew" ? <small>作成者: {goal.owner.displayName ?? goal.owner.username}</small> : null}
+                </>}
               </button>
               {ownGoal ? (
                 <div className="goal-card-actions">
@@ -164,6 +199,7 @@ export function HomePage() {
                   </select>
                   {!goal.sourceRoundGoalId && !goal.sourceProgressGoalId ? <details className="card-menu"><summary aria-label={`${goal.title}の操作`}><MoreVertical size={18} /></summary><div>
                     <button onClick={() => navigate(`/goal-editor/${goal.id}`)} type="button">編集</button>
+                    <button className="danger-text" onClick={() => void removeGoal(goal)} type="button">削除</button>
                   </div></details> : null}
                 </div>
               ) : null}
@@ -189,7 +225,14 @@ export function HomePage() {
         <div className="dialog-actions"><button className="secondary-button" onClick={() => { setKeyword(""); setSourceFilter("all"); }} type="button">解除</button><button className="primary-button" onClick={() => setFilterOpen(false)} type="button">適用</button></div>
       </section></div> : null}
 
-      {selected ? <div className="progress-modal-backdrop" onMouseDown={() => setSelected(null)}><section aria-modal="true" className="progress-modal goal-detail-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog">
+      {editingRoundGoal ? <div className="modal-backdrop" onMouseDown={() => savingRoundCount ? undefined : setEditingRoundGoal(null)}><section aria-modal="true" className="panel compact-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog">
+        <div className="section-heading"><div><h2>{editingRoundGoal.title}</h2><p>目標数 {editingRoundGoal.targetCount.toLocaleString()}</p></div><button aria-label="閉じる" className="icon-button" disabled={savingRoundCount} onClick={() => setEditingRoundGoal(null)} type="button"><X size={18} /></button></div>
+        <label>現在数<input autoFocus disabled={savingRoundCount} inputMode="numeric" min={0} onChange={(event) => setRoundCurrentCount(event.target.value)} pattern="[0-9]*" type="number" value={roundCurrentCount} /></label>
+        <div className="quick-number-actions"><button disabled={savingRoundCount} onClick={() => setRoundCurrentCount("0")} type="button">0</button><button disabled={savingRoundCount} onClick={() => setRoundCurrentCount(String(editingRoundGoal.targetCount))} type="button">目標数</button></div>
+        <div className="dialog-actions"><button className="secondary-button" disabled={savingRoundCount} onClick={() => setEditingRoundGoal(null)} type="button">キャンセル</button><button className="primary-button" disabled={savingRoundCount} onClick={() => void updateRoundCount()} type="button">{savingRoundCount ? <><LoaderCircle aria-hidden="true" className="spin" size={17} />反映中…</> : "反映"}</button></div>
+      </section></div> : null}
+
+      {selected ? <div className="progress-modal-backdrop goal-detail-backdrop" onMouseDown={() => setSelected(null)}><section aria-modal="true" className="progress-modal goal-detail-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog">
         <header className="progress-modal-header"><div><h2>{selected.title}</h2><p>{selected.visibility === "crew" ? "団内目標" : "個人目標"}</p></div><button aria-label="閉じる" className="icon-button" onClick={() => setSelected(null)} type="button"><X size={18} /></button></header>
         <div className="progress-modal-body">
           <div className="segmented"><button className={detailTab === "overview" ? "active" : ""} onClick={() => setDetailTab("overview")} type="button">概要・関連情報</button><button className={detailTab === "tasks" ? "active" : ""} onClick={() => setDetailTab("tasks")} type="button">サブタスク</button></div>

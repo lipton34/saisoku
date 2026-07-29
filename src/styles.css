@@ -5182,6 +5182,28 @@ textarea {
   color: #657688;
 }
 
+.goal-card-main:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.goal-card-loading {
+  min-height: 42px;
+  align-content: center;
+  color: #526b7d;
+  font-weight: 800;
+}
+
+.spin {
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .goal-card-actions {
   display: flex;
   gap: 6px;
@@ -5270,6 +5292,11 @@ textarea {
   max-height: min(84vh, 720px);
   overflow-y: auto;
   padding: 18px;
+}
+
+.goal-detail-backdrop {
+  align-items: center;
+  padding: 12px;
 }
 
 .goal-detail-dialog {
