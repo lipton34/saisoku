@@ -5241,9 +5241,9 @@ textarea {
 
 .card-menu > div {
   position: absolute;
-  z-index: 20;
-  top: 44px;
+  z-index: 50;
   right: 0;
+  bottom: 44px;
   display: grid;
   min-width: 120px;
   padding: 6px;
@@ -5395,7 +5395,25 @@ fieldset.goal-subtask-editor {
   overflow-wrap: anywhere;
 }
 
+.goal-subtask-main {
+  width: 100%;
+  max-width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--goal-subtask-border);
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.goal-subtask-main > span,
 .goal-subtask-main .text-button {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.goal-subtask-main .text-button {
+  flex: 1 1 auto;
   min-width: 0;
   padding: 4px 0;
   text-align: left;
