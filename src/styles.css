@@ -5105,66 +5105,15 @@ textarea {
   justify-content: space-between;
 }
 
-.mobile-shell .page-heading {
-  min-height: 56px;
-  flex-direction: row;
-  gap: 8px;
-  align-items: center;
-  padding: 10px 14px;
-}
-
-.mobile-shell .page-heading h1,
-.mobile-shell .page-heading h2 {
-  margin: 0;
-  font-size: 1.2rem;
-  line-height: 1.3;
-}
-
-.mobile-shell .page-heading .eyebrow {
-  margin-bottom: 1px;
-  font-size: 0.64rem;
-}
-
-.mobile-shell .section-heading {
-  flex-direction: row;
-  align-items: center;
-}
-
-.mobile-shell .section-heading h2 {
-  font-size: 1.05rem;
-  line-height: 1.35;
-}
-
 .heading-actions {
   display: flex;
-  flex: 0 0 auto;
   gap: 8px;
   align-items: center;
-  flex-wrap: nowrap;
 }
 
 .goal-scope-tabs,
 .goal-status-tabs {
   width: 100%;
-}
-
-.goal-status-tabs {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.goal-status-tabs button {
-  min-width: 0;
-  padding-inline: 6px;
-  font-size: 0.84rem;
-  white-space: nowrap;
-}
-
-.progress-goal-panel > .section-heading {
-  margin-bottom: 0;
-}
-
-.progress-goal-panel > .section-heading h2 {
-  font-size: 1.05rem;
 }
 
 .goal-board-column,
@@ -5749,26 +5698,63 @@ textarea {
     font-size: 0.78rem;
   }
 
-  .heading-actions .secondary-button {
-    min-height: 42px;
-    padding-inline: 10px;
-  }
-
   .mobile-shell .page-heading {
     min-height: 52px;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
     padding: 8px 10px;
   }
 
   .mobile-shell .page-heading h1,
   .mobile-shell .page-heading h2 {
+    margin: 0;
     font-size: 1.08rem;
+    line-height: 1.3;
+  }
+
+  .mobile-shell .page-heading .eyebrow {
+    margin-bottom: 1px;
+    font-size: 0.64rem;
+  }
+
+  .mobile-shell .section-heading {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .mobile-shell .section-heading h2 {
+    font-size: 1.05rem;
+    line-height: 1.35;
+  }
+
+  .goal-status-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .goal-status-tabs button {
+    min-width: 0;
+    padding-inline: 6px;
+    font-size: 0.84rem;
+    white-space: nowrap;
+  }
+
+  .progress-goal-panel > .section-heading {
+    margin-bottom: 0;
+  }
+
+  .progress-goal-panel > .section-heading h2 {
+    font-size: 1.05rem;
   }
 
   .heading-actions {
+    flex: 0 0 auto;
     gap: 4px;
+    flex-wrap: nowrap;
   }
 
   .heading-actions .secondary-button {
+    min-height: 42px;
     gap: 5px;
     padding-inline: 8px;
     font-size: 0.82rem;
