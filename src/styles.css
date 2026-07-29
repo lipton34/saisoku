@@ -5398,14 +5398,19 @@ fieldset.goal-subtask-editor {
 .goal-subtask-main {
   width: 100%;
   max-width: 100%;
-  padding: 9px 10px;
-  border: 1px solid var(--goal-subtask-border);
-  border-radius: 9px;
-  background: #f8fafc;
+}
+
+.goal-subtask-main input[type="checkbox"] {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
 }
 
 .goal-subtask-main > span,
 .goal-subtask-main .text-button {
+  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
