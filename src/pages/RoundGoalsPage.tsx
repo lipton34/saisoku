@@ -16,7 +16,7 @@ export function RoundGoalsPage() {
       setGoals(data.goals);
       setError("");
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "周回目標を読み込めませんでした");
+      setError(loadError instanceof Error ? loadError.message : "数量目標を読み込めませんでした");
     }
   }
 
@@ -51,7 +51,7 @@ export function RoundGoalsPage() {
   }
 
   async function remove(goal: RoundGoal) {
-    if (!window.confirm("この周回目標を削除します。目標ボードとの連携も削除されます")) return;
+    if (!window.confirm("この数量目標を削除します。目標ボードとの連携も削除されます")) return;
     try {
       await api.deleteRoundGoal(goal.id);
       await load();
@@ -64,11 +64,11 @@ export function RoundGoalsPage() {
     <div className="page-stack compact-page">
       <section className="page-heading">
         <p className="eyebrow">Round goals</p>
-        <h1>周回目標</h1>
+        <h1>数量目標</h1>
       </section>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       {goals.length === 0 ? (
-        <section className="panel empty-state"><p>周回目標はまだありません。</p></section>
+        <section className="panel empty-state"><p>数量目標はまだありません。</p></section>
       ) : (
         <section className="simple-card-list">
           {goals.map((goal, index) => {
@@ -105,7 +105,7 @@ export function RoundGoalsPage() {
           })}
         </section>
       )}
-      <Link aria-label="周回目標を作成" className="floating-action" to="/round-goals/new"><Plus size={23} /></Link>
+      <Link aria-label="数量目標を作成" className="floating-action" to="/round-goals/new"><Plus size={23} /></Link>
 
       {editing ? (
         <div className="modal-backdrop" onMouseDown={() => setEditing(null)}>

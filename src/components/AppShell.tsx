@@ -5,7 +5,7 @@ import { useAuth } from "./AuthContext";
 
 const navigation = [
   { to: "/", label: "タスク", icon: ListTodo },
-  { to: "/round-goals", label: "周回目標", icon: Repeat2 },
+  { to: "/round-goals", label: "数量目標", icon: Repeat2 },
   { to: "/progress-goals", label: "進捗管理", icon: ChartNoAxesColumnIncreasing },
   { to: "/builds", label: "編成", icon: Swords },
   { to: "/guild-war-goals", label: "古戦場", icon: Flame }

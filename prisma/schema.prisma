@@ -96,6 +96,7 @@ model RoundGoal {
   ownerId      String   @map("owner_id")
   owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   boardGoal    Goal?
+  linkedSubTasks GoalSubTask[] @relation("GoalSubTaskRoundGoal")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -117,6 +118,7 @@ model ProgressGoal {
   ownerId         String                      @map("owner_id")
   owner           User                        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   boardGoal       Goal?
+  linkedSubTasks  GoalSubTask[]             @relation("GoalSubTaskProgressGoal")
   stages          ProgressStageProgress[]
   conditions      ProgressConditionProgress[]
   createdAt       DateTime                    @default(now()) @map("created_at")
@@ -271,8 +273,6 @@ model Goal {
   sourceRoundGoal      RoundGoal?         @relation(fields: [sourceRoundGoalId], references: [id], onDelete: Cascade)
   sourceProgressGoalId String?            @unique @map("source_progress_goal_id")
   sourceProgressGoal   ProgressGoal?      @relation(fields: [sourceProgressGoalId], references: [id], onDelete: Cascade)
-  requiredItems        GoalRequiredItem[]
-  raidTargets          GoalRaidTarget[]
   subTasks             GoalSubTask[]
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
@@ -282,53 +282,27 @@ model Goal {
   @@map("goals")
 }
 
-model GoalRequiredItem {
-  id            String         @id @default(cuid())
-  goalId        String
-  masterItemId  String?
-  itemKind      String         @default("weapon")
-  name          String
-  requiredCount Int            @default(1)
-  currentCount  Int            @default(0)
-  importance    String         @default("必須")
-  note          String?
-  goal          Goal           @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  masterItem    GbfMasterItem? @relation(fields: [masterItemId], references: [id], onDelete: SetNull)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  @@index([goalId])
-  @@index([masterItemId])
-  @@map("goal_required_items")
-}
-
-model GoalRaidTarget {
-  id           String   @id @default(cuid())
-  goalId       String
-  questName    String
-  runType      String   @default("other")
-  targetCount  Int      @default(0)
-  currentCount Int      @default(0)
-  note         String?
-  goal         Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([goalId])
-  @@map("goal_raid_targets")
-}
-
 model GoalSubTask {
-  id        String   @id @default(cuid())
-  goalId    String
-  title     String
-  isDone    Boolean  @default(false)
-  sortOrder Int      @default(0)
-  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String        @id @default(cuid())
+  goalId               String
+  kind                 String        @default("standard")
+  title                String?
+  isDone               Boolean       @default(false)
+  sourceRoundGoalId    String?       @map("source_round_goal_id")
+  sourceProgressGoalId String?       @map("source_progress_goal_id")
+  completionOverride   Boolean?      @map("completion_override")
+  sortOrder            Int           @default(0)
+  goal                 Goal          @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  sourceRoundGoal      RoundGoal?     @relation("GoalSubTaskRoundGoal", fields: [sourceRoundGoalId], references: [id], onDelete: Cascade)
+  sourceProgressGoal   ProgressGoal?  @relation("GoalSubTaskProgressGoal", fields: [sourceProgressGoalId], references: [id], onDelete: Cascade)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
 
-  @@index([goalId])
+  @@unique([goalId, sourceRoundGoalId])
+  @@unique([goalId, sourceProgressGoalId])
+  @@index([goalId, sortOrder])
+  @@index([sourceRoundGoalId])
+  @@index([sourceProgressGoalId])
   @@map("goal_sub_tasks")
 }
 
@@ -349,7 +323,6 @@ model GbfMasterItem {
   sortOrder         Int                @default(0)
   isActive          Boolean            @default(true)
   aliases           GbfMasterAlias[]
-  goalRequiredItems GoalRequiredItem[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 

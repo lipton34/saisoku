@@ -40,7 +40,7 @@ router.get("/:id", async (req, res, next) => {
       include: includeBoardGoal
     });
     if (!goal) {
-      res.status(404).json({ message: "周回目標が見つかりません" });
+      res.status(404).json({ message: "数量目標が見つかりません" });
       return;
     }
     res.json({ goal });
@@ -97,7 +97,7 @@ router.patch("/:id", async (req, res, next) => {
       include: includeBoardGoal
     });
     if (!existing) {
-      res.status(404).json({ message: "周回目標が見つかりません" });
+      res.status(404).json({ message: "数量目標が見つかりません" });
       return;
     }
     const targetCount = req.body.targetCount === undefined ? existing.targetCount : count(req.body.targetCount);
@@ -163,7 +163,7 @@ router.delete("/:id", async (req, res, next) => {
   try {
     const deleted = await prisma.roundGoal.deleteMany({ where: { id: req.params.id, ownerId: ownerId(req) } });
     if (deleted.count === 0) {
-      res.status(404).json({ message: "周回目標が見つかりません" });
+      res.status(404).json({ message: "数量目標が見つかりません" });
       return;
     }
     res.status(204).send();

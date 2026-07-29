@@ -1,8 +1,8 @@
-import { Filter, LoaderCircle, MoreVertical, Plus, X } from "lucide-react";
+import { CheckSquare, Filter, Hash, LoaderCircle, Milestone, MoreVertical, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
-import { api, type Goal, type GoalBoardState, type RoundGoal } from "../lib/api";
+import { api, type Goal, type GoalBoardState, type GoalSubTaskInput, type ProgressGoal, type RoundGoal } from "../lib/api";
 
 const statuses: { value: GoalBoardState; label: string }[] = [
   { value: "unset", label: "未設定" },
@@ -29,6 +29,9 @@ export function HomePage() {
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newSubTask, setNewSubTask] = useState("");
+  const [newSubTasks, setNewSubTasks] = useState<GoalSubTaskInput[]>([]);
+  const [roundCandidates, setRoundCandidates] = useState<RoundGoal[]>([]);
+  const [progressCandidates, setProgressCandidates] = useState<ProgressGoal[]>([]);
   const [error, setError] = useState("");
 
   async function load(nextScope = scope) {
@@ -105,7 +108,7 @@ export function HomePage() {
 
   async function changeStatus(goal: Goal, boardStatus: GoalBoardState) {
     try {
-      await api.updateGoal(goal.id, { boardStatus });
+      await api.updateGoal(goal.id, { boardStatus, expectedUpdatedAt: goal.updatedAt });
       await load();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "状態を変更できませんでした");
@@ -115,9 +118,10 @@ export function HomePage() {
   async function createGoal(event: React.FormEvent) {
     event.preventDefault();
     try {
-      await api.createGoal({ title: newTitle, description: newDescription });
+      await api.createGoal({ title: newTitle, description: newDescription, subTasks: newSubTasks });
       setNewTitle("");
       setNewDescription("");
+      setNewSubTasks([]);
       setCreateOpen(false);
       setScope("personal");
       setStatus("unset");
@@ -145,7 +149,7 @@ export function HomePage() {
   async function publish(goal: Goal) {
     if (!window.confirm("団内目標にすると個人目標へ戻せません。団内へ公開しますか？")) return;
     try {
-      await api.updateGoal(goal.id, { visibility: "crew", confirmCrewPublish: true });
+      await api.updateGoal(goal.id, { visibility: "crew", confirmCrewPublish: true, expectedUpdatedAt: goal.updatedAt });
       setSelected(null);
       await load();
     } catch (publishError) {
@@ -153,15 +157,54 @@ export function HomePage() {
     }
   }
 
-  async function addSubTask(event: React.FormEvent) {
-    event.preventDefault();
-    if (!selected || !newSubTask.trim()) return;
+  async function toggleSubTask(task: Goal["subTasks"][number]) {
+    if (!selected) return;
     try {
-      await api.createGoalSubTask(selected.id, newSubTask);
-      setNewSubTask("");
+      const value = task.kind === "standard"
+        ? { isDone: !task.effectiveIsDone, expectedUpdatedAt: task.updatedAt }
+        : { completionOverride: !task.effectiveIsDone, expectedUpdatedAt: task.updatedAt };
+      const response = await api.updateGoalSubTask(selected.id, task.id, value);
+      setSelected(response.goal);
       await load();
     } catch (taskError) {
-      setError(taskError instanceof Error ? taskError.message : "サブタスクを追加できませんでした");
+      setError(taskError instanceof Error ? taskError.message : "サブタスクを更新できませんでした");
+    }
+  }
+
+  async function resetSubTaskAutomatic(taskId: string, updatedAt: string) {
+    if (!selected) return;
+    try {
+      const response = await api.updateGoalSubTask(selected.id, taskId, { completionOverride: null, expectedUpdatedAt: updatedAt });
+      setSelected(response.goal);
+      await load();
+    } catch (taskError) {
+      setError(taskError instanceof Error ? taskError.message : "自動判定へ戻せませんでした");
+    }
+  }
+
+  async function openLinkedSubTask(task: Goal["subTasks"][number]) {
+    if (task.kind === "round" && task.sourceRoundGoalId) {
+      try {
+        const response = await api.roundGoal(task.sourceRoundGoalId);
+        setEditingRoundGoal(response.goal);
+        setRoundCurrentCount(String(response.goal.currentCount));
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "数量目標を開けませんでした");
+      }
+    } else if (task.kind === "progress" && task.sourceProgressGoalId) {
+      navigate(`/progress-goals?goalId=${encodeURIComponent(task.sourceProgressGoalId)}`);
+    }
+  }
+
+  async function openCreate() {
+    setCreateOpen(true);
+    try {
+      const [roundData, progressData] = await Promise.all([api.roundGoals(), api.progressGoals()]);
+      setRoundCandidates(roundData.goals);
+      setProgressCandidates(progressData.goals);
+    } catch {
+      setRoundCandidates([]);
+      setProgressCandidates([]);
     }
   }
 
@@ -189,19 +232,20 @@ export function HomePage() {
             <article className={`panel goal-board-card goal-kind-${kind}`} key={goal.id}>
               <button aria-busy={openingGoalId === goal.id} className="goal-card-main" disabled={openingGoalId !== null} onClick={() => void openGoal(goal)} type="button">
                 {openingGoalId === goal.id ? <span className="goal-card-loading"><LoaderCircle aria-hidden="true" className="spin" size={19} />読み込み中…</span> : <>
-                  <span><strong>{goal.title}</strong>{kind !== "normal" ? <small>{kind === "round" ? "周回目標" : "進捗管理"}</small> : null}</span>
+                  <span><strong>{goal.title}</strong>{kind !== "normal" ? <small>{kind === "round" ? "数量目標" : "進捗管理"}</small> : null}</span>
                   {goal.description ? <p>{goal.description}</p> : null}
                   {scope === "crew" ? <small>作成者: {goal.owner.displayName ?? goal.owner.username}</small> : null}
+                  {kind === "normal" && goal.totalSubTaskCount > 0 ? <small className={goal.completedSubTaskCount === goal.totalSubTaskCount ? "goal-subtask-summary done" : "goal-subtask-summary"}><CheckSquare aria-hidden="true" size={15} />{goal.completedSubTaskCount}/{goal.totalSubTaskCount}</small> : null}
                 </>}
               </button>
-              {ownGoal ? (
+              {ownGoal || scope === "crew" ? (
                 <div className="goal-card-actions">
                   <select aria-label={`${goal.title}の状態`} onChange={(event) => void changeStatus(goal, event.target.value as GoalBoardState)} value={goal.boardStatus}>
                     {statuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                   </select>
                   {!goal.sourceRoundGoalId && !goal.sourceProgressGoalId ? <details className="card-menu"><summary aria-label={`${goal.title}の操作`}><MoreVertical size={18} /></summary><div>
                     <button onClick={() => navigate(`/goal-editor/${goal.id}`)} type="button">編集</button>
-                    <button className="danger-text" onClick={() => void removeGoal(goal)} type="button">削除</button>
+                    {ownGoal ? <button className="danger-text" onClick={() => void removeGoal(goal)} type="button">削除</button> : null}
                   </div></details> : null}
                 </div>
               ) : null}
@@ -210,12 +254,22 @@ export function HomePage() {
         })}
       </section>
 
-      <button aria-label="目標を作成" className="floating-action" onClick={() => setCreateOpen(true)} type="button"><Plus size={23} /></button>
+      <button aria-label="目標を作成" className="floating-action" onClick={() => void openCreate()} type="button"><Plus size={23} /></button>
 
       {createOpen ? <div className="modal-backdrop" onMouseDown={() => setCreateOpen(false)}><form aria-modal="true" className="panel compact-dialog" onMouseDown={(event) => event.stopPropagation()} onSubmit={createGoal} role="dialog">
         <div className="section-heading"><h2>目標を作成</h2><button aria-label="閉じる" className="icon-button" onClick={() => setCreateOpen(false)} type="button"><X size={18} /></button></div>
         <label>タイトル<input autoFocus onChange={(event) => setNewTitle(event.target.value)} required value={newTitle} /></label>
         <label>概要<textarea onChange={(event) => setNewDescription(event.target.value)} rows={4} value={newDescription} /></label>
+        <fieldset className="goal-subtask-editor"><legend>サブタスク（任意）</legend>
+          {newSubTasks.map((task, index) => <div className="goal-subtask-draft" key={`${task.kind}-${index}`}>
+            {task.kind === "standard" ? <CheckSquare aria-label="通常サブタスク" size={17} /> : task.kind === "round" ? <Hash aria-label="数量目標" size={17} /> : <Milestone aria-label="進捗目標" size={17} />}
+            <span>{task.kind === "standard" ? task.title : task.kind === "round" ? roundCandidates.find((goal) => goal.id === task.sourceRoundGoalId)?.title : progressCandidates.find((goal) => goal.id === task.sourceProgressGoalId)?.targetName}</span>
+            <button aria-label="削除" className="icon-button" onClick={() => setNewSubTasks((current) => current.filter((_, itemIndex) => itemIndex !== index))} type="button"><X size={16} /></button>
+          </div>)}
+          <div className="inline-form"><label className="sr-only" htmlFor="create-standard-subtask">通常サブタスク</label><input id="create-standard-subtask" maxLength={100} onChange={(event) => setNewSubTask(event.target.value)} placeholder="作業を追加" value={newSubTask} /><button className="secondary-button" disabled={!newSubTask.trim() || newSubTasks.length >= 50} onClick={() => { setNewSubTasks((current) => [...current, { kind: "standard", title: newSubTask.trim() }]); setNewSubTask(""); }} type="button">追加</button></div>
+          <label>数量目標<select onChange={(event) => { if (event.target.value) setNewSubTasks((current) => [...current, { kind: "round", sourceRoundGoalId: event.target.value }]); event.target.value = ""; }} value=""><option value="">選択してください</option>{roundCandidates.filter((candidate) => !newSubTasks.some((task) => task.kind === "round" && task.sourceRoundGoalId === candidate.id)).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title}</option>)}</select></label>
+          <label>進捗目標<select onChange={(event) => { if (event.target.value) setNewSubTasks((current) => [...current, { kind: "progress", sourceProgressGoalId: event.target.value }]); event.target.value = ""; }} value=""><option value="">選択してください</option>{progressCandidates.filter((candidate) => !newSubTasks.some((task) => task.kind === "progress" && task.sourceProgressGoalId === candidate.id)).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.targetName}</option>)}</select></label>
+        </fieldset>
         <p className="form-hint">個人目標の「未設定」に追加されます。</p>
         <div className="dialog-actions"><button className="secondary-button" onClick={() => setCreateOpen(false)} type="button">キャンセル</button><button className="primary-button" type="submit">作成</button></div>
       </form></div> : null}
@@ -223,7 +277,7 @@ export function HomePage() {
       {filterOpen ? <div className="modal-backdrop" onMouseDown={() => setFilterOpen(false)}><section aria-modal="true" className="panel compact-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog">
         <div className="section-heading"><h2>絞り込み</h2><button aria-label="閉じる" className="icon-button" onClick={() => setFilterOpen(false)} type="button"><X size={18} /></button></div>
         <label>キーワード<input onChange={(event) => setKeyword(event.target.value)} value={keyword} /></label>
-        <label>目標の種類<select onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)} value={sourceFilter}><option value="all">すべて</option><option value="normal">通常目標</option><option value="round">周回目標</option><option value="progress">進捗管理</option></select></label>
+        <label>目標の種類<select onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)} value={sourceFilter}><option value="all">すべて</option><option value="normal">通常目標</option><option value="round">数量目標</option><option value="progress">進捗管理</option></select></label>
         <div className="dialog-actions"><button className="secondary-button" onClick={() => { setKeyword(""); setSourceFilter("all"); }} type="button">解除</button><button className="primary-button" onClick={() => setFilterOpen(false)} type="button">適用</button></div>
       </section></div> : null}
 
@@ -237,17 +291,21 @@ export function HomePage() {
       {selected ? <div className="progress-modal-backdrop goal-detail-backdrop" onMouseDown={() => setSelected(null)}><section aria-modal="true" className="progress-modal goal-detail-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog">
         <header className="progress-modal-header"><div><h2>{selected.title}</h2><p>{selected.visibility === "crew" ? "団内目標" : "個人目標"}</p></div><button aria-label="閉じる" className="icon-button" onClick={() => setSelected(null)} type="button"><X size={18} /></button></header>
         <div className="progress-modal-body">
-          <div className="segmented"><button className={detailTab === "overview" ? "active" : ""} onClick={() => setDetailTab("overview")} type="button">概要・関連情報</button><button className={detailTab === "tasks" ? "active" : ""} onClick={() => setDetailTab("tasks")} type="button">サブタスク</button></div>
+          <div className="segmented"><button className={detailTab === "overview" ? "active" : ""} onClick={() => setDetailTab("overview")} type="button">概要</button><button className={detailTab === "tasks" ? "active" : ""} onClick={() => setDetailTab("tasks")} type="button">サブタスク</button></div>
           {detailTab === "overview" ? <div className="goal-detail-content">
             {selected.description ? <p>{selected.description}</p> : <p className="muted-text">概要はありません。</p>}
             {selected.memo ? <p>{selected.memo}</p> : null}
-            {selected.requiredItems.length || selected.raidTargets.length ? <div><h3>関連情報</h3>{selected.requiredItems.map((item) => <p key={item.id}>{item.name} {item.currentCount} / {item.requiredCount}</p>)}{selected.raidTargets.map((target) => <p key={target.id}>{target.questName} {target.currentCount} / {target.targetCount}</p>)}</div> : null}
           </div> : <div className="goal-subtask-list">
-            {selected.subTasks.map((task) => <label className="checkbox-field" key={task.id}><input checked={task.isDone} disabled={selected.ownerId !== user?.id} onChange={() => void api.updateGoalSubTaskNew(selected.id, task.id, { isDone: !task.isDone }).then(() => load())} type="checkbox" />{task.title}</label>)}
-            {selected.ownerId === user?.id ? <form className="inline-form" onSubmit={addSubTask}><label className="sr-only" htmlFor="new-sub-task">サブタスク</label><input id="new-sub-task" onChange={(event) => setNewSubTask(event.target.value)} placeholder="サブタスクを追加" value={newSubTask} /><button className="secondary-button" type="submit">追加</button></form> : null}
+            {selected.subTasks.length === 0 ? <div className="empty-state"><p>サブタスクはありません。</p></div> : selected.subTasks.map((task) => <div className={`goal-subtask-card kind-${task.kind}${task.effectiveIsDone ? " done" : ""}`} key={task.id}>
+              <span className="goal-subtask-kind">{task.kind === "standard" ? <CheckSquare aria-label="通常サブタスク" size={18} /> : task.kind === "round" ? <Hash aria-label="数量目標" size={18} /> : <Milestone aria-label="進捗目標" size={18} />}</span>
+              <div className="goal-subtask-main"><input aria-label={`${task.title ?? "サブタスク"}の完了状態`} checked={task.effectiveIsDone} onChange={() => void toggleSubTask(task)} type="checkbox" />{task.kind === "standard" ? <span>{task.title}</span> : <button className="text-button" onClick={() => void openLinkedSubTask(task)} type="button">{task.title}</button>}</div>
+              {task.kind === "round" && task.sourceRoundGoal ? <small>{task.sourceRoundGoal.currentCount}/{task.sourceRoundGoal.targetCount}</small> : null}
+              {task.kind === "progress" && task.sourceProgressGoal ? <small>{task.sourceProgressGoal.progressRate}%</small> : null}
+              {task.completionOverride !== null ? <button aria-label="自動判定に戻す" className="icon-button" onClick={() => void resetSubTaskAutomatic(task.id, task.updatedAt)} title="自動判定に戻す" type="button"><RotateCcw size={16} /></button> : null}
+            </div>)}
           </div>}
         </div>
-        {selected.ownerId === user?.id ? <footer className="progress-modal-footer goal-detail-actions"><button className="secondary-button danger-text" onClick={() => void removeGoal(selected)} type="button">削除</button><span className="progress-modal-footer-spacer" />{selected.visibility === "personal" ? <button className="secondary-button" onClick={() => void publish(selected)} type="button">団内へ公開</button> : null}<button className="primary-button" onClick={() => navigate(`/goal-editor/${selected.id}`)} type="button">編集</button></footer> : null}
+        <footer className="progress-modal-footer goal-detail-actions">{selected.ownerId === user?.id ? <button className="secondary-button danger-text" onClick={() => void removeGoal(selected)} type="button">削除</button> : null}<span className="progress-modal-footer-spacer" />{selected.ownerId === user?.id && selected.visibility === "personal" ? <button className="secondary-button" onClick={() => void publish(selected)} type="button">団内へ公開</button> : null}<button className="primary-button" onClick={() => navigate(`/goal-editor/${selected.id}`)} type="button">編集</button></footer>
       </section></div> : null}
     </div>
   );

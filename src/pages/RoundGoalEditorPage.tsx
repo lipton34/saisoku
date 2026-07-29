@@ -18,7 +18,7 @@ export function RoundGoalEditorPage() {
     api.roundGoals().then(({ goals }) => {
       const goal = goals.find((item) => item.id === goalId);
       if (!goal) {
-        setError("周回目標が見つかりません");
+        setError("数量目標が見つかりません");
         return;
       }
       setTitle(goal.title);
@@ -53,7 +53,7 @@ export function RoundGoalEditorPage() {
 
   return (
     <div className="page-stack compact-page">
-      <section className="page-heading"><h1>{goalId ? "周回目標を編集" : "周回目標を作成"}</h1></section>
+      <section className="page-heading"><h1>{goalId ? "数量目標を編集" : "数量目標を作成"}</h1></section>
       <form className="panel simple-form" onSubmit={submit}>
         <label>タイトル<input maxLength={100} onChange={(event) => setTitle(event.target.value)} required value={title} /></label>
         <div className="two-column-form">

@@ -4,42 +4,28 @@ export type User = {
   displayName: string | null;
 };
 
-export type GoalRequiredItem = {
-  id: string;
-  goalId: string;
-  masterItemId: string | null;
-  itemKind: string;
-  name: string;
-  requiredCount: number;
-  currentCount: number;
-  importance: string;
-  note: string | null;
-  masterItem?: GbfMasterItem | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type GoalRaidTarget = {
-  id: string;
-  goalId: string;
-  questName: string;
-  runType: string;
-  targetCount: number;
-  currentCount: number;
-  note: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
 export type GoalSubTask = {
   id: string;
   goalId: string;
-  title: string;
+  kind: "standard" | "round" | "progress";
+  title: string | null;
   isDone: boolean;
+  automaticIsDone: boolean;
+  effectiveIsDone: boolean;
+  completionOverride: boolean | null;
   sortOrder: number;
+  sourceRoundGoalId: string | null;
+  sourceProgressGoalId: string | null;
+  sourceRoundGoal: RoundGoal | null;
+  sourceProgressGoal: { id: string; targetName: string; progressRate: number } | null;
   createdAt: string;
   updatedAt: string;
 };
+
+export type GoalSubTaskInput =
+  | { kind: "standard"; title: string }
+  | { kind: "round"; sourceRoundGoalId: string }
+  | { kind: "progress"; sourceProgressGoalId: string };
 
 
 export type ProgressPreset = {
@@ -156,9 +142,9 @@ export type Goal = {
     goalStageId: string;
     updatedAt: string;
   } | null;
-  requiredItems: GoalRequiredItem[];
-  raidTargets: GoalRaidTarget[];
   subTasks: GoalSubTask[];
+  completedSubTaskCount: number;
+  totalSubTaskCount: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -640,25 +626,37 @@ export const api = {
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
   goals: (scope: "personal" | "crew") => request<{ goals: Goal[] }>(`/api/goals?scope=${scope}`),
   goal: (id: string) => request<{ goal: Goal }>(`/api/goals/${id}`),
-  createGoal: (goal: { title: string; description?: string; memo?: string }) =>
+  createGoal: (goal: { title: string; description?: string; memo?: string; subTasks?: GoalSubTaskInput[] }) =>
     request<{ goal: Goal }>("/api/goals", { method: "POST", json: goal }),
   updateGoal: (
     id: string,
     goal: Partial<Pick<Goal, "title" | "description" | "memo" | "visibility" | "boardStatus">> & {
       confirmCrewPublish?: boolean;
+      expectedUpdatedAt?: string;
     }
   ) => request<{ goal: Goal }>(`/api/goals/${id}`, { method: "PATCH", json: goal }),
   deleteGoal: (id: string) => request<void>(`/api/goals/${id}`, { method: "DELETE" }),
   unlinkGoalSource: (id: string) => request<void>(`/api/goals/${id}/source-link`, { method: "DELETE" }),
-  createGoalSubTask: (id: string, title: string) =>
-    request<{ subTask: GoalSubTask }>(`/api/goals/${id}/sub-tasks`, { method: "POST", json: { title } }),
-  updateGoalSubTaskNew: (id: string, subTaskId: string, value: { title?: string; isDone?: boolean }) =>
-    request<{ subTask: GoalSubTask }>(`/api/goals/${id}/sub-tasks/${subTaskId}`, {
+  createGoalSubTask: (id: string, value: GoalSubTaskInput & { expectedGoalUpdatedAt?: string }) =>
+    request<{ goal: Goal }>(`/api/goals/${id}/sub-tasks`, { method: "POST", json: value }),
+  updateGoalSubTask: (
+    id: string,
+    subTaskId: string,
+    value: { title?: string; isDone?: boolean; completionOverride?: boolean | null; expectedUpdatedAt?: string }
+  ) =>
+    request<{ goal: Goal }>(`/api/goals/${id}/sub-tasks/${subTaskId}`, {
       method: "PATCH",
       json: value
     }),
-  deleteGoalSubTaskNew: (id: string, subTaskId: string) =>
-    request<void>(`/api/goals/${id}/sub-tasks/${subTaskId}`, { method: "DELETE" }),
+  reorderGoalSubTasks: (id: string, subTaskIds: string[], expectedGoalUpdatedAt: string) =>
+    request<{ goal: Goal }>(`/api/goals/${id}/sub-tasks/order`, {
+      method: "PUT",
+      json: { subTaskIds, expectedGoalUpdatedAt }
+    }),
+  deleteGoalSubTask: (id: string, subTaskId: string, expectedGoalUpdatedAt: string) =>
+    request<{ goal: Goal }>(`/api/goals/${id}/sub-tasks/${subTaskId}?expectedGoalUpdatedAt=${encodeURIComponent(expectedGoalUpdatedAt)}`, {
+      method: "DELETE"
+    }),
   roundGoals: () => request<{ goals: RoundGoal[] }>("/api/round-goals"),
   createRoundGoal: (goal: {
     title: string;
