@@ -61,17 +61,19 @@ export function HomePage() {
 
   async function openGoal(goal: Goal) {
     if (openingGoalId) return;
-    if (goal.sourceRoundGoal) {
-      setEditingRoundGoal(goal.sourceRoundGoal);
-      setRoundCurrentCount(String(goal.sourceRoundGoal.currentCount));
-      return;
-    }
-    if (goal.sourceProgressGoalId) {
-      navigate(`/progress-goals?goalId=${encodeURIComponent(goal.sourceProgressGoalId)}`);
-      return;
-    }
     setOpeningGoalId(goal.id);
     try {
+      if (goal.sourceRoundGoalId) {
+        const response = await api.roundGoal(goal.sourceRoundGoalId);
+        setEditingRoundGoal(response.goal);
+        setRoundCurrentCount(String(response.goal.currentCount));
+        return;
+      }
+      if (goal.sourceProgressGoalId) {
+        const response = await api.progressGoal(goal.sourceProgressGoalId);
+        navigate(`/progress-goals?goalId=${encodeURIComponent(goal.sourceProgressGoalId)}&targetStageId=${encodeURIComponent(response.goal.targetStageId)}`);
+        return;
+      }
       const response = await api.goal(goal.id);
       setDetailTab("overview");
       setSelected(response.goal);

@@ -33,6 +33,22 @@ router.get("/", async (req, res, next) => {
   }
 });
 
+router.get("/:id", async (req, res, next) => {
+  try {
+    const goal = await prisma.roundGoal.findFirst({
+      where: { id: req.params.id, ownerId: ownerId(req) },
+      include: includeBoardGoal
+    });
+    if (!goal) {
+      res.status(404).json({ message: "周回目標が見つかりません" });
+      return;
+    }
+    res.json({ goal });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post("/", async (req, res, next) => {
   try {
     const title = text(req.body.title);

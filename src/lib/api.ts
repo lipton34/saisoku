@@ -667,6 +667,7 @@ export const api = {
     note?: string;
     showOnBoard?: boolean;
   }) => request<{ goal: RoundGoal }>("/api/round-goals", { method: "POST", json: goal }),
+  roundGoal: (id: string) => request<{ goal: RoundGoal }>(`/api/round-goals/${id}`),
   updateRoundGoal: (id: string, goal: Partial<Omit<RoundGoal, "id" | "ownerId" | "boardGoal" | "createdAt" | "updatedAt">> & { showOnBoard?: boolean }) =>
     request<{ goal: RoundGoal }>(`/api/round-goals/${id}`, { method: "PATCH", json: goal }),
   reorderRoundGoals: (goalIds: string[]) =>
