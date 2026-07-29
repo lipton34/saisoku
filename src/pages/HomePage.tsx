@@ -297,7 +297,6 @@ export function HomePage() {
             {selected.memo ? <p>{selected.memo}</p> : null}
           </div> : <div className="goal-subtask-list">
             {selected.subTasks.length === 0 ? <div className="empty-state"><p>サブタスクはありません。</p></div> : selected.subTasks.map((task) => <div className={`goal-subtask-card kind-${task.kind}${task.effectiveIsDone ? " done" : ""}`} key={task.id}>
-              <span className="goal-subtask-kind">{task.kind === "standard" ? <CheckSquare aria-label="通常サブタスク" size={18} /> : task.kind === "round" ? <Hash aria-label="数量目標" size={18} /> : <Milestone aria-label="進捗目標" size={18} />}</span>
               <div className="goal-subtask-main"><input aria-label={`${task.title ?? "サブタスク"}の完了状態`} checked={task.effectiveIsDone} onChange={() => void toggleSubTask(task)} type="checkbox" />{task.kind === "standard" ? <span>{task.title}</span> : <button className="text-button" onClick={() => void openLinkedSubTask(task)} type="button">{task.title}</button>}</div>
               {task.kind === "round" && task.sourceRoundGoal ? <small>{task.sourceRoundGoal.currentCount}/{task.sourceRoundGoal.targetCount}</small> : null}
               {task.kind === "progress" && task.sourceProgressGoal ? <small>{task.sourceProgressGoal.progressRate}%</small> : null}

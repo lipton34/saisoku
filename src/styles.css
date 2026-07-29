@@ -5367,6 +5367,10 @@ fieldset.goal-subtask-editor {
   background: var(--goal-subtask-surface);
 }
 
+.goal-subtask-card {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
 .goal-subtask-card.kind-round {
   border-left-color: var(--goal-subtask-round);
 }
@@ -5377,13 +5381,6 @@ fieldset.goal-subtask-editor {
 
 .goal-subtask-card.done {
   background: var(--goal-subtask-done);
-}
-
-.goal-subtask-card.done label span,
-.goal-subtask-card.done .goal-subtask-main > span,
-.goal-subtask-card.done .goal-subtask-main .text-button,
-.goal-subtask-card.done > span:nth-child(2) {
-  text-decoration: line-through;
 }
 
 .goal-subtask-card label,
@@ -5452,11 +5449,11 @@ fieldset.goal-subtask-editor {
 
 @media (max-width: 680px) {
   .goal-subtask-card {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .goal-subtask-row-actions {
-    grid-column: 2;
+    grid-column: 1 / -1;
     justify-content: flex-end;
   }
 
