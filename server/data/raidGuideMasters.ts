@@ -1,3 +1,5 @@
+import { tengenRaidGuideMaster } from "./tengenRaidGuideMaster.js";
+
 export type RaidGuideMasterRow = {
   id: string;
   pageType?: "guide" | "heading";
@@ -326,7 +328,8 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
         ]
       }
     ]
-  }
+  },
+  tengenRaidGuideMaster
 ];
 
 export function validateRaidGuideMasterDefinitions(definitions = raidGuideMasterDefinitions) {
