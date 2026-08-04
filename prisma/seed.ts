@@ -89,11 +89,22 @@ async function seedRaidGuides() {
       }
     });
 
+    // New sections or rows may be inserted before existing master records. Move
+    // current orders out of the target range first to avoid unique collisions.
+    await prisma.raidGuideSection.updateMany({
+      where: { guideId: guide.id, sortOrder: { lt: 1000 } },
+      data: { sortOrder: { increment: 1000 } }
+    });
+
     for (const [sectionIndex, section] of guide.sections.entries()) {
       await prisma.raidGuideSection.upsert({
         where: { id: section.id },
         update: { guideId: guide.id, title: section.title, sortOrder: sectionIndex, isActive: true },
         create: { id: section.id, guideId: guide.id, title: section.title, sortOrder: sectionIndex, isActive: true }
+      });
+      await prisma.raidGuideRow.updateMany({
+        where: { sectionId: section.id, sortOrder: { lt: 1000 } },
+        data: { sortOrder: { increment: 1000 } }
       });
       for (const [rowIndex, row] of section.rows.entries()) {
         await prisma.raidGuideRow.upsert({
