@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, type RaidGuideReader, type RaidGuideStickyNote, type SimpleBuildPost } from "../lib/api";
+import { createRaidGuidePageLink } from "../components/RaidGuideLinkedText";
 
 type EditableSticky = {
   clientId: string;
@@ -31,6 +32,8 @@ export function RaidGuideStrategyEditorPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [linkTargets, setLinkTargets] = useState<Record<string, string>>({});
+  const [linkLabels, setLinkLabels] = useState<Record<string, string>>({});
 
   useEffect(() => {
     Promise.all([api.raidGuideReader(guideId, strategyId), api.simpleBuildPosts()]).then(([reader, buildData]) => {
@@ -58,7 +61,7 @@ export function RaidGuideStrategyEditorPage() {
   function change<T>(setter: (value: T) => void, value: T) { setter(value); setDirty(true); }
 
   function addNote(guideRowId: string | null) {
-    if (notes.length >= 20) { setError("付箋は20件まで追加できます"); return; }
+    if (notes.length >= 50) { setError("付箋は50件まで追加できます"); return; }
     setNotes((current) => [...current, { clientId: crypto.randomUUID(), guideRowId, body: "", color: "yellow" }]);
     setDirty(true); setError("");
   }
@@ -114,6 +117,10 @@ export function RaidGuideStrategyEditorPage() {
 
   function StickyEditor({ note, group }: { note: EditableSticky; group: EditableSticky[] }) {
     const index = group.findIndex((item) => item.clientId === note.clientId);
+    const pages = guide?.sections.flatMap((section) => section.rows.map((row) => ({ ...row, sectionTitle: section.title }))) ?? [];
+    const selectedTarget = linkTargets[note.clientId] ?? "";
+    const selectedPage = pages.find((page) => page.id === selectedTarget);
+    const linkLabel = linkLabels[note.clientId] ?? selectedPage?.timingCondition ?? "";
     return <article className={`raid-sticky-editor is-${note.color}`}>
       <textarea aria-label="付箋本文" maxLength={500} onChange={(event) => updateNote(note.clientId, { body: event.target.value })} placeholder="この場所で確認すること" rows={3} value={note.body} />
       <div className="raid-sticky-controls"><label>色<select onChange={(event) => updateNote(note.clientId, { color: event.target.value as RaidGuideStickyNote["color"] })} value={note.color}>{colors.map((color) => <option key={color.value} value={color.value}>{color.label}</option>)}</select></label>
@@ -121,6 +128,7 @@ export function RaidGuideStrategyEditorPage() {
         <button aria-label="付箋を下へ" disabled={index === group.length - 1} onClick={() => moveNote(note.clientId, 1)} title="下へ" type="button"><ArrowDown size={17} /></button>
         <button aria-label="付箋を削除" onClick={() => removeNote(note.clientId)} title="削除" type="button"><Trash2 size={17} /></button>
       </div>
+      <div className="raid-sticky-link-editor"><label>ページリンク<select onChange={(event) => { const target = pages.find((page) => page.id === event.target.value); setLinkTargets((current) => ({ ...current, [note.clientId]: event.target.value })); setLinkLabels((current) => ({ ...current, [note.clientId]: target?.timingCondition ?? "" })); }} value={selectedTarget}><option value="">リンク先を選択</option>{pages.map((page) => <option key={page.id} value={page.id}>{page.sectionTitle}：{page.timingCondition}</option>)}</select></label><label>表示文字<input maxLength={80} onChange={(event) => setLinkLabels((current) => ({ ...current, [note.clientId]: event.target.value }))} value={linkLabel} /></label><button className="secondary-button" disabled={!selectedTarget || !linkLabel.trim()} onClick={() => { if (!selectedPage) return; updateNote(note.clientId, { body: `${note.body}${note.body && !note.body.endsWith(" ") ? " " : ""}${createRaidGuidePageLink(selectedPage.id, linkLabel)}` }); }} type="button">本文末尾へ追加</button></div>
     </article>;
   }
 
@@ -130,8 +138,8 @@ export function RaidGuideStrategyEditorPage() {
   return <div className="page-stack compact-page raid-strategy-editor-page">
     <section className="page-heading"><div><p className="eyebrow">{guide.questMaster.displayName ?? guide.questMaster.name}</p><h1>{strategyId ? "対策メモを編集" : "対策メモを作成"}</h1></div></section>
     <section className="panel simple-form"><label>タイトル<input maxLength={100} onChange={(event) => change(setTitle, event.target.value)} value={title} /></label><label>概要<textarea maxLength={500} onChange={(event) => change(setOverview, event.target.value)} rows={3} value={overview} /></label><label>公開範囲<select onChange={(event) => change(setVisibility, event.target.value as "crew" | "personal")} value={visibility}><option value="crew">団内公開</option><option value="personal">自分のみ</option></select></label><label>関連編成<select onChange={(event) => change(setBuildPostId, event.target.value)} value={buildPostId}><option value="">設定しない</option>{builds.map((build) => <option key={build.id} value={build.id}>{build.title}</option>)}</select></label></section>
-    <section className="panel raid-sticky-location"><div className="section-heading"><div><h2>全体への付箋</h2><small>{grouped.get("overall")?.length ?? 0}件</small></div><button className="secondary-button" disabled={notes.length >= 20} onClick={() => addNote(null)} type="button"><Plus size={17} />追加</button></div>{grouped.get("overall")?.map((note) => <StickyEditor group={grouped.get("overall") ?? []} key={note.clientId} note={note} />)}</section>
-    {guide.sections.map((section) => <section className="raid-editor-section" key={section.id}><h2>{section.title}</h2>{section.rows.map((row) => { const rowNotes = grouped.get(row.id) ?? []; return <article className="panel raid-sticky-location" key={row.id}><div className="raid-editor-row-summary"><span className={`raid-danger-label is-${row.dangerLevel}`}>{row.dangerLevel === "danger" ? "危険" : row.dangerLevel === "caution" ? "注意" : "通常"}</span><strong>{row.timingCondition}</strong><p>{row.enemyAction}</p></div><div className="section-heading"><div><h3>この行の付箋</h3><small>{rowNotes.length}件</small></div><button className="secondary-button" disabled={notes.length >= 20} onClick={() => addNote(row.id)} type="button"><Plus size={17} />追加</button></div>{rowNotes.map((note) => <StickyEditor group={rowNotes} key={note.clientId} note={note} />)}</article>; })}</section>)}
+    <section className="panel raid-sticky-location"><div className="section-heading"><div><h2>全体への付箋</h2><small>{grouped.get("overall")?.length ?? 0}件</small></div><button className="secondary-button" disabled={notes.length >= 50} onClick={() => addNote(null)} type="button"><Plus size={17} />追加</button></div>{grouped.get("overall")?.map((note) => <StickyEditor group={grouped.get("overall") ?? []} key={note.clientId} note={note} />)}</section>
+    {guide.sections.map((section) => <section className="raid-editor-section" key={section.id}><h2>{section.title}</h2>{section.rows.map((row) => { const rowNotes = grouped.get(row.id) ?? []; return <article className="panel raid-sticky-location" key={row.id}><div className="raid-editor-row-summary"><span className={`raid-danger-label is-${row.dangerLevel}`}>{row.dangerLevel === "danger" ? "危険" : row.dangerLevel === "caution" ? "注意" : "通常"}</span><strong>{row.timingCondition}</strong><p>{row.enemyAction}</p></div><div className="section-heading"><div><h3>この行の付箋</h3><small>{rowNotes.length}件</small></div><button className="secondary-button" disabled={notes.length >= 50} onClick={() => addNote(row.id)} type="button"><Plus size={17} />追加</button></div>{rowNotes.map((note) => <StickyEditor group={rowNotes} key={note.clientId} note={note} />)}</article>; })}</section>)}
     {deleted ? <div className="raid-undo"><span>付箋を削除しました</span><button onClick={() => { setNotes((current) => { const copy = [...current]; copy.splice(deleted.index, 0, deleted.note); return copy; }); setDeleted(null); }} type="button"><RotateCcw size={16} />元に戻す</button></div> : null}
     {error ? <p className="form-error" role="alert">{error}</p> : null}
     <div className="form-actions"><button className="secondary-button" disabled={saving} onClick={cancel} type="button">キャンセル</button><button className="primary-button" disabled={saving} onClick={() => void save()} type="button">{saving ? "保存中…" : "保存"}</button></div>

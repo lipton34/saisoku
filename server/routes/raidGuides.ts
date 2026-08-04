@@ -32,7 +32,7 @@ function parseDate(value: unknown) {
 type StickyInput = { guideRowId: string | null; body: string; color: string };
 
 function parseStickyNotes(value: unknown): StickyInput[] | null {
-  if (!Array.isArray(value) || value.length > 20) return null;
+  if (!Array.isArray(value) || value.length > 50) return null;
   const parsed: StickyInput[] = [];
   for (const item of value) {
     if (!item || typeof item !== "object" || Array.isArray(item)) return null;
@@ -55,9 +55,12 @@ async function validateStrategyInput(guideId: string, body: Record<string, unkno
   if (!title || title.length > 100) return { error: "タイトルは100文字以内で入力してください" } as const;
   if ((overview?.length ?? 0) > 500) return { error: "概要は500文字以内で入力してください" } as const;
   if (!visibilities.has(visibility)) return { error: "公開範囲を確認してください" } as const;
-  if (!stickyNotes) return { error: "付箋は20件まで、本文は500文字までです" } as const;
+  if (!stickyNotes) return { error: "付箋は50件まで、本文は500文字までです" } as const;
 
-  const rowIds = [...new Set(stickyNotes.flatMap((note) => note.guideRowId ? [note.guideRowId] : []))];
+  const inlineTargetIds = stickyNotes.flatMap((note) => [...note.body.matchAll(/\[\[page:([^|\]]+)\|[^\]]+\]\]/g)].map((match) => match[1]));
+  const malformedLink = stickyNotes.some((note) => note.body.replace(/\[\[page:[^|\]]+\|[^\]]+\]\]/g, "").includes("[[page:"));
+  if (malformedLink) return { error: "付箋内のページリンクを確認してください" } as const;
+  const rowIds = [...new Set(stickyNotes.flatMap((note) => note.guideRowId ? [note.guideRowId] : []).concat(inlineTargetIds))];
   const [rowCount, buildCount] = await Promise.all([
     prisma.raidGuideRow.count({ where: { id: { in: rowIds }, guideId, isActive: true } }),
     buildPostId ? prisma.buildPost.count({ where: { id: buildPostId } }) : Promise.resolve(0)

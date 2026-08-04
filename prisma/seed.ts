@@ -105,6 +105,7 @@ async function seedRaidGuides() {
             enemyAction: row.enemyAction,
             requiredResponse: row.requiredResponse,
             supplementalNote: row.supplementalNote ?? null,
+            pageType: row.pageType ?? "guide",
             dangerLevel: row.dangerLevel,
             sortOrder: rowIndex,
             isActive: true
@@ -117,6 +118,7 @@ async function seedRaidGuides() {
             enemyAction: row.enemyAction,
             requiredResponse: row.requiredResponse,
             supplementalNote: row.supplementalNote ?? null,
+            pageType: row.pageType ?? "guide",
             dangerLevel: row.dangerLevel,
             sortOrder: rowIndex,
             isActive: true

@@ -380,6 +380,7 @@ model RaidGuideRow {
   enemyAction      String                  @map("enemy_action")
   requiredResponse String                  @map("required_response")
   supplementalNote String?                 @map("supplemental_note")
+  pageType         String                  @default("guide") @map("page_type")
   dangerLevel      String                  @default("normal") @map("danger_level")
   sortOrder        Int                     @map("sort_order")
   isActive         Boolean                 @default(true) @map("is_active")

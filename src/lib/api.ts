@@ -261,6 +261,7 @@ export type RaidGuideRow = {
   enemyAction: string;
   requiredResponse: string;
   supplementalNote: string | null;
+  pageType: "guide" | "heading";
   dangerLevel: "normal" | "caution" | "danger";
   sortOrder: number;
   outgoingLinks: { id: string; targetRowId: string; label: string; sortOrder: number }[];

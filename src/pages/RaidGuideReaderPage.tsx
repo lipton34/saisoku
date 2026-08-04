@@ -1,7 +1,8 @@
-import { ChevronLeft, ChevronRight, Settings, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings, Undo2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
+import { RaidGuideLinkedText } from "../components/RaidGuideLinkedText";
 import { api, type RaidGuideReader, type RaidGuideStickyNote, type RaidGuideStrategy } from "../lib/api";
 import { findRaidGuideRecent, saveRaidGuideRecent } from "../lib/raidGuideReaderState";
 
@@ -19,6 +20,7 @@ export function RaidGuideReaderPage() {
   const [pageStart, setPageStart] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const [linkHistory, setLinkHistory] = useState<number[]>([]);
   const [error, setError] = useState("");
   const touchStartX = useRef<number | null>(null);
 
@@ -65,10 +67,21 @@ export function RaidGuideReaderPage() {
     setPageStart((current) => Math.floor(current / value) * value);
   }
 
-  function jumpTo(rowId: string) {
+  function jumpTo(rowId: string, rememberSource = true) {
     const index = rows.findIndex((row) => row.id === rowId);
     if (index < 0) return;
+    if (rememberSource) setLinkHistory((current) => [...current.slice(-9), pageStart]);
     setPageStart(Math.floor(index / pageSize) * pageSize);
+    setSettingsOpen(false);
+    setActiveNoteId(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function returnToLinkSource() {
+    const target = linkHistory.at(-1);
+    if (target === undefined) return;
+    setLinkHistory((current) => current.slice(0, -1));
+    setPageStart(target);
     setSettingsOpen(false);
     setActiveNoteId(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -88,7 +101,7 @@ export function RaidGuideReaderPage() {
   }} onTouchStart={(event) => { touchStartX.current = event.touches[0].clientX; }}>
     <header className="raid-reader-header">
       <button aria-label="閲覧画面を閉じる" onClick={() => navigate(`/raid-guides/${guideId}`)} title="閉じる" type="button"><X /></button>
-      <span className="raid-reader-section" title={currentSection}>{currentSection}</span>
+      {linkHistory.length ? <button aria-label="リンク元のページへ戻る" className="raid-reader-link-back" onClick={returnToLinkSource} title="リンク元へ戻る" type="button"><Undo2 size={18} /><span>{currentSection}</span></button> : <span className="raid-reader-section" title={currentSection}>{currentSection}</span>}
       <button aria-label="前のページ" disabled={pageStart === 0} onClick={() => move(-1)} title="前へ" type="button"><ChevronLeft /></button>
       <strong aria-label={`${pageStart + 1}から${lastVisible}ページ、全${rows.length}ページ`}>{pageStart + 1}{pageSize > 1 ? `–${lastVisible}` : ""}/{rows.length}</strong>
       <button aria-label="次のページ" disabled={lastVisible >= rows.length} onClick={() => move(1)} title="次へ" type="button"><ChevronRight /></button>
@@ -98,30 +111,31 @@ export function RaidGuideReaderPage() {
     <div className="raid-reader-pages">
       {visibleRows.map((row) => {
         const notes = [...overallNotes, ...(strategy?.stickyNotes.filter((note) => note.guideRowId === row.id) ?? [])];
-        return <article className="raid-reader-page" key={row.id}>
+        return <article className={`raid-reader-page${row.pageType === "heading" ? " is-heading" : ""}`} key={row.id}>
           <div className="raid-reader-detail">
             <div className="raid-reader-page-heading"><span>{row.sectionTitle}</span><span className={`raid-danger-label is-${row.dangerLevel}`}>{row.dangerLevel === "danger" ? "危険" : row.dangerLevel === "caution" ? "注意" : "通常"}</span></div>
-            <section><small>タイミング・条件</small><h1>{row.timingCondition}</h1></section>
-            <section><small>敵の行動・予兆</small><p>{row.enemyAction}</p></section>
-            <section className="raid-reader-response"><small>必要な対応・解除条件</small><p>{row.requiredResponse}</p></section>
+            <section>{row.pageType === "guide" ? <small>タイミング・条件</small> : null}<h1>{row.timingCondition}</h1></section>
+            <section>{row.pageType === "guide" ? <small>敵の行動・予兆</small> : null}<p><RaidGuideLinkedText onJump={jumpTo}>{row.enemyAction}</RaidGuideLinkedText></p></section>
+            <section className="raid-reader-response"><small>{row.pageType === "heading" ? "この見出しで確認すること" : "必要な対応・解除条件"}</small><p><RaidGuideLinkedText onJump={jumpTo}>{row.requiredResponse}</RaidGuideLinkedText></p></section>
             {row.supplementalNote ? <section><small>補足・注意点</small><p>{row.supplementalNote}</p></section> : null}
             {row.outgoingLinks.length ? <nav aria-label="関連する攻略行" className="raid-reader-links">{row.outgoingLinks.map((link) => <button key={link.id} onClick={() => jumpTo(link.targetRowId)} type="button">{link.label}<ChevronRight size={16} /></button>)}</nav> : null}
           </div>
-          <StickyStack activeId={activeNoteId} notes={notes} onActivate={setActiveNoteId} />
+          <StickyStack activeId={activeNoteId} notes={notes} onActivate={setActiveNoteId} onJump={jumpTo} />
         </article>;
       })}
     </div>
 
     {settingsOpen ? <div className="modal-backdrop raid-reader-settings-backdrop" onMouseDown={() => setSettingsOpen(false)}><section aria-modal="true" className="panel raid-reader-settings" onMouseDown={(event) => event.stopPropagation()} role="dialog"><div className="section-heading"><h2>閲覧設定</h2><button aria-label="設定を閉じる" className="icon-button" onClick={() => setSettingsOpen(false)} type="button"><X size={19} /></button></div>
       <fieldset><legend>一度に表示するページ数</legend><div className="segmented-control">{([1, 3, 5] as PageSize[]).map((value) => <button aria-pressed={pageSize === value} className={pageSize === value ? "active" : ""} key={value} onClick={() => changePageSize(value)} type="button">{value}ページ</button>)}</div></fieldset>
-      <div className="raid-reader-jumps"><h3>区間へ移動</h3>{guide.sections.map((section) => <button key={section.id} onClick={() => jumpTo(section.rows[0]?.id ?? "")} type="button">{section.title}<ChevronRight size={17} /></button>)}</div>
+      {linkHistory.length ? <button className="secondary-button" onClick={returnToLinkSource} type="button">リンク元のページへ戻る</button> : null}
+      <div className="raid-reader-jumps"><h3>区間へ移動</h3>{guide.sections.map((section) => <button key={section.id} onClick={() => jumpTo(section.rows[0]?.id ?? "", false)} type="button">{section.title}<ChevronRight size={17} /></button>)}</div>
       {strategy?.buildPost ? <Link className="secondary-button" to={`/builds/${strategy.buildPost.id}`}>関連編成を開く</Link> : null}
     </section></div> : null}
   </main>;
 }
 
-function StickyStack({ activeId, notes, onActivate }: { activeId: string | null; notes: RaidGuideStickyNote[]; onActivate: (id: string) => void }) {
+function StickyStack({ activeId, notes, onActivate, onJump }: { activeId: string | null; notes: RaidGuideStickyNote[]; onActivate: (id: string) => void; onJump: (rowId: string) => void }) {
   if (!notes.length) return <aside className="raid-reader-sticky-empty"><span>付箋なし</span></aside>;
   const activeIndex = Math.max(0, notes.findIndex((note) => note.id === activeId));
-  return <aside aria-label="対策メモの付箋" className="raid-reader-stickies">{notes.map((note, index) => <button aria-label={`付箋 ${index + 1}/${notes.length}`} className={`raid-reader-sticky is-${note.color}${index === activeIndex ? " is-active" : ""}`} key={note.id} onClick={() => onActivate(note.id)} style={{ transform: `translate(${index * 7}px, ${index * 9}px) rotate(${(index % 3) - 1}deg)`, zIndex: index === activeIndex ? notes.length + 1 : index + 1 }} type="button"><small>{note.guideRowId === null ? "全体" : "このページ"}</small><p>{note.body}</p><span>{index + 1}/{notes.length}</span></button>)}</aside>;
+  return <aside aria-label="対策メモの付箋" className="raid-reader-stickies">{notes.map((note, index) => <div className={`raid-reader-sticky is-${note.color}${index === activeIndex ? " is-active" : ""}`} key={note.id} onClick={() => onActivate(note.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onActivate(note.id); }} role="button" style={{ transform: `translate(${index * 7}px, ${index * 9}px) rotate(${(index % 3) - 1}deg)`, zIndex: index === activeIndex ? notes.length + 1 : index + 1 }} tabIndex={0}><small>{note.guideRowId === null ? "全体" : "このページ"}</small><p><RaidGuideLinkedText onJump={onJump}>{note.body}</RaidGuideLinkedText></p><span>{index + 1}/{notes.length}</span></div>)}</aside>;
 }

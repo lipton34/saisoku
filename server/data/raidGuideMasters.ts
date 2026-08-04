@@ -1,5 +1,6 @@
 export type RaidGuideMasterRow = {
   id: string;
+  pageType?: "guide" | "heading";
   timingCondition: string;
   enemyAction: string;
   requiredResponse: string;
@@ -32,7 +33,7 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
     questMasterId: "quest-dark-rapture-zero",
     title: "6人攻略・共通行動",
     overview: "ルシファー・ゼロの6人攻略で共通して確認する予兆と解除条件。属性・編成固有の動きは対策メモと付箋で補う。",
-    revision: 1,
+    revision: 2,
     isActive: true,
     references: [
       {
@@ -47,6 +48,20 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
       }
     ],
     sections: [
+      {
+        id: "dark-rapture-zero-section-important",
+        title: "挑戦前の重要事項",
+        rows: [
+          {
+            id: "dark-rapture-zero-page-important",
+            pageType: "heading",
+            timingCondition: "挑戦前の重要事項",
+            enemyAction: "開幕の果実、HP80%の神器、HP60%の弱体リセット、HP20%以降のカウント管理を先に確認する。[[page:dark-rapture-zero-row-opening|開幕の果実を確認]] [[page:dark-rapture-zero-row-80-orbital|HP80%の神器を確認]] [[page:dark-rapture-zero-row-60-trumpet|HP60%の注意を確認]] [[page:dark-rapture-zero-row-20-gospel|HP20%以降を確認]]",
+            requiredResponse: "関連ページを開き、編成ごとの対応は対策メモの付箋で補う。",
+            dangerLevel: "caution"
+          }
+        ]
+      },
       {
         id: "dark-rapture-zero-section-100-81",
         title: "HP100%～81%",
@@ -328,6 +343,8 @@ export function validateRaidGuideMasterDefinitions(definitions = raidGuideMaster
       if (!row.timingCondition.trim() || row.timingCondition.length > 100) throw new Error(`${row.id}: タイミングを確認してください`);
       if (!row.enemyAction.trim() || row.enemyAction.length > 500) throw new Error(`${row.id}: 敵行動を確認してください`);
       if (!row.requiredResponse.trim() || row.requiredResponse.length > 500) throw new Error(`${row.id}: 対応を確認してください`);
+      const linkTargets = [...row.enemyAction.matchAll(/\[\[page:([^|\]]+)\|[^\]]+\]\]/g)].map((match) => match[1]);
+      for (const target of linkTargets) if (!rows.some((candidate) => candidate.id === target)) throw new Error(`${row.id}: リンク先が見つかりません: ${target}`);
       if ((row.supplementalNote?.length ?? 0) > 500) throw new Error(`${row.id}: 補足は500文字までです`);
     });
   }

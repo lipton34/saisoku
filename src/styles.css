@@ -5203,6 +5203,36 @@ textarea {
   grid-template-columns: minmax(120px, 1fr) auto auto auto;
 }
 
+.raid-sticky-link-editor {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(120px, 1fr) auto;
+}
+
+.raid-inline-page-link {
+  background: transparent;
+  border: 0;
+  color: #176b8a;
+  cursor: pointer;
+  display: inline;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 2px;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.raid-reader-page.is-heading .raid-reader-detail {
+  align-content: center;
+  background: linear-gradient(145deg, #fffef9, #f5f0e4);
+}
+
+.raid-reader-page.is-heading .raid-reader-detail h1 {
+  font-size: clamp(1.55rem, 5vw, 2.25rem);
+}
+
 .raid-reader {
   background: #eee9dc;
   color: #25313b;
@@ -5238,6 +5268,20 @@ textarea {
   width: 44px;
 }
 
+.raid-reader-header .raid-reader-link-back {
+  gap: 5px;
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 0 5px;
+  width: 100%;
+}
+
+.raid-reader-link-back span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .raid-reader-header button:disabled { opacity: 0.3; }
 .raid-reader-header strong { font-size: 0.88rem; white-space: nowrap; }
 .raid-reader-section { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -5256,7 +5300,7 @@ textarea {
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(54, 46, 34, 0.13);
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr);
+  grid-template-rows: minmax(min-content, 7fr) minmax(220px, 3fr);
   min-height: calc(100dvh - 76px);
   overflow: hidden;
 }
@@ -5310,8 +5354,8 @@ textarea {
 .raid-reader-stickies,
 .raid-reader-sticky-empty {
   background: #f2eee4;
-  border-left: 1px solid #ded5c4;
-  min-height: 300px;
+  border-top: 1px solid #ded5c4;
+  min-height: 220px;
   overflow: hidden;
   padding: 22px;
   position: relative;
@@ -5366,18 +5410,17 @@ textarea {
   .raid-strategy-card { align-items: stretch; grid-template-columns: 1fr; }
   .raid-strategy-actions { justify-content: flex-start; }
   .raid-sticky-controls { grid-template-columns: 1fr repeat(3, auto); }
+  .raid-sticky-link-editor { grid-template-columns: 1fr; }
   .raid-reader-pages { padding: 8px; }
-  .raid-reader-page { grid-template-columns: 3fr 2fr; }
   .raid-reader-detail { gap: 12px; padding: 16px 13px; }
   .raid-reader-detail p { font-size: 1rem; line-height: 1.6; }
-  .raid-reader-stickies, .raid-reader-sticky-empty { min-height: 260px; padding: 12px; }
+  .raid-reader-stickies, .raid-reader-sticky-empty { min-height: 220px; padding: 12px; }
   .raid-reader-sticky { left: 7px; padding: 12px 10px; top: 10px; width: calc(100% - 33px); }
 }
 
 @media (max-width: 420px) {
   .raid-reader-header { grid-template-columns: 44px 0 44px auto 44px 44px; }
   .raid-reader-section { visibility: hidden; }
-  .raid-reader-page { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
   .raid-reader-page-heading { align-items: flex-start; flex-direction: column; }
   .raid-reader-detail h1 { font-size: 1.2rem; }
   .raid-reader-detail p { font-size: 0.96rem; }
