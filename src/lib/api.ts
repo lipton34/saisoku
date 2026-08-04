@@ -198,6 +198,96 @@ export type BuildDraft = SimpleBuildFields & {
   updatedAt: string;
 };
 
+export type RaidGuideStickyNote = {
+  id: string;
+  strategyId: string;
+  guideRowId: string | null;
+  body: string;
+  color: "yellow" | "blue" | "green" | "pink" | "purple";
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RaidGuideStrategy = {
+  id: string;
+  guideId: string;
+  ownerId: string;
+  title: string;
+  overview: string | null;
+  visibility: "crew" | "personal";
+  buildPostId: string | null;
+  slotNumber: number;
+  owner: { id: string; username: string; displayName: string | null };
+  authorName: string;
+  stickyNotes: RaidGuideStickyNote[];
+  stickyNoteCount: number;
+  buildPost: {
+    id: string;
+    title: string;
+    questName: string | null;
+    images: SimpleBuildImage[];
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RaidGuideQuest = {
+  id: string;
+  name: string;
+  element: string | null;
+  category: string | null;
+  guides: { id: string; title: string; createdAt: string }[];
+};
+
+export type RaidGuideDetail = {
+  id: string;
+  questMasterId: string;
+  title: string;
+  overview: string | null;
+  revision: number;
+  isActive: boolean;
+  questMaster: { id: string; name: string; displayName: string | null; element: string | null };
+  references: { id: string; url: string; label: string; sortOrder: number }[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RaidGuideRow = {
+  id: string;
+  guideId: string;
+  sectionId: string;
+  timingCondition: string;
+  enemyAction: string;
+  requiredResponse: string;
+  supplementalNote: string | null;
+  dangerLevel: "normal" | "caution" | "danger";
+  sortOrder: number;
+  outgoingLinks: { id: string; targetRowId: string; label: string; sortOrder: number }[];
+};
+
+export type RaidGuideReader = RaidGuideDetail & {
+  sections: Array<{
+    id: string;
+    title: string;
+    sortOrder: number;
+    rows: RaidGuideRow[];
+  }>;
+};
+
+export type RaidGuideStrategyInput = {
+  title: string;
+  overview?: string;
+  visibility: "crew" | "personal";
+  buildPostId?: string | null;
+  expectedUpdatedAt?: string;
+  stickyNotes: Array<{
+    guideRowId: string | null;
+    body: string;
+    color: RaidGuideStickyNote["color"];
+  }>;
+};
+
 export type GuildWarGoalDay = {
   id: string;
   dayLabel: string;
@@ -688,6 +778,22 @@ export const api = {
   publishBuildDraft: (id: string) =>
     request<{ post: SimpleBuildPost }>(`/api/build-drafts/${id}/publish`, { method: "POST" }),
   deleteBuildDraft: (id: string) => request<void>(`/api/build-drafts/${id}`, { method: "DELETE" }),
+  raidGuideQuests: () => request<{ quests: RaidGuideQuest[] }>("/api/raid-guides"),
+  raidGuide: (guideId: string) => request<{
+    guide: RaidGuideDetail;
+    ownStrategies: RaidGuideStrategy[];
+    crewStrategies: RaidGuideStrategy[];
+  }>(`/api/raid-guides/${guideId}`),
+  raidGuideReader: (guideId: string, strategyId?: string) =>
+    request<{ guide: RaidGuideReader; strategy: RaidGuideStrategy | null }>(
+      `/api/raid-guides/${guideId}/reader${toQuery({ strategyId })}`
+    ),
+  createRaidGuideStrategy: (guideId: string, value: RaidGuideStrategyInput) =>
+    request<{ strategy: RaidGuideStrategy }>(`/api/raid-guides/${guideId}/strategies`, { method: "POST", json: value }),
+  updateRaidGuideStrategy: (strategyId: string, value: RaidGuideStrategyInput) =>
+    request<{ strategy: RaidGuideStrategy }>(`/api/raid-guide-strategies/${strategyId}`, { method: "PUT", json: value }),
+  deleteRaidGuideStrategy: (strategyId: string) =>
+    request<void>(`/api/raid-guide-strategies/${strategyId}`, { method: "DELETE" }),
   uploadSimpleBuildImage: (kind: "posts" | "drafts", id: string, file: File) => {
     const formData = new FormData();
     formData.set("image", file);

@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { gbfMasterSeedItems, normalizeMasterAlias } from "../server/data/gbfMasterSeed/index.js";
+import { raidGuideMasterDefinitions, validateRaidGuideMasterDefinitions } from "../server/data/raidGuideMasters.js";
 
 const prisma = new PrismaClient();
 
@@ -64,9 +65,80 @@ async function seedGbfMasters() {
   }
 }
 
+async function seedRaidGuides() {
+  validateRaidGuideMasterDefinitions();
+  for (const [guideIndex, guide] of raidGuideMasterDefinitions.entries()) {
+    await prisma.raidGuide.upsert({
+      where: { id: guide.id },
+      update: {
+        questMasterId: guide.questMasterId,
+        title: guide.title,
+        overview: guide.overview,
+        revision: guide.revision,
+        sortOrder: guideIndex,
+        isActive: guide.isActive
+      },
+      create: {
+        id: guide.id,
+        questMasterId: guide.questMasterId,
+        title: guide.title,
+        overview: guide.overview,
+        revision: guide.revision,
+        sortOrder: guideIndex,
+        isActive: guide.isActive
+      }
+    });
+
+    for (const [sectionIndex, section] of guide.sections.entries()) {
+      await prisma.raidGuideSection.upsert({
+        where: { id: section.id },
+        update: { guideId: guide.id, title: section.title, sortOrder: sectionIndex, isActive: true },
+        create: { id: section.id, guideId: guide.id, title: section.title, sortOrder: sectionIndex, isActive: true }
+      });
+      for (const [rowIndex, row] of section.rows.entries()) {
+        await prisma.raidGuideRow.upsert({
+          where: { id: row.id },
+          update: {
+            guideId: guide.id,
+            sectionId: section.id,
+            timingCondition: row.timingCondition,
+            enemyAction: row.enemyAction,
+            requiredResponse: row.requiredResponse,
+            supplementalNote: row.supplementalNote ?? null,
+            dangerLevel: row.dangerLevel,
+            sortOrder: rowIndex,
+            isActive: true
+          },
+          create: {
+            id: row.id,
+            guideId: guide.id,
+            sectionId: section.id,
+            timingCondition: row.timingCondition,
+            enemyAction: row.enemyAction,
+            requiredResponse: row.requiredResponse,
+            supplementalNote: row.supplementalNote ?? null,
+            dangerLevel: row.dangerLevel,
+            sortOrder: rowIndex,
+            isActive: true
+          }
+        });
+      }
+    }
+
+    for (const [referenceIndex, reference] of guide.references.entries()) {
+      await prisma.raidGuideReference.upsert({
+        where: { id: reference.id },
+        update: { guideId: guide.id, label: reference.label, url: reference.url, sortOrder: referenceIndex },
+        create: { id: reference.id, guideId: guide.id, label: reference.label, url: reference.url, sortOrder: referenceIndex }
+      });
+    }
+  }
+}
+
 seedGbfMasters()
+  .then(seedRaidGuides)
   .then(async () => {
-    console.log(`Seeded ${gbfMasterSeedItems.length} GBF master items.`);
+    console.log(`Seeded ${gbfMasterSeedItems.length} GBF master items and ${raidGuideMasterDefinitions.length} raid guides.`);
     await prisma.$disconnect();
   })
   .catch(async (error) => {

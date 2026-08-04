@@ -12,6 +12,7 @@ Saisokuは、グランブルーファンタジーの固定メンバー5人によ
 - 画像・概要・補足・参考URLを中心とする編成公開投稿
 - 所有者だけが利用できる編成下書き
 - 古戦場の目標、討伐速度、計算結果
+- 団内共通の高難度攻略メモと、利用者ごとの付箋付き対策メモ
 - 保管庫内のイベント予定と公式NEWS
 - GBFキャラ、武器、召喚石、ジョブ、素材、クエストの内部マスタ
 
@@ -24,13 +25,15 @@ Saisokuは、グランブルーファンタジーの固定メンバー5人によ
 - `/builds/new`: 編成作成
 - `/builds/drafts`: 自分の下書き
 - `/guild-war-goals`: 古戦場
+- `/utilities`: 便利機能
+- `/raid-guides`: 高難度攻略メモ
 - `/archive`: 保管庫
 - `/event-schedule`: イベント予定
 - `/official-news`: 公式NEWS
 
 旧タスク、素材目標、旧編成、目標提案、ロードマップ、旧ツールのURLとAPIは廃止され、404を返します。
 
-共通下部ナビゲーションの「タスク」は`/`の目標ボードへ移動します。保管庫はヘッダーのアイコンから開きます。
+共通下部ナビゲーションの「タスク」は`/`の目標ボードへ移動し、「便利」は古戦場と高難度攻略メモの入口です。保管庫はヘッダーのアイコンから開きます。
 
 ## 技術構成
 
@@ -110,5 +113,6 @@ npm run migration:remove-legacy-build-images -- --confirm-delete-legacy-build-im
 - [進捗管理](docs/23_progress_preset_feature.md)
 - [古戦場](docs/16_guild_war_goal_calculator.md)
 - [公式NEWS](docs/17_official_news_mvp.md)
+- [高難度攻略メモ](docs/29_high_difficulty_raid_guide_feature.md)
 
 公開URLは`https://saisoku.onrender.com`です。Renderでの現在のデプロイ状態は反映作業時に確認してください。

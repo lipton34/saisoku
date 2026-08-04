@@ -82,6 +82,7 @@ model User {
   progressSharedValues UserProgressSharedValue[]
   buildPosts           BuildPost[]
   buildDrafts          BuildDraft[]
+  raidGuideStrategies  RaidGuideStrategy[]
   guildWarGoalPlans    GuildWarGoalPlan[]
   goals                Goal[]
 }
@@ -198,6 +199,7 @@ model BuildPost {
   ownerId           String           @map("owner_id")
   owner             User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   images            BuildPostImage[]
+  raidGuideStrategies RaidGuideStrategy[]
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
 
@@ -323,12 +325,146 @@ model GbfMasterItem {
   sortOrder         Int                @default(0)
   isActive          Boolean            @default(true)
   aliases           GbfMasterAlias[]
+  raidGuides        RaidGuide[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
   @@index([kind, isActive, sortOrder])
   @@index([kind, name])
   @@map("gbf_master_items")
+}
+
+model RaidGuide {
+  id            String               @id
+  questMasterId String               @map("quest_master_id")
+  questMaster   GbfMasterItem        @relation(fields: [questMasterId], references: [id], onDelete: Restrict)
+  title         String
+  overview      String?
+  revision      Int                  @default(1)
+  sortOrder     Int                  @default(0) @map("sort_order")
+  isActive      Boolean              @default(false) @map("is_active")
+  sections      RaidGuideSection[]
+  rows          RaidGuideRow[]
+  references    RaidGuideReference[]
+  strategies    RaidGuideStrategy[]
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  @@index([questMasterId, isActive, createdAt])
+  @@map("raid_guides")
+}
+
+model RaidGuideSection {
+  id        String         @id
+  guideId   String         @map("guide_id")
+  guide     RaidGuide      @relation(fields: [guideId], references: [id], onDelete: Restrict)
+  title     String
+  sortOrder Int            @map("sort_order")
+  isActive  Boolean        @default(true) @map("is_active")
+  rows      RaidGuideRow[]
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  @@unique([guideId, sortOrder])
+  @@index([guideId, isActive, sortOrder])
+  @@map("raid_guide_sections")
+}
+
+model RaidGuideRow {
+  id               String                  @id
+  guideId          String                  @map("guide_id")
+  guide            RaidGuide               @relation(fields: [guideId], references: [id], onDelete: Restrict)
+  sectionId        String                  @map("section_id")
+  section          RaidGuideSection        @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  timingCondition  String                  @map("timing_condition")
+  enemyAction      String                  @map("enemy_action")
+  requiredResponse String                  @map("required_response")
+  supplementalNote String?                 @map("supplemental_note")
+  dangerLevel      String                  @default("normal") @map("danger_level")
+  sortOrder        Int                     @map("sort_order")
+  isActive         Boolean                 @default(true) @map("is_active")
+  outgoingLinks    RaidGuideRowLink[]      @relation("RaidGuideRowLinkSource")
+  incomingLinks    RaidGuideRowLink[]      @relation("RaidGuideRowLinkTarget")
+  stickyNotes      RaidGuideStickyNote[]
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+
+  @@unique([sectionId, sortOrder])
+  @@index([guideId, sectionId, isActive, sortOrder])
+  @@map("raid_guide_rows")
+}
+
+model RaidGuideRowLink {
+  id          String       @id
+  sourceRowId String       @map("source_row_id")
+  sourceRow   RaidGuideRow @relation("RaidGuideRowLinkSource", fields: [sourceRowId], references: [id], onDelete: Cascade)
+  targetRowId String       @map("target_row_id")
+  targetRow   RaidGuideRow @relation("RaidGuideRowLinkTarget", fields: [targetRowId], references: [id], onDelete: Restrict)
+  label       String
+  sortOrder   Int          @map("sort_order")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@unique([sourceRowId, targetRowId])
+  @@unique([sourceRowId, sortOrder])
+  @@index([targetRowId])
+  @@map("raid_guide_row_links")
+}
+
+model RaidGuideReference {
+  id        String    @id
+  guideId   String    @map("guide_id")
+  guide     RaidGuide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  url       String
+  label     String
+  sortOrder Int       @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([guideId, url])
+  @@unique([guideId, sortOrder])
+  @@map("raid_guide_references")
+}
+
+model RaidGuideStrategy {
+  id          String                @id @default(cuid())
+  guideId     String                @map("guide_id")
+  guide       RaidGuide             @relation(fields: [guideId], references: [id], onDelete: Restrict)
+  ownerId     String                @map("owner_id")
+  owner       User                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  overview    String?
+  visibility  String                @default("crew")
+  buildPostId String?               @map("build_post_id")
+  buildPost   BuildPost?            @relation(fields: [buildPostId], references: [id], onDelete: SetNull)
+  slotNumber  Int                   @map("slot_number")
+  stickyNotes RaidGuideStickyNote[]
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  @@unique([guideId, ownerId, slotNumber])
+  @@index([guideId, visibility, updatedAt])
+  @@index([guideId, ownerId, updatedAt])
+  @@index([buildPostId])
+  @@map("raid_guide_strategies")
+}
+
+model RaidGuideStickyNote {
+  id         String            @id @default(cuid())
+  strategyId String            @map("strategy_id")
+  strategy   RaidGuideStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  guideRowId String?           @map("guide_row_id")
+  guideRow   RaidGuideRow?     @relation(fields: [guideRowId], references: [id], onDelete: Restrict)
+  body       String
+  color      String            @default("yellow")
+  sortOrder  Int               @map("sort_order")
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+
+  @@unique([strategyId, sortOrder])
+  @@index([strategyId, guideRowId, sortOrder])
+  @@index([guideRowId])
+  @@map("raid_guide_sticky_notes")
 }
 
 model GbfMasterAlias {

@@ -14,14 +14,20 @@ import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { OfficialNewsPage } from "./pages/OfficialNewsPage";
 import { ProgressGoalsPage } from "./pages/ProgressGoalsPage";
+import { RaidGuideDetailPage } from "./pages/RaidGuideDetailPage";
+import { RaidGuideReaderPage } from "./pages/RaidGuideReaderPage";
+import { RaidGuidesPage } from "./pages/RaidGuidesPage";
+import { RaidGuideStrategyEditorPage } from "./pages/RaidGuideStrategyEditorPage";
 import { RoundGoalEditorPage } from "./pages/RoundGoalEditorPage";
 import { RoundGoalsPage } from "./pages/RoundGoalsPage";
+import { UtilitiesPage } from "./pages/UtilitiesPage";
 
 export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
+        <Route path="/raid-guides/:guideId/read" element={<RaidGuideReaderPage />} />
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
           <Route path="/goal-editor/:goalId" element={<GoalEditorPage />} />
@@ -36,6 +42,11 @@ export function App() {
           <Route path="/builds/:buildId/edit" element={<BuildEditorPage mode="edit" />} />
           <Route path="/builds/:buildId" element={<BuildDetailPage />} />
           <Route path="/guild-war-goals" element={<GuildWarGoalsPage />} />
+          <Route path="/utilities" element={<UtilitiesPage />} />
+          <Route path="/raid-guides" element={<RaidGuidesPage />} />
+          <Route path="/raid-guides/:guideId" element={<RaidGuideDetailPage />} />
+          <Route path="/raid-guides/:guideId/strategies/new" element={<RaidGuideStrategyEditorPage />} />
+          <Route path="/raid-guides/:guideId/strategies/:strategyId/edit" element={<RaidGuideStrategyEditorPage />} />
           <Route path="/archive" element={<ArchivePage />} />
           <Route path="/event-schedule" element={<EventSchedulePage />} />
           <Route path="/official-news" element={<OfficialNewsPage />} />

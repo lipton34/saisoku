@@ -15,6 +15,7 @@ import { guildWarGoalsRouter } from "./routes/guildWarGoals.js";
 import { goalsRouter } from "./routes/goals.js";
 import { progressGoalsRouter } from "./routes/progressGoals.js";
 import { roundGoalsRouter } from "./routes/roundGoals.js";
+import { raidGuidesRouter, raidGuideStrategiesRouter } from "./routes/raidGuides.js";
 import {
   newsFetchLogsRouter,
   newsItemsRouter,
@@ -58,6 +59,8 @@ app.use("/api/guild-war-goals", guildWarGoalsRouter);
 app.use("/api/goals", goalsRouter);
 app.use("/api/progress-goals", progressGoalsRouter);
 app.use("/api/round-goals", roundGoalsRouter);
+app.use("/api/raid-guides", raidGuidesRouter);
+app.use("/api/raid-guide-strategies", raidGuideStrategiesRouter);
 app.use("/api/news", officialNewsRouter);
 app.use("/api/news-fetch-logs", newsFetchLogsRouter);
 app.use("/api/news-items", newsItemsRouter);

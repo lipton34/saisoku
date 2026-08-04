@@ -1,4 +1,4 @@
-import { Archive, ChartNoAxesColumnIncreasing, Flame, Home, ListTodo, LogOut, Repeat2, Swords } from "lucide-react";
+import { Archive, ChartNoAxesColumnIncreasing, Home, ListTodo, LogOut, Repeat2, Swords, Wrench } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
@@ -8,7 +8,7 @@ const navigation = [
   { to: "/round-goals", label: "数量目標", icon: Repeat2 },
   { to: "/progress-goals", label: "進捗管理", icon: ChartNoAxesColumnIncreasing },
   { to: "/builds", label: "編成", icon: Swords },
-  { to: "/guild-war-goals", label: "古戦場", icon: Flame }
+  { to: "/utilities", label: "便利", icon: Wrench }
 ];
 
 export function AppShell() {
@@ -63,7 +63,7 @@ export function AppShell() {
           const Icon = item.icon;
           return (
             <NavLink
-              className={({ isActive }) => isActive ? "active" : undefined}
+              className={({ isActive }) => isActive || (item.to === "/utilities" && ["/guild-war-goals", "/raid-guides"].some((path) => location.pathname.startsWith(path))) ? "active" : undefined}
               end={item.to === "/"}
               key={item.to}
               to={item.to}

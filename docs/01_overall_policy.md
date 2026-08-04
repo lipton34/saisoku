@@ -1,12 +1,12 @@
 # Saisoku 全体方針
 
-最終更新: 2026-07-25
+最終更新: 2026-08-04
 
 ## 1. 目的
 
 Saisokuは、グランブルーファンタジーの固定メンバー5人による団内運用を補助する非公開Webツールである。GBF本体や攻略サイトの代替ではなく、団内で共有する編成、目標、周回記録、イベント情報を少ない操作で整理する。
 
-今回のモバイル中心の機能再編は `docs/27_mobile_first_feature_reorganization.md` を正本とする。進捗管理は `docs/23_progress_preset_feature.md`、古戦場は `docs/16_guild_war_goal_calculator.md`、公式NEWSは `docs/17_official_news_mvp.md` を併せて参照する。
+今回のモバイル中心の機能再編は `docs/27_mobile_first_feature_reorganization.md` を正本とする。高難度攻略メモと、それに伴う「便利」ナビゲーションへの変更は `docs/29_high_difficulty_raid_guide_feature.md` が後続の正本となる。進捗管理は `docs/23_progress_preset_feature.md`、古戦場は `docs/16_guild_war_goal_calculator.md`、公式NEWSは `docs/17_official_news_mvp.md` を併せて参照する。
 
 ## 2. 利用環境と設計原則
 
@@ -25,7 +25,7 @@ Saisokuは、グランブルーファンタジーの固定メンバー5人によ
 - 周回目標: 素材数、討伐数、周回数などの簡易カウンター
 - 進捗管理: 段階別の必要素材、条件、所持数
 - 編成: 画像と補足を中心とする団内公開投稿
-- 古戦場: 目標貢献度、肉、討伐数、必要時間の計算
+- 便利機能: 高難度攻略メモ、古戦場
 
 保管庫:
 

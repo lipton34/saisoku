@@ -12,6 +12,7 @@ The current application includes:
 - GBF character, weapon, summon, job, material, and quest masters
 - private and crew goals, a three-state board, linked round/progress goals, and sub-tasks
 - Guild War planning and calculations
+- crew-authored high-difficulty raid guides with personal or crew-visible sticky-note strategies
 - official-news ingestion and event scheduling
 - staged progress management
 - a mobile-first shared header, five-item bottom navigation, and archive
