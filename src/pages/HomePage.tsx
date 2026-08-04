@@ -1,4 +1,4 @@
-import { CheckSquare, Filter, Hash, LoaderCircle, Milestone, MoreVertical, Plus, RotateCcw, X } from "lucide-react";
+import { CheckSquare, Filter, Hash, LoaderCircle, Milestone, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
@@ -14,7 +14,7 @@ export function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [scope, setScope] = useState<"personal" | "crew">("personal");
-  const [status, setStatus] = useState<GoalBoardState>("unset");
+  const [status, setStatus] = useState<GoalBoardState>("now");
   const [goals, setGoals] = useState<Goal[]>([]);
   const [selected, setSelected] = useState<Goal | null>(null);
   const [openingGoalId, setOpeningGoalId] = useState<string | null>(null);
@@ -243,10 +243,6 @@ export function HomePage() {
                   <select aria-label={`${goal.title}の状態`} onChange={(event) => void changeStatus(goal, event.target.value as GoalBoardState)} value={goal.boardStatus}>
                     {statuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                   </select>
-                  {!goal.sourceRoundGoalId && !goal.sourceProgressGoalId ? <details className="card-menu"><summary aria-label={`${goal.title}の操作`}><MoreVertical size={18} /></summary><div>
-                    <button onClick={() => navigate(`/goal-editor/${goal.id}`)} type="button">編集</button>
-                    {ownGoal ? <button className="danger-text" onClick={() => void removeGoal(goal)} type="button">削除</button> : null}
-                  </div></details> : null}
                 </div>
               ) : null}
             </article>
@@ -304,7 +300,7 @@ export function HomePage() {
             </div>)}
           </div>}
         </div>
-        <footer className="progress-modal-footer goal-detail-actions">{selected.ownerId === user?.id ? <button className="secondary-button danger-text" onClick={() => void removeGoal(selected)} type="button">削除</button> : null}<span className="progress-modal-footer-spacer" />{selected.ownerId === user?.id && selected.visibility === "personal" ? <button className="secondary-button" onClick={() => void publish(selected)} type="button">団内へ公開</button> : null}<button className="primary-button" onClick={() => navigate(`/goal-editor/${selected.id}`)} type="button">編集</button></footer>
+        <footer className="progress-modal-footer goal-detail-actions">{selected.ownerId === user?.id ? <button className="secondary-button danger-text" onClick={() => void removeGoal(selected)} type="button">削除</button> : null}<span className="progress-modal-footer-spacer" />{selected.ownerId === user?.id && selected.visibility === "personal" && !selected.subTasks.some((task) => task.kind === "round" || task.kind === "progress") ? <button className="secondary-button" onClick={() => void publish(selected)} type="button">団内目標として公開</button> : null}<button className="primary-button" onClick={() => navigate(`/goal-editor/${selected.id}`)} type="button">編集</button></footer>
       </section></div> : null}
     </div>
   );
