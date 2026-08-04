@@ -17,6 +17,22 @@ export function RaidGuideLinkedText({ children, onJump }: { children: string; on
   return <>{parts}</>;
 }
 
+export function RaidGuideStructuredText({ children, onJump }: { children: string; onJump: (rowId: string) => void }) {
+  const lines = children.split("\n");
+  return <div className="raid-reader-facts">{lines.map((line, index) => {
+    if (!line.trim()) return <span aria-hidden="true" className="raid-reader-fact-break" key={`break-${index}`} />;
+    const bullet = line.startsWith("・") ? line.slice(1).trim() : null;
+    const labelSeparator = bullet?.indexOf("：") ?? -1;
+    if (bullet !== null && labelSeparator > 0) {
+      const label = bullet.slice(0, labelSeparator);
+      const value = bullet.slice(labelSeparator + 1);
+      return <span className="raid-reader-fact" key={`${line}-${index}`}><strong>{label}</strong><span><RaidGuideLinkedText onJump={onJump}>{value}</RaidGuideLinkedText></span></span>;
+    }
+    const isTitle = index === 0 && !line.includes("[[page:");
+    return <span className={`raid-reader-fact${isTitle ? " is-title" : ""}${line.includes("[[page:") ? " is-link" : ""}`} key={`${line}-${index}`}><RaidGuideLinkedText onJump={onJump}>{bullet ?? line}</RaidGuideLinkedText></span>;
+  })}</div>;
+}
+
 export function createRaidGuidePageLink(rowId: string, label: string) {
   return `[[page:${rowId}|${label.replace(/[\[\]|]/g, "").trim()}]]`;
 }

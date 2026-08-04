@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, Settings, Undo2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
-import { RaidGuideLinkedText } from "../components/RaidGuideLinkedText";
+import { RaidGuideLinkedText, RaidGuideStructuredText } from "../components/RaidGuideLinkedText";
 import { api, type RaidGuideReader, type RaidGuideStickyNote, type RaidGuideStrategy } from "../lib/api";
 import { findRaidGuideRecent, saveRaidGuideRecent } from "../lib/raidGuideReaderState";
 
@@ -115,8 +115,8 @@ export function RaidGuideReaderPage() {
           <div className="raid-reader-detail">
             <div className="raid-reader-page-heading"><span>{row.sectionTitle}</span><span className={`raid-danger-label is-${row.dangerLevel}`}>{row.dangerLevel === "danger" ? "危険" : row.dangerLevel === "caution" ? "注意" : "通常"}</span></div>
             <section>{row.pageType === "guide" ? <small>タイミング・条件</small> : null}<h1><RaidGuideLinkedText onJump={jumpTo}>{row.timingCondition}</RaidGuideLinkedText></h1></section>
-            <section>{row.pageType === "guide" ? <small>敵の行動・予兆</small> : null}<p><RaidGuideLinkedText onJump={jumpTo}>{row.enemyAction}</RaidGuideLinkedText></p></section>
-            <section className="raid-reader-response"><small>{row.pageType === "heading" ? "この見出しで確認すること" : "必要な対応・解除条件"}</small><p><RaidGuideLinkedText onJump={jumpTo}>{row.requiredResponse}</RaidGuideLinkedText></p></section>
+            <section>{row.pageType === "guide" ? <small>敵の行動・予兆</small> : null}<RaidGuideStructuredText onJump={jumpTo}>{row.enemyAction}</RaidGuideStructuredText></section>
+            <section className="raid-reader-response"><small>{row.pageType === "heading" ? "この見出しで確認すること" : "必要な対応・解除条件"}</small><RaidGuideStructuredText onJump={jumpTo}>{row.requiredResponse}</RaidGuideStructuredText></section>
             {row.supplementalNote ? <section><small>補足・注意点</small><p>{row.supplementalNote}</p></section> : null}
             {row.outgoingLinks.length ? <nav aria-label="関連する攻略行" className="raid-reader-links">{row.outgoingLinks.map((link) => <button key={link.id} onClick={() => jumpTo(link.targetRowId)} type="button">{link.label}<ChevronRight size={16} /></button>)}</nav> : null}
           </div>

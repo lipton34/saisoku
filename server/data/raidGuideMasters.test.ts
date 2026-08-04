@@ -15,7 +15,7 @@ test("raid guide master definitions are valid", () => {
   assert.ok(tengen);
   assert.equal(tengen.questMasterId, "quest-the-world-of-six-dragons");
   assert.equal(tengen.sections.length, 7);
-  assert.equal(tengen.revision, 3);
+  assert.equal(tengen.revision, 4);
   assert.equal(tengen.sections.flatMap((section) => section.rows).length, 27);
   assert.equal(tengen.references.length, 2);
   assert.equal(tengen.sections.at(-1)?.rows.at(-1)?.enemyAction.includes("ラツィオ・エグゼティウム"), true);
