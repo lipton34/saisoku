@@ -5300,22 +5300,25 @@ textarea {
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(54, 46, 34, 0.13);
   display: grid;
-  grid-template-rows: minmax(min-content, 7fr) minmax(220px, 3fr);
+  grid-template-rows: auto minmax(220px, 1fr);
   min-height: calc(100dvh - 76px);
   overflow: hidden;
 }
 
 .raid-reader-detail {
+  align-content: start;
   display: grid;
-  gap: 16px;
+  gap: 10px;
+  max-height: calc((100dvh - 76px) * 0.7);
   min-width: 0;
-  padding: clamp(18px, 4vw, 38px);
+  overflow-y: auto;
+  padding: clamp(16px, 3vw, 28px);
 }
 
 .raid-reader-detail section {
   border-bottom: 1px solid #e3ded2;
   min-width: 0;
-  padding-bottom: 14px;
+  padding-bottom: 9px;
 }
 
 .raid-reader-detail small {
@@ -5412,7 +5415,7 @@ textarea {
   .raid-sticky-controls { grid-template-columns: 1fr repeat(3, auto); }
   .raid-sticky-link-editor { grid-template-columns: 1fr; }
   .raid-reader-pages { padding: 8px; }
-  .raid-reader-detail { gap: 12px; padding: 16px 13px; }
+  .raid-reader-detail { gap: 8px; padding: 14px 12px; }
   .raid-reader-detail p { font-size: 1rem; line-height: 1.6; }
   .raid-reader-stickies, .raid-reader-sticky-empty { min-height: 220px; padding: 12px; }
   .raid-reader-sticky { left: 7px; padding: 12px 10px; top: 10px; width: calc(100% - 33px); }
