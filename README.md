@@ -114,5 +114,6 @@ npm run migration:remove-legacy-build-images -- --confirm-delete-legacy-build-im
 - [古戦場](docs/16_guild_war_goal_calculator.md)
 - [公式NEWS](docs/17_official_news_mvp.md)
 - [高難度攻略メモ](docs/29_high_difficulty_raid_guide_feature.md)
+- [高難度攻略メモ 実装・マスター拡張ガイド](docs/30_high_difficulty_raid_guide_implementation_guide.md)
 
 公開URLは`https://saisoku.onrender.com`です。Renderでの現在のデプロイ状態は反映作業時に確認してください。
