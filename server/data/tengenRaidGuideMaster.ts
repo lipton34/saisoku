@@ -5,7 +5,7 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
   questMasterId: "quest-the-world-of-six-dragons",
   title: "6人攻略・共通行動",
   overview: "天元たる六色の理の6人攻略で共通して確認する形態別予兆、穹竜の試練、HP15%以降の連続予兆。属性・編成固有の動きは対策メモと付箋で補う。",
-  revision: 2,
+  revision: 3,
   isActive: true,
   references: [
     {
@@ -70,7 +70,7 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           id: "tengen-row-hp-trigger",
           timingCondition: "HP90%／70%／50%",
           enemyAction: "形態別合体技\n・火／風：朱の灼爪・翠の飄嘴\n・水／土：碧の渦核・金の巌擲\n・光／闇：白の煌閃・黒の呪禍\n\n・ダメージ：対応する2属性で各2回（各10倍）\n・弱体：対応する2属性の脆性\n・敵：対応する竜気Lvが各2上昇",
-          requiredResponse: "・HP90%：200万ダメージ 9回\n・HP70%：200万ダメージ 12回\n・HP50%：200万ダメージ 15回",
+          requiredResponse: "・HP90%：200万ダメージ 9回\n・HP70%：200万ダメージ 12回\n・HP50%：200万ダメージ 15回\n・解除時：出現中の2体の竜気Lvが各1減少",
           supplementalNote: "2026年2月の緩和後は、発生しなかった該当特殊技が2個以下の場合に付与されていた強化効果と、形態移行時の対応弱体効果が撤廃されている。",
           dangerLevel: "danger"
         },
@@ -78,7 +78,7 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           id: "tengen-row-ct-methos",
           timingCondition: "CT予兆（HP100%～40%）",
           enemyAction: "メートス・ルジェット\n・ダメージ：ランダム対象へ無属性6000×6回\n・弱体：虚脱、アビリティ封印",
-          requiredResponse: "・2000万ダメージ",
+          requiredResponse: "・2000万ダメージ\n・解除時：出現中の各竜気Lvが確率で1減少",
           dangerLevel: "caution"
         }
       ]
@@ -99,14 +99,14 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           id: "tengen-row-fire-wind-ougi-trigger",
           timingCondition: "奥義ダメージ累計5000万到達後の次ターン",
           enemyAction: "インテンシス・フレイム\n・ダメージ：全体火属性15倍\n・弱体：奥義ゲージ上昇量DOWN（累積／回復不可）\n・敵：ウィルナスの竜気Lv1上昇",
-          requiredResponse: "・36hit",
+          requiredResponse: "・36hit\n・解除時：ウィルナスの竜気Lvが3減少",
           dangerLevel: "caution"
         },
         {
           id: "tengen-row-fire-wind-ability-trigger",
           timingCondition: "アビリティダメージ累計5000万到達後の次ターン",
           enemyAction: "エクザスティブ・コラプス\n・ダメージ：ランダム対象へ風属性3倍×12回\n・弱体：弱体耐性DOWN（累積／回復不可）\n・敵：イーウィヤの竜気Lv1上昇",
-          requiredResponse: "・奥義5回",
+          requiredResponse: "・奥義5回\n・解除時：イーウィヤの竜気Lvが3減少",
           dangerLevel: "caution"
         }
       ]
@@ -127,14 +127,14 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           id: "tengen-row-water-earth-ougi-trigger",
           timingCondition: "奥義ダメージ累計5000万到達後の次ターン",
           enemyAction: "フェロシアス・アトラクター\n・ダメージ：ランダム対象へ水属性6回（合計30倍）\n・弱体：攻撃力DOWN（累積／回復不可）\n・敵：ワムデュスの竜気Lv1上昇",
-          requiredResponse: "・TA4回",
+          requiredResponse: "・TA4回\n・解除時：ワムデュスの竜気Lvが3減少",
           dangerLevel: "caution"
         },
         {
           id: "tengen-row-water-earth-ability-trigger",
           timingCondition: "アビリティダメージ累計5000万到達後の次ターン",
           enemyAction: "天地激震\n・ダメージ：全体土属性15倍\n・弱体：防御力DOWN（累積／回復不可）\n・敵：ガレヲンの竜気Lv1上昇",
-          requiredResponse: "・FC発動",
+          requiredResponse: "・FC発動\n・解除時：ガレヲンの竜気Lvが3減少",
           dangerLevel: "caution"
         }
       ]
@@ -155,14 +155,14 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           id: "tengen-row-light-dark-ougi-trigger",
           timingCondition: "奥義ダメージ累計5000万到達後の次ターン",
           enemyAction: "万雷散華\n・ダメージ：ランダム対象へ光属性4回（合計40倍）\n・弱体：連続攻撃確率DOWN（累積／回復不可）\n・敵：ル・オーの竜気Lv1上昇",
-          requiredResponse: "・アビリティ5回",
+          requiredResponse: "・アビリティ5回\n・解除時：ル・オーの竜気Lvが3減少",
           dangerLevel: "caution"
         },
         {
           id: "tengen-row-light-dark-ability-trigger",
           timingCondition: "アビリティダメージ累計5000万到達後の次ターン",
           enemyAction: "ネクロシスストーム\n・ダメージ：全体闇属性15倍\n・弱体：回復力DOWN（累積／回復不可）\n・敵：フェディエルの竜気Lv1上昇",
-          requiredResponse: "・弱体効果10回",
+          requiredResponse: "・弱体効果10回\n・解除時：フェディエルの竜気Lvが3減少",
           dangerLevel: "caution"
         }
       ]
