@@ -114,7 +114,7 @@ export function RaidGuideReaderPage() {
         return <article className={`raid-reader-page${row.pageType === "heading" ? " is-heading" : ""}`} key={row.id}>
           <div className="raid-reader-detail">
             <div className="raid-reader-page-heading"><span>{row.sectionTitle}</span><span className={`raid-danger-label is-${row.dangerLevel}`}>{row.dangerLevel === "danger" ? "危険" : row.dangerLevel === "caution" ? "注意" : "通常"}</span></div>
-            <section>{row.pageType === "guide" ? <small>タイミング・条件</small> : null}<h1>{row.timingCondition}</h1></section>
+            <section>{row.pageType === "guide" ? <small>タイミング・条件</small> : null}<h1><RaidGuideLinkedText onJump={jumpTo}>{row.timingCondition}</RaidGuideLinkedText></h1></section>
             <section>{row.pageType === "guide" ? <small>敵の行動・予兆</small> : null}<p><RaidGuideLinkedText onJump={jumpTo}>{row.enemyAction}</RaidGuideLinkedText></p></section>
             <section className="raid-reader-response"><small>{row.pageType === "heading" ? "この見出しで確認すること" : "必要な対応・解除条件"}</small><p><RaidGuideLinkedText onJump={jumpTo}>{row.requiredResponse}</RaidGuideLinkedText></p></section>
             {row.supplementalNote ? <section><small>補足・注意点</small><p>{row.supplementalNote}</p></section> : null}

@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 const pageLinkPattern = /\[\[page:([^|\]]+)\|([^\]]+)\]\]/g;
 
+export type RaidGuidePageLink = { rowId: string; label: string };
+
 export function RaidGuideLinkedText({ children, onJump }: { children: string; onJump: (rowId: string) => void }) {
   const parts: ReactNode[] = [];
   let position = 0;
@@ -17,4 +19,18 @@ export function RaidGuideLinkedText({ children, onJump }: { children: string; on
 
 export function createRaidGuidePageLink(rowId: string, label: string) {
   return `[[page:${rowId}|${label.replace(/[\[\]|]/g, "").trim()}]]`;
+}
+
+export function splitRaidGuideLinkedText(value: string) {
+  const links: RaidGuidePageLink[] = [...value.matchAll(pageLinkPattern)].map((match) => ({ rowId: match[1], label: match[2] }));
+  return { text: value.replace(pageLinkPattern, "").trim(), links };
+}
+
+export function plainRaidGuideLinkedText(value: string) {
+  return value.replace(pageLinkPattern, "$2");
+}
+
+export function joinRaidGuideLinkedText(text: string, links: RaidGuidePageLink[]) {
+  const suffix = links.map((link) => createRaidGuidePageLink(link.rowId, link.label)).join(" ");
+  return [text.trim(), suffix].filter(Boolean).join("\n");
 }

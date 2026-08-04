@@ -33,7 +33,7 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
     questMasterId: "quest-dark-rapture-zero",
     title: "6人攻略・共通行動",
     overview: "ルシファー・ゼロの6人攻略で共通して確認する予兆と解除条件。属性・編成固有の動きは対策メモと付箋で補う。",
-    revision: 5,
+    revision: 6,
     isActive: true,
     references: [
       {
@@ -84,28 +84,28 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
           {
             id: "dark-rapture-zero-row-95-axion",
             timingCondition: "HP95%",
-            enemyAction: "アキシオン\n・弱体：連続攻撃確率DOWN、虚脱\n・カウントダウン進行",
+            enemyAction: "アキシオン\n・ダメージ：全体ランダム属性 3回（合計30倍）\n・弱体：連続攻撃確率DOWN、虚脱\n・カウントダウン進行",
             requiredResponse: "・TA 4回",
             dangerLevel: "caution"
           },
           {
             id: "dark-rapture-zero-row-after-95-fix",
-            timingCondition: "HP95%予兆の次ターン",
-            enemyAction: "フィークス\n・弱体：裂傷、衰弱\n・カウントダウン進行",
+            timingCondition: "[[page:dark-rapture-zero-row-95-axion|アキシオン]]の次ターン",
+            enemyAction: "フィークス\n・ダメージ：全体ランダム属性 30倍\n・弱体：裂傷、衰弱\n・カウントダウン進行",
             requiredResponse: "・奥義ダメージ 2000万",
             dangerLevel: "caution"
           },
           {
             id: "dark-rapture-zero-row-after-95-sephiroth",
-            timingCondition: "フィークスの次ターン",
-            enemyAction: "セフィロト\n・弱体：アビリティスロウ\n・カウントダウン進行",
+            timingCondition: "[[page:dark-rapture-zero-row-after-95-fix|フィークス]]の次ターン",
+            enemyAction: "セフィロト\n・ダメージ：ランダム対象 12回（合計24倍）\n・弱体：アビリティスロウ\n・カウントダウン進行",
             requiredResponse: "・アビリティダメージ 1500万",
             dangerLevel: "caution"
           },
           {
             id: "dark-rapture-zero-row-early-ct-poros",
             timingCondition: "CT予兆（HP100%～81%）",
-            enemyAction: "ポースポロス\n・カウントダウン進行",
+            enemyAction: "ポースポロス\n・ダメージ：ランダム対象 5回（合計20倍）\n・追加ダメージ：全体無属性 6000\n・弱体：強圧、暗闇\n・カウントダウン進行",
             requiredResponse: "・弱体効果 7回",
             supplementalNote: earlyCtNote,
             dangerLevel: "caution"
@@ -113,7 +113,7 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
           {
             id: "dark-rapture-zero-row-early-ct-iblis",
             timingCondition: "CT予兆（HP100%～81%）",
-            enemyAction: "イブリース\n・敵強化：追撃、全属性ダメージカット\n・カウントダウン進行",
+            enemyAction: "イブリース\n・ダメージ：ランダム対象 5回（合計20倍）\n・追加ダメージ：全体無属性 6000\n・敵強化：追撃、全属性ダメージカット\n・カウントダウン進行",
             requiredResponse: "・ディスペル 2回",
             supplementalNote: earlyCtNote,
             dangerLevel: "caution"
@@ -121,7 +121,7 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
           {
             id: "dark-rapture-zero-row-early-tessera",
             timingCondition: "CT予兆を攻撃行動前に解除した場合",
-            enemyAction: "テセラ\n・CT予兆を攻撃行動前に解除すると確率で発生",
+            enemyAction: "テセラ\n・ダメージ：全体ランダム属性 30倍\n・強化効果：全て無効化\n・奥義ゲージDOWN\n・カウントダウン進行\n・CT予兆を攻撃行動前に解除すると確率で発生",
             requiredResponse: "・150万ダメージ 7hit",
             dangerLevel: "caution"
           }
@@ -134,14 +134,14 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
           {
             id: "dark-rapture-zero-row-80-orbital",
             timingCondition: "HP80%",
-            enemyAction: "オービタル・レゾナンス\n・神器：永遠拒絶または絶対否定\n・解除不可",
+            enemyAction: "オービタル・レゾナンス\n・神器：永遠拒絶または絶対否定\n・通常攻撃も実行",
             requiredResponse: "・解除条件なし\n・神器の種類を確認",
             supplementalNote: "HP80%移行時の特殊発生\n・HP95%以降の予兆を複数解除できず、カウント0付近で他参戦者がHP80%を通過した場合に発生報告あり",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-80-artifact",
-            timingCondition: "HP80%通過後",
+            timingCondition: "[[page:dark-rapture-zero-row-80-orbital|HP80%]]通過後",
             enemyAction: "神器の毎ターン条件\n・永遠拒絶：TA 2回未満で追加効果\n・絶対否定：25hit未満で追加効果",
             requiredResponse: "・永遠拒絶：TA 2回\n・絶対否定：25hit",
             supplementalNote: "永遠拒絶のリフレクトは特に危険。CT予兆の解除条件も神器で変わる。",
@@ -149,36 +149,36 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
           },
           {
             id: "dark-rapture-zero-row-80-axion-vanitas",
-            timingCondition: "HP80%の次ターン",
-            enemyAction: "アキシオン・ヴァニタス\n・解除条件：HP80%までの最大ダメージ比率で分岐",
+            timingCondition: "[[page:dark-rapture-zero-row-80-orbital|HP80%]]の次ターン",
+            enemyAction: "アキシオン・ヴァニタス\n・ダメージ：ランダム対象 6回（合計24倍）\n・弱体：強圧、暗闇\n・FCゲージ30%DOWN\n・カウントダウン進行",
             requiredResponse: "・通常攻撃：100万ダメージ 10回\n・アビダメ：奥義 4回\n・奥義：40hit\n・その他：アビリティダメージ 15hit",
             dangerLevel: "caution"
           },
           {
             id: "dark-rapture-zero-row-80-fix-vanitas",
-            timingCondition: "アキシオン・ヴァニタスの次ターン",
-            enemyAction: "フィークス・ヴァニタス\n・解除条件：同じダメージ比率で分岐",
+            timingCondition: "[[page:dark-rapture-zero-row-80-axion-vanitas|アキシオン・ヴァニタス]]の次ターン",
+            enemyAction: "フィークス・ヴァニタス\n・ダメージ：全体ランダム属性 3回（合計30倍）\n・奥義ゲージDOWN\n・弱体：アビリティスロウ（2キャラ）\n・FCゲージ30%DOWN\n・カウントダウン進行",
             requiredResponse: "・通常攻撃：弱体効果 7回\n・アビダメ：TA 4回\n・奥義：アビリティダメージ 1500万\n・その他：奥義 4回",
             dangerLevel: "caution"
           },
           {
             id: "dark-rapture-zero-row-80-sephiroth-vanitas",
-            timingCondition: "フィークス・ヴァニタスの次ターン",
-            enemyAction: "セフィロト・ヴァニタス\n・解除条件：同じダメージ比率で分岐",
+            timingCondition: "[[page:dark-rapture-zero-row-80-fix-vanitas|フィークス・ヴァニタス]]の次ターン",
+            enemyAction: "セフィロト・ヴァニタス\n・ダメージ：ランダム対象 12回（合計24倍）\n・弱体：召喚不可\n・FCゲージ30%DOWN\n・カウントダウン進行",
             requiredResponse: "・通常攻撃：アビリティダメージ 1500万\n・アビダメ：40hit\n・奥義：TA 4回\n・その他：40hit",
             dangerLevel: "caution"
           },
           {
             id: "dark-rapture-zero-row-80-ct-absolute",
             timingCondition: "CT予兆（絶対否定）",
-            enemyAction: "絶対否定\n・弱体：麻痺\n・FCゲージ減少",
+            enemyAction: "絶対否定\n・ダメージ：全体ランダム属性 3回（合計24倍）\n・敵強化：与ダメージ上昇、追撃\n・弱体：連続攻撃確率DOWN、麻痺（2キャラ）\n・FCゲージ30%DOWN\n・カウントダウン進行",
             requiredResponse: "・奥義 4回",
             dangerLevel: "caution"
           },
           {
             id: "dark-rapture-zero-row-80-ct-eternal",
             timingCondition: "CT予兆（永遠拒絶）",
-            enemyAction: "永遠拒絶と完全否認\n・弱体：麻痺\n・FCゲージ減少",
+            enemyAction: "永遠拒絶と完全否認\n・ダメージ：全体ランダム属性 3回（合計24倍）\n・敵強化：与ダメージ上昇、追撃\n・弱体：連続攻撃確率DOWN、麻痺（2キャラ）\n・FCゲージ30%DOWN\n・カウントダウン進行",
             requiredResponse: "・TA 3回",
             dangerLevel: "danger"
           }
@@ -191,56 +191,56 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
           {
             id: "dark-rapture-zero-row-60-trumpet",
             timingCondition: "HP60%",
-            enemyAction: "黙示録の喇叭\n・味方効果：ランダムな果実 2種類\n・1人目通過時：敵の弱体効果をリセット\n・解除不可",
+            enemyAction: "黙示録の喇叭\n・ダメージ：全体ランダム属性 12倍\n・味方効果：ランダムな果実 2種類\n・1人目通過時：敵の弱体効果をリセット",
             requiredResponse: "・解除条件なし\n・全員で通過確認\n・1人目通過後に弱体効果を入れ直す",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-trial-1",
             timingCondition: "HP55%",
-            enemyAction: "十二の試練・第一節\n・解除失敗：試練効果が残る\n・カウントダウン進行",
+            enemyAction: "十二の試練・第一節\n・ダメージ：全体ランダム属性 120倍\n・弱体：連続攻撃確率DOWN\n・カウントダウン初期値減少",
             requiredResponse: "・奥義 5回",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-trial-2",
-            timingCondition: "第一節の次ターン",
-            enemyAction: "十二の試練・第二節",
+            timingCondition: "[[page:dark-rapture-zero-row-trial-1|第一節]]の次ターン",
+            enemyAction: "十二の試練・第二節\n・ダメージ：ランダム対象 12回（合計120倍）\n・敵強化：弱体耐性UP\n・カウントダウン初期値減少",
             requiredResponse: "・攻撃行動 6回",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-trial-3",
-            timingCondition: "第二節の次ターン",
-            enemyAction: "十二の試練・第三節",
+            timingCondition: "[[page:dark-rapture-zero-row-trial-2|第二節]]の次ターン",
+            enemyAction: "十二の試練・第三節\n・ダメージ：全体ランダム属性 3回（合計120倍）\n・弱体：奥義封印\n・カウントダウン初期値減少",
             requiredResponse: "・3500万ダメージ",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-trial-4",
-            timingCondition: "第三節の次ターン",
-            enemyAction: "十二の試練・第四節",
+            timingCondition: "[[page:dark-rapture-zero-row-trial-3|第三節]]の次ターン",
+            enemyAction: "十二の試練・第四節\n・ダメージ：全体ランダム属性 30倍\n・弱体：裂傷、衰弱（2キャラ）\n・カウントダウン初期値減少",
             requiredResponse: "・弱体効果 10回",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-trial-5",
-            timingCondition: "第四節の次ターン",
-            enemyAction: "十二の試練・第五節",
+            timingCondition: "[[page:dark-rapture-zero-row-trial-4|第四節]]の次ターン",
+            enemyAction: "十二の試練・第五節\n・ダメージ：ランダム対象 12回（合計120倍）\n・敵強化：攻防UP\n・カウントダウン初期値減少",
             requiredResponse: "・FC発動",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-trial-6",
-            timingCondition: "第五節の次ターン",
-            enemyAction: "十二の試練・第六節",
+            timingCondition: "[[page:dark-rapture-zero-row-trial-5|第五節]]の次ターン",
+            enemyAction: "十二の試練・第六節\n・ダメージ：全体ランダム属性 3回（合計120倍）\n・敵強化：被ダメージ減少\n・カウントダウン初期値減少",
             requiredResponse: "・60hit",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-mid-ct-poros",
             timingCondition: "CT予兆（HP60%～21%）",
-            enemyAction: "ポースポロス\n・カウントダウン進行",
+            enemyAction: "ポースポロス\n・ダメージ：ランダム対象 5回（合計20倍）\n・追加ダメージ：全体無属性 6000\n・弱体：強圧、暗闇\n・カウントダウン進行",
             requiredResponse: "・弱体効果 7回",
             supplementalNote: earlyCtNote,
             dangerLevel: "caution"
@@ -248,7 +248,7 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
           {
             id: "dark-rapture-zero-row-mid-ct-iblis",
             timingCondition: "CT予兆（HP60%～21%）",
-            enemyAction: "イブリース\n・敵強化：追撃、全属性ダメージカット\n・カウントダウン進行",
+            enemyAction: "イブリース\n・ダメージ：ランダム対象 5回（合計20倍）\n・追加ダメージ：全体無属性 6000\n・敵強化：追撃、全属性ダメージカット\n・カウントダウン進行",
             requiredResponse: "・ディスペル 2回",
             supplementalNote: earlyCtNote,
             dangerLevel: "caution"
@@ -256,7 +256,7 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
           {
             id: "dark-rapture-zero-row-mid-tessera",
             timingCondition: "CT予兆を攻撃行動前に解除した場合",
-            enemyAction: "テセラ\n・CT予兆を攻撃行動前に解除すると確率で発生",
+            enemyAction: "テセラ\n・ダメージ：全体ランダム属性 30倍\n・強化効果：全て無効化\n・奥義ゲージDOWN\n・カウントダウン進行\n・CT予兆を攻撃行動前に解除すると確率で発生",
             requiredResponse: "・アビリティ 5回",
             dangerLevel: "caution"
           }
@@ -269,50 +269,50 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
           {
             id: "dark-rapture-zero-row-20-gospel",
             timingCondition: "HP20%",
-            enemyAction: "終末の福音\n・ダメージ：全体無属性 1万\n・敵強化：参戦者共通の試練 7～12\n・解除不可",
+            enemyAction: "終末の福音\n・ダメージ：全体無属性 1万\n・敵強化：参戦者共通の試練 7～12",
             requiredResponse: "・解除条件なし\n・全員で予兆確認後に通過",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-anti-basileia-1",
-            timingCondition: "終末の福音の次ターン",
-            enemyAction: "アンチ・バシレイア\n・解除条件：奥義6回、アビリティ12回、66hitからランダムに1つ",
+            timingCondition: "[[page:dark-rapture-zero-row-20-gospel|終末の福音]]の次ターン",
+            enemyAction: "アンチ・バシレイア\n・ダメージ：全体ランダム属性 120倍\n・カウントダウン進行",
             requiredResponse: "・奥義 6回\n・アビリティ 12回\n・66hit\n※いずれか1条件",
             supplementalNote: "解除困難ならガードやFC中断で次条件へ進む選択肢がある。",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-anti-basileia-2",
-            timingCondition: "1回目を未解除の場合の次ターン",
-            enemyAction: "アンチ・バシレイア\n・解除条件：1回目とは異なる未提示条件",
+            timingCondition: "[[page:dark-rapture-zero-row-anti-basileia-1|1回目]]を未解除の場合の次ターン",
+            enemyAction: "アンチ・バシレイア\n・ダメージ：全体ランダム属性 120倍\n・カウントダウン進行",
             requiredResponse: "・前ターン以外の残り2条件から1つ",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-anti-basileia-3",
-            timingCondition: "2回目も未解除の場合の次ターン",
-            enemyAction: "アンチ・バシレイア\n・解除条件：残る未提示条件",
+            timingCondition: "[[page:dark-rapture-zero-row-anti-basileia-2|2回目]]も未解除の場合の次ターン",
+            enemyAction: "アンチ・バシレイア\n・ダメージ：全体ランダム属性 120倍\n・カウントダウン進行",
             requiredResponse: "・残った最後の1条件\n※3ターン以内にいずれか1条件を解除",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-13-poros-apocalypse",
             timingCondition: "HP13%",
-            enemyAction: "ポースポロス・アポカリプス\n・敵強化：全属性ダメージカット\n・弱体：強圧",
+            enemyAction: "ポースポロス・アポカリプス\n・ダメージ：全体ランダム属性 3回（合計30倍）\n・敵強化：全属性ダメージカット\n・弱体：強圧\n・カウントダウン進行",
             requiredResponse: "・99,999,999ダメージ",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-6-iblis-apocalypse",
             timingCondition: "HP6%",
-            enemyAction: "イブリース・アポカリプス",
+            enemyAction: "イブリース・アポカリプス\n・ダメージ：ランダム対象 3回（合計20倍）\n・追加ダメージ：全体無属性 6000\n・弱体：アビリティ封印（2キャラ）\n・奥義ゲージDOWN（2キャラ）\n・カウントダウン進行",
             requiredResponse: "・99hit",
             dangerLevel: "danger"
           },
           {
             id: "dark-rapture-zero-row-final-ct-axion",
             timingCondition: "CT予兆（HP20%以降）",
-            enemyAction: "アキシオン・アポカリプス\n・弱体：アンデッド\n・カウントダウン進行",
+            enemyAction: "アキシオン・アポカリプス\n・ダメージ：全体ランダム属性 3回（合計30倍）\n・弱体：アンデッド\n・カウントダウン進行",
             requiredResponse: "・FC発動",
             dangerLevel: "danger"
           },
@@ -344,7 +344,7 @@ export function validateRaidGuideMasterDefinitions(definitions = raidGuideMaster
       if (!row.timingCondition.trim() || row.timingCondition.length > 100) throw new Error(`${row.id}: タイミングを確認してください`);
       if (!row.enemyAction.trim() || row.enemyAction.length > 500) throw new Error(`${row.id}: 敵行動を確認してください`);
       if (!row.requiredResponse.trim() || row.requiredResponse.length > 500) throw new Error(`${row.id}: 対応を確認してください`);
-      const linkTargets = [...row.enemyAction.matchAll(/\[\[page:([^|\]]+)\|[^\]]+\]\]/g)].map((match) => match[1]);
+      const linkTargets = [row.timingCondition, row.enemyAction, row.requiredResponse, row.supplementalNote ?? ""].flatMap((value) => [...value.matchAll(/\[\[page:([^|\]]+)\|[^\]]+\]\]/g)].map((match) => match[1]));
       for (const target of linkTargets) if (!rows.some((candidate) => candidate.id === target)) throw new Error(`${row.id}: リンク先が見つかりません: ${target}`);
       if ((row.supplementalNote?.length ?? 0) > 500) throw new Error(`${row.id}: 補足は500文字までです`);
     });
