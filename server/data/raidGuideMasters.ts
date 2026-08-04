@@ -24,6 +24,7 @@ export type RaidGuideMasterDefinition = {
   revision: number;
   isActive: boolean;
   references: { id: string; label: string; url: string }[];
+  rowRedirects?: Record<string, string>;
   sections: RaidGuideMasterSection[];
 };
 
@@ -337,6 +338,10 @@ export function validateRaidGuideMasterDefinitions(definitions = raidGuideMaster
   for (const guide of definitions) {
     if (guide.sections.length > 20) throw new Error(`${guide.id}: 区間は20件までです`);
     const rows = guide.sections.flatMap((section) => section.rows);
+    for (const [sourceId, targetId] of Object.entries(guide.rowRedirects ?? {})) {
+      if (rows.some((row) => row.id === sourceId)) throw new Error(`${guide.id}: 移行元の攻略行が有効なままです: ${sourceId}`);
+      if (!rows.some((row) => row.id === targetId)) throw new Error(`${guide.id}: 移行先の攻略行が見つかりません: ${targetId}`);
+    }
     if (rows.length > 100) throw new Error(`${guide.id}: 攻略行は100件までです`);
     if (guide.references.length > 5) throw new Error(`${guide.id}: 参考URLは5件までです`);
     for (const id of [guide.id, ...guide.sections.map((section) => section.id), ...rows.map((row) => row.id), ...guide.references.map((reference) => reference.id)]) {

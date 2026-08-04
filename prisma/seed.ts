@@ -93,8 +93,18 @@ async function seedRaidGuides() {
     // current orders out of the target range first to avoid unique collisions.
     await prisma.raidGuideSection.updateMany({
       where: { guideId: guide.id, sortOrder: { lt: 1000 } },
-      data: { sortOrder: { increment: 1000 } }
+      data: { sortOrder: { increment: 1000 }, isActive: false }
     });
+    await prisma.raidGuideRow.updateMany({
+      where: { guideId: guide.id },
+      data: { isActive: false }
+    });
+    for (const [sourceId, targetId] of Object.entries(guide.rowRedirects ?? {})) {
+      await prisma.raidGuideStickyNote.updateMany({
+        where: { strategy: { guideId: guide.id }, guideRowId: sourceId },
+        data: { guideRowId: targetId }
+      });
+    }
 
     for (const [sectionIndex, section] of guide.sections.entries()) {
       await prisma.raidGuideSection.upsert({

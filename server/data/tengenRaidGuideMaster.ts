@@ -5,7 +5,7 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
   questMasterId: "quest-the-world-of-six-dragons",
   title: "6人攻略・共通行動",
   overview: "天元たる六色の理の6人攻略で共通して確認する形態別予兆、穹竜の試練、HP15%以降の連続予兆。属性・編成固有の動きは対策メモと付箋で補う。",
-  revision: 1,
+  revision: 2,
   isActive: true,
   references: [
     {
@@ -19,6 +19,11 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
       url: "https://kamigame.jp/グラブル/クエスト/マルチバトル/天元たる六色の理.html"
     }
   ],
+  rowRedirects: {
+    "tengen-row-fire-wind-hp": "tengen-row-hp-trigger",
+    "tengen-row-water-earth-hp": "tengen-row-hp-trigger",
+    "tengen-row-light-dark-hp": "tengen-row-hp-trigger"
+  },
   sections: [
     {
       id: "tengen-section-important",
@@ -49,8 +54,8 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           id: "tengen-page-common",
           pageType: "heading",
           timingCondition: "HP100%～40%共通",
-          enemyAction: "・HP100%／80%／60%：火風・水土・光闇がランダムに登場\n・対応する2属性でダメージ軽減を解除\n・HP90%／70%／50%：200万ダメージ予兆\n・CT：メートス・ルジェット\n\n[[page:tengen-page-fire-wind|火・風形態]]\n[[page:tengen-page-water-earth|水・土形態]]\n[[page:tengen-page-light-dark|光・闇形態]]",
-          requiredResponse: "・登場形態を確認\n・対応属性の軽減解除後に弱体効果を入れる\n・竜気Lvを抑えながら進行",
+          enemyAction: "[[page:tengen-row-form-change|HP100%／80%／60%：形態移行]]\n[[page:tengen-row-hp-trigger|HP90%／70%／50%：共通HP予兆]]\n[[page:tengen-row-ct-methos|CT：メートス・ルジェット]]\n\n[[page:tengen-page-fire-wind|火・風形態]]\n[[page:tengen-page-water-earth|水・土形態]]\n[[page:tengen-page-light-dark|光・闇形態]]",
+          requiredResponse: "・現在の形態または発生条件を選択",
           dangerLevel: "caution"
         },
         {
@@ -64,7 +69,7 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
         {
           id: "tengen-row-hp-trigger",
           timingCondition: "HP90%／70%／50%",
-          enemyAction: "形態別合体技\n・対応する2属性の攻撃：各2回\n・ダメージ：各10倍\n・弱体：対応する2属性の脆性\n・敵：対応する竜気Lvが各2上昇",
+          enemyAction: "形態別合体技\n・火／風：朱の灼爪・翠の飄嘴\n・水／土：碧の渦核・金の巌擲\n・光／闇：白の煌閃・黒の呪禍\n\n・ダメージ：対応する2属性で各2回（各10倍）\n・弱体：対応する2属性の脆性\n・敵：対応する竜気Lvが各2上昇",
           requiredResponse: "・HP90%：200万ダメージ 9回\n・HP70%：200万ダメージ 12回\n・HP50%：200万ダメージ 15回",
           supplementalNote: "2026年2月の緩和後は、発生しなかった該当特殊技が2個以下の場合に付与されていた強化効果と、形態移行時の対応弱体効果が撤廃されている。",
           dangerLevel: "danger"
@@ -86,8 +91,8 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           id: "tengen-page-fire-wind",
           pageType: "heading",
           timingCondition: "火・風形態",
-          enemyAction: "・奥義ダメージ累計5000万：インテンシス・フレイム\n・アビリティダメージ累計5000万：エクザスティブ・コラプス\n・HP予兆：朱の灼爪・翠の飄嘴",
-          requiredResponse: "・36hit\n・奥義5回\n・HPに応じた200万ダメージ回数",
+          enemyAction: "[[page:tengen-row-fire-wind-ougi-trigger|奥義ダメージ累計5000万：インテンシス・フレイム]]\n[[page:tengen-row-fire-wind-ability-trigger|アビリティダメージ累計5000万：エクザスティブ・コラプス]]\n[[page:tengen-row-hp-trigger|HP90%／70%／50%：共通HP予兆]]\n[[page:tengen-row-ct-methos|CT：メートス・ルジェット]]",
+          requiredResponse: "・確認する予兆を選択",
           dangerLevel: "caution"
         },
         {
@@ -103,13 +108,6 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           enemyAction: "エクザスティブ・コラプス\n・ダメージ：ランダム対象へ風属性3倍×12回\n・弱体：弱体耐性DOWN（累積／回復不可）\n・敵：イーウィヤの竜気Lv1上昇",
           requiredResponse: "・奥義5回",
           dangerLevel: "caution"
-        },
-        {
-          id: "tengen-row-fire-wind-hp",
-          timingCondition: "[[page:tengen-row-hp-trigger|HP90%／70%／50%]]",
-          enemyAction: "朱の灼爪・翠の飄嘴\n・ダメージ：全体火属性2回、風属性2回\n・各10倍\n・弱体：火脆性、風脆性\n・敵：ウィルナスとイーウィヤの竜気Lv各2上昇",
-          requiredResponse: "・HP90%：200万ダメージ 9回\n・HP70%：200万ダメージ 12回\n・HP50%：200万ダメージ 15回",
-          dangerLevel: "danger"
         }
       ]
     },
@@ -121,8 +119,8 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           id: "tengen-page-water-earth",
           pageType: "heading",
           timingCondition: "水・土形態",
-          enemyAction: "・奥義ダメージ累計5000万：フェロシアス・アトラクター\n・アビリティダメージ累計5000万：天地激震\n・HP予兆：碧の渦核・金の巌擲",
-          requiredResponse: "・TA4回\n・FC発動\n・HPに応じた200万ダメージ回数",
+          enemyAction: "[[page:tengen-row-water-earth-ougi-trigger|奥義ダメージ累計5000万：フェロシアス・アトラクター]]\n[[page:tengen-row-water-earth-ability-trigger|アビリティダメージ累計5000万：天地激震]]\n[[page:tengen-row-hp-trigger|HP90%／70%／50%：共通HP予兆]]\n[[page:tengen-row-ct-methos|CT：メートス・ルジェット]]",
+          requiredResponse: "・確認する予兆を選択",
           dangerLevel: "caution"
         },
         {
@@ -138,13 +136,6 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           enemyAction: "天地激震\n・ダメージ：全体土属性15倍\n・弱体：防御力DOWN（累積／回復不可）\n・敵：ガレヲンの竜気Lv1上昇",
           requiredResponse: "・FC発動",
           dangerLevel: "caution"
-        },
-        {
-          id: "tengen-row-water-earth-hp",
-          timingCondition: "[[page:tengen-row-hp-trigger|HP90%／70%／50%]]",
-          enemyAction: "碧の渦核・金の巌擲\n・ダメージ：全体水属性2回、土属性2回\n・各10倍\n・弱体：水脆性、土脆性\n・敵：ワムデュスとガレヲンの竜気Lv各2上昇",
-          requiredResponse: "・HP90%：200万ダメージ 9回\n・HP70%：200万ダメージ 12回\n・HP50%：200万ダメージ 15回",
-          dangerLevel: "danger"
         }
       ]
     },
@@ -156,8 +147,8 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           id: "tengen-page-light-dark",
           pageType: "heading",
           timingCondition: "光・闇形態",
-          enemyAction: "・奥義ダメージ累計5000万：万雷散華\n・アビリティダメージ累計5000万：ネクロシスストーム\n・HP予兆：白の煌閃・黒の呪禍",
-          requiredResponse: "・アビリティ5回\n・弱体効果10回\n・HPに応じた200万ダメージ回数",
+          enemyAction: "[[page:tengen-row-light-dark-ougi-trigger|奥義ダメージ累計5000万：万雷散華]]\n[[page:tengen-row-light-dark-ability-trigger|アビリティダメージ累計5000万：ネクロシスストーム]]\n[[page:tengen-row-hp-trigger|HP90%／70%／50%：共通HP予兆]]\n[[page:tengen-row-ct-methos|CT：メートス・ルジェット]]",
+          requiredResponse: "・確認する予兆を選択",
           dangerLevel: "caution"
         },
         {
@@ -173,13 +164,6 @@ export const tengenRaidGuideMaster: RaidGuideMasterDefinition = {
           enemyAction: "ネクロシスストーム\n・ダメージ：全体闇属性15倍\n・弱体：回復力DOWN（累積／回復不可）\n・敵：フェディエルの竜気Lv1上昇",
           requiredResponse: "・弱体効果10回",
           dangerLevel: "caution"
-        },
-        {
-          id: "tengen-row-light-dark-hp",
-          timingCondition: "[[page:tengen-row-hp-trigger|HP90%／70%／50%]]",
-          enemyAction: "白の煌閃・黒の呪禍\n・ダメージ：全体光属性2回、闇属性2回\n・各10倍\n・弱体：光脆性、闇脆性\n・敵：ル・オーとフェディエルの竜気Lv各2上昇",
-          requiredResponse: "・HP90%：200万ダメージ 9回\n・HP70%：200万ダメージ 12回\n・HP50%：200万ダメージ 15回",
-          dangerLevel: "danger"
         }
       ]
     },
