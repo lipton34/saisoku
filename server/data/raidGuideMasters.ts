@@ -33,7 +33,7 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
     questMasterId: "quest-dark-rapture-zero",
     title: "6人攻略・共通行動",
     overview: "ルシファー・ゼロの6人攻略で共通して確認する予兆と解除条件。属性・編成固有の動きは対策メモと付箋で補う。",
-    revision: 4,
+    revision: 5,
     isActive: true,
     references: [
       {
@@ -136,6 +136,7 @@ export const raidGuideMasterDefinitions: RaidGuideMasterDefinition[] = [
             timingCondition: "HP80%",
             enemyAction: "オービタル・レゾナンス\n・神器：永遠拒絶または絶対否定\n・解除不可",
             requiredResponse: "・解除条件なし\n・神器の種類を確認",
+            supplementalNote: "HP80%移行時の特殊発生\n・HP95%以降の予兆を複数解除できず、カウント0付近で他参戦者がHP80%を通過した場合に発生報告あり",
             dangerLevel: "danger"
           },
           {
