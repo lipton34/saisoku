@@ -2,17 +2,14 @@ export const SPARK_SAVINGS_LIMITS = {
   crystalCount: 999_999_999,
   singleTicketCount: 999_999,
   tenPullTicketCount: 99_999,
-  targetName: 100,
-  memo: 2_000
+  historyTitle: 100,
+  historyMemo: 500
 } as const;
 
 export type SparkSavingsInput = {
   crystalCount: number;
   singleTicketCount: number;
   tenPullTicketCount: number;
-  targetName: string | null;
-  plannedAt: Date | null;
-  memo: string | null;
 };
 
 type ParseResult =
@@ -32,7 +29,7 @@ function parseCount(value: unknown, label: string, maximum: number): number | st
   return parsed;
 }
 
-function parseOptionalText(value: unknown, label: string, maximum: number): string | null {
+export function parseOptionalText(value: unknown, label: string, maximum: number): string | null {
   if (value === null || value === undefined || value === "") {
     return null;
   }
@@ -49,20 +46,6 @@ function parseOptionalText(value: unknown, label: string, maximum: number): stri
   return normalized;
 }
 
-function parsePlannedAt(value: unknown): Date | null {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    throw new Error("使用予定日はYYYY-MM-DD形式の有効な日付で入力してください");
-  }
-  const date = new Date(`${value}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
-    throw new Error("使用予定日は有効な日付で入力してください");
-  }
-  return date;
-}
-
 export function parseSparkSavingsInput(body: unknown): ParseResult {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return { ok: false, message: "入力内容を確認してください" };
@@ -76,21 +59,7 @@ export function parseSparkSavingsInput(body: unknown): ParseResult {
   const tenPullTicketCount = parseCount(input.tenPullTicketCount, "10連チケット", SPARK_SAVINGS_LIMITS.tenPullTicketCount);
   if (typeof tenPullTicketCount === "string") return { ok: false, message: tenPullTicketCount };
 
-  try {
-    return {
-      ok: true,
-      value: {
-        crystalCount,
-        singleTicketCount,
-        tenPullTicketCount,
-        targetName: parseOptionalText(input.targetName, "目的", SPARK_SAVINGS_LIMITS.targetName),
-        plannedAt: parsePlannedAt(input.plannedAt),
-        memo: parseOptionalText(input.memo, "メモ", SPARK_SAVINGS_LIMITS.memo)
-      }
-    };
-  } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "入力内容を確認してください" };
-  }
+  return { ok: true, value: { crystalCount, singleTicketCount, tenPullTicketCount } };
 }
 
 export function sparkSavingsOwnerWhere(ownerId: string) {
@@ -100,10 +69,7 @@ export function sparkSavingsOwnerWhere(ownerId: string) {
 export const sparkSavingsResetData = {
   crystalCount: 0,
   singleTicketCount: 0,
-  tenPullTicketCount: 0,
-  targetName: null,
-  plannedAt: null,
-  memo: null
+  tenPullTicketCount: 0
 } as const;
 
 export function serializeSparkSavings(savings: {
@@ -111,9 +77,8 @@ export function serializeSparkSavings(savings: {
   crystalCount: number;
   singleTicketCount: number;
   tenPullTicketCount: number;
-  targetName: string | null;
-  plannedAt: Date | null;
-  memo: string | null;
+  historyStartedAt: Date | null;
+  historySummaryStartMonth: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -122,9 +87,8 @@ export function serializeSparkSavings(savings: {
     crystalCount: savings.crystalCount,
     singleTicketCount: savings.singleTicketCount,
     tenPullTicketCount: savings.tenPullTicketCount,
-    targetName: savings.targetName,
-    plannedAt: savings.plannedAt?.toISOString().slice(0, 10) ?? null,
-    memo: savings.memo,
+    historyStartedAt: savings.historyStartedAt?.toISOString() ?? null,
+    historySummaryStartMonth: savings.historySummaryStartMonth?.toISOString().slice(0, 7) ?? null,
     createdAt: savings.createdAt.toISOString(),
     updatedAt: savings.updatedAt.toISOString()
   };

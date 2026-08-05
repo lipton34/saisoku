@@ -13,7 +13,7 @@ Saisokuは、グランブルーファンタジーの固定メンバー5人によ
 - 所有者だけが利用できる編成下書き
 - 古戦場の目標、討伐速度、計算結果
 - 団内共通の高難度攻略メモと、利用者ごとの付箋付き対策メモ
-- 本人だけが利用できる宝晶石・ガチャチケットの天井貯金
+- 本人専用の残高・狙い目・獲得履歴と、団内共有の獲得目安を備えた天井貯金
 - 保管庫内のイベント予定と公式NEWS
 - GBFキャラ、武器、召喚石、ジョブ、素材、クエストの内部マスタ
 
@@ -107,7 +107,7 @@ npm run migration:remove-legacy-build-images -- --confirm-delete-legacy-build-im
 
 `20260729090000_goal_subtask_rebuild`は、旧サブタスク、必要武器、討伐目標の既存データを削除し、サブタスクの3種類管理へ置き換える破壊的migrationです。先行migrationの適用状況を確認し、同じディレクトリの`preflight.sql`で対象件数を確認してから適用してください。
 
-`20260805090000_add_spark_savings`は、本人専用の天井貯金テーブル、所有者一意制約、入力範囲のCHECK制約を追加する非破壊migrationです。2026-08-05に本番DBへ適用済みです。
+`20260805090000_add_spark_savings`は、本人専用の天井貯金テーブル、所有者一意制約、入力範囲のCHECK制約を追加する非破壊migrationです。2026-08-05に本番DBへ適用済みです。`20260805120000_expand_spark_savings`は狙い目、履歴、共有の排出時期・獲得実績・開催予定・監査ログを追加し、旧任意情報3列を削除します。適用前に同ディレクトリの`preflight.sql`で削除対象を確認してください。この拡張migrationはまだ本番へ適用していません。
 
 ## 開発資料
 
@@ -120,6 +120,6 @@ npm run migration:remove-legacy-build-images -- --confirm-delete-legacy-build-im
 - [高難度攻略メモ](docs/29_high_difficulty_raid_guide_feature.md)
 - [高難度攻略メモ 実装・マスター拡張ガイド](docs/30_high_difficulty_raid_guide_implementation_guide.md)
 - [天井貯金](docs/31_spark_savings_feature.md)
-- [天井貯金拡張（確定仕様・実装待ち）](docs/32_spark_savings_expansion_feature.md)
+- [天井貯金拡張](docs/32_spark_savings_expansion_feature.md)
 
 公開URLは`https://saisoku.onrender.com`です。Renderでの現在のデプロイ状態は反映作業時に確認してください。

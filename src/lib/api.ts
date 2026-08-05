@@ -360,9 +360,8 @@ export type SparkSavings = {
   crystalCount: number;
   singleTicketCount: number;
   tenPullTicketCount: number;
-  targetName: string | null;
-  plannedAt: string | null;
-  memo: string | null;
+  historyStartedAt: string | null;
+  historySummaryStartMonth: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -371,10 +370,14 @@ export type SparkSavingsInput = {
   crystalCount: string;
   singleTicketCount: string;
   tenPullTicketCount: string;
-  targetName: string | null;
-  plannedAt: string | null;
-  memo: string | null;
 };
+
+export type SparkAvailabilityPeriod = { id: string; kind: "annual" | "permanent" | "irregular"; displayLabel: string; startMonth: number | null; startPart: string | null; endMonth: number | null; endPart: string | null; isActive: boolean; updatedAt: string };
+export type SparkTarget = { id: string; itemType: "character" | "summon" | "weapon"; name: string; masterItemId: string | null; desiredCount: number; ownedCount: number; availabilityPeriodId: string | null; availabilityPeriod: SparkAvailabilityPeriod | null; note: string | null; sortOrder: number; goalLinks: { goal: { id: string; title: string; visibility: string } }[]; buildLinks: { buildPost: { id: string; title: string } }[]; updatedAt: string };
+export type SparkTargetInput = { itemType: string; name: string; masterItemId: string | null; desiredCount: number; ownedCount: number; availabilityPeriodId: string | null; note: string | null; sortOrder: number; goalIds: string[]; buildPostIds: string[] };
+export type SparkHistoryEntry = { id: string; entryType: "start" | "earn" | "spend" | "adjustment"; crystalDelta: number; singleTicketDelta: number; tenPullTicketDelta: number; crystalBalance: number; singleTicketBalance: number; tenPullTicketBalance: number; title: string; memo: string | null; createdAt: string };
+export type SparkRewardEventType = { id: string; name: string; aggregationKind: "scheduled" | "monthlyBaseline"; isActive: boolean; sortOrder: number; updatedAt: string };
+export type SparkRewardMonthSummary = { year: number; month: number; min: number | null; max: number | null; records: { id: string; name: string; eventTypeName: string; min: number | null; max: number | null }[]; schedules: { id: string; name: string; eventTypeName: string; startedOn: string; endedOn: string | null }[] };
 
 export type SourceArticleType =
   | "monthly_plan"
@@ -879,6 +882,35 @@ export const api = {
     request<{ sparkSavings: SparkSavings | null; message: string }>("/api/spark-savings/reset", {
       method: "POST"
     }),
+  activateSparkHistory: () => request<{ sparkSavings: SparkSavings; message: string }>("/api/spark-savings/history/activate", { method: "POST" }),
+  sparkHistory: (cursor?: string) => request<{ entries: SparkHistoryEntry[]; nextCursor: string | null }>(`/api/spark-savings/history${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
+  sparkHistorySummary: () => request<{ months: { month: string; earnedEquivalent: number; spentEquivalent: number; adjustmentEquivalent: number; entryCount: number }[] }>("/api/spark-savings/history/summary"),
+  addSparkHistory: (value: SparkSavingsInput & { entryType: string; title: string; memo: string | null }) => request<{ sparkSavings: SparkSavings; entry: SparkHistoryEntry; message: string }>("/api/spark-savings/history/entries", { method: "POST", json: value }),
+  updateSparkHistoryStart: (month: string) => request<{ sparkSavings: SparkSavings; message: string }>("/api/spark-savings/history/summary-start", { method: "PATCH", json: { month } }),
+  deleteSparkHistory: () => request<{ sparkSavings: SparkSavings; message: string }>("/api/spark-savings/history", { method: "DELETE" }),
+  sparkTargets: (showCompleted = false) => request<{ targets: SparkTarget[] }>(`/api/spark-targets?showCompleted=${showCompleted}`),
+  sparkTargetOptions: () => request<{ periods: SparkAvailabilityPeriod[]; goals: { id: string; title: string; visibility: string }[]; builds: { id: string; title: string }[] }>("/api/spark-targets/options"),
+  createSparkTarget: (value: SparkTargetInput) => request<{ target: SparkTarget; message: string }>("/api/spark-targets", { method: "POST", json: value }),
+  updateSparkTarget: (id: string, value: SparkTargetInput) => request<{ target: SparkTarget; message: string }>(`/api/spark-targets/${id}`, { method: "PUT", json: value }),
+  deleteSparkTarget: (id: string) => request<{ message: string }>(`/api/spark-targets/${id}`, { method: "DELETE" }),
+  sparkRewardSummary: () => request<{ months: SparkRewardMonthSummary[] }>("/api/spark-rewards/summary"),
+  sparkAvailabilityPeriods: () => request<{ periods: SparkAvailabilityPeriod[] }>("/api/spark-rewards/availability-periods"),
+  createSparkAvailabilityPeriod: (value: Record<string, unknown>) => request<{ period: SparkAvailabilityPeriod; message: string }>("/api/spark-rewards/availability-periods", { method: "POST", json: value }),
+  updateSparkAvailabilityPeriod: (id: string, value: Record<string, unknown>) => request<{ period: SparkAvailabilityPeriod; message: string }>(`/api/spark-rewards/availability-periods/${id}`, { method: "PUT", json: value }),
+  deleteSparkAvailabilityPeriod: (id: string) => request<{ message: string }>(`/api/spark-rewards/availability-periods/${id}`, { method: "DELETE" }),
+  sparkRewardEventTypes: () => request<{ eventTypes: SparkRewardEventType[] }>("/api/spark-rewards/event-types"),
+  createSparkRewardEventType: (value: Record<string, unknown>) => request<{ eventType: SparkRewardEventType; message: string }>("/api/spark-rewards/event-types", { method: "POST", json: value }),
+  updateSparkRewardEventType: (id: string, value: Record<string, unknown>) => request<{ eventType: SparkRewardEventType; message: string }>(`/api/spark-rewards/event-types/${id}`, { method: "PUT", json: value }),
+  deleteSparkRewardEventType: (id: string) => request<{ message: string }>(`/api/spark-rewards/event-types/${id}`, { method: "DELETE" }),
+  sparkRewardRecords: () => request<{ records: Array<Record<string, unknown> & { id: string; occurrenceName: string; year: number; month: number; updatedAt: string; eventType: SparkRewardEventType }> }>("/api/spark-rewards/records"),
+  createSparkRewardRecord: (value: Record<string, unknown>) => request<{ message: string }>("/api/spark-rewards/records", { method: "POST", json: value }),
+  updateSparkRewardRecord: (id: string, value: Record<string, unknown>) => request<{ message: string }>(`/api/spark-rewards/records/${id}`, { method: "PUT", json: value }),
+  deleteSparkRewardRecord: (id: string) => request<{ message: string }>(`/api/spark-rewards/records/${id}`, { method: "DELETE" }),
+  sparkRewardSchedules: () => request<{ schedules: Array<Record<string, unknown> & { id: string; name: string; startedOn: string; endedOn: string | null; updatedAt: string; eventType: SparkRewardEventType }> }>("/api/spark-rewards/schedules"),
+  createSparkRewardSchedule: (value: Record<string, unknown>) => request<{ message: string }>("/api/spark-rewards/schedules", { method: "POST", json: value }),
+  updateSparkRewardSchedule: (id: string, value: Record<string, unknown>) => request<{ message: string }>(`/api/spark-rewards/schedules/${id}`, { method: "PUT", json: value }),
+  deleteSparkRewardSchedule: (id: string) => request<{ message: string }>(`/api/spark-rewards/schedules/${id}`, { method: "DELETE" }),
+  updateSparkRewardMonthStatus: (year: number, month: number, isComplete: boolean) => request<{ message: string }>(`/api/spark-rewards/month-statuses/${year}/${month}`, { method: "PUT", json: { isComplete } }),
   newsItems: (params?: OfficialNewsListParams) =>
     request<{ items: ExtractedNewsItem[]; total: number; limit: number; offset: number }>(
       `/api/news-items${toQuery(params)}`

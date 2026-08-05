@@ -39,17 +39,13 @@ test("API入力を厳密に検証して正規化する", () => {
   const parsed = parseSparkSavingsInput({
     crystalCount: "000300",
     singleTicketCount: "2",
-    tenPullTicketCount: "3",
-    targetName: "  周年  ",
-    plannedAt: "2028-02-29",
-    memo: "   "
+    tenPullTicketCount: "3"
   });
   assert.equal(parsed.ok, true);
   if (parsed.ok) {
     assert.equal(parsed.value.crystalCount, 300);
-    assert.equal(parsed.value.targetName, "周年");
-    assert.equal(parsed.value.plannedAt?.toISOString().slice(0, 10), "2028-02-29");
-    assert.equal(parsed.value.memo, null);
+    assert.equal(parsed.value.singleTicketCount, 2);
+    assert.equal(parsed.value.tenPullTicketCount, 3);
   }
 
   for (const invalid of ["", "-1", "1.5", "1e3", "+1", "１"]) {
@@ -58,7 +54,6 @@ test("API入力を厳密に検証して正規化する", () => {
   assert.equal(parseSparkSavingsInput({ crystalCount: "1000000000", singleTicketCount: "0", tenPullTicketCount: "0" }).ok, false);
   assert.equal(parseSparkSavingsInput({ crystalCount: "0", singleTicketCount: "1000000", tenPullTicketCount: "0" }).ok, false);
   assert.equal(parseSparkSavingsInput({ crystalCount: "0", singleTicketCount: "0", tenPullTicketCount: "100000" }).ok, false);
-  assert.equal(parseSparkSavingsInput({ crystalCount: "0", singleTicketCount: "0", tenPullTicketCount: "0", plannedAt: "2027-02-29" }).ok, false);
 });
 
 test("所有者条件とリセット値は他ユーザーIDを受け取らない", () => {
@@ -66,9 +61,6 @@ test("所有者条件とリセット値は他ユーザーIDを受け取らない
   assert.deepEqual(sparkSavingsResetData, {
     crystalCount: 0,
     singleTicketCount: 0,
-    tenPullTicketCount: 0,
-    targetName: null,
-    plannedAt: null,
-    memo: null
+    tenPullTicketCount: 0
   });
 });

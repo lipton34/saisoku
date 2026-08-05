@@ -1,271 +1,62 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Gem, Pencil, RotateCcw, Save, Ticket } from "lucide-react";
-import { api, type SparkSavings, type SparkSavingsInput } from "../lib/api";
+import { CheckCircle2, Gem, Pencil, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { api, type SparkHistoryEntry, type SparkSavings, type SparkSavingsInput, type SparkTarget, type SparkTargetInput, type SparkRewardMonthSummary } from "../lib/api";
 import { calculateSparkSavings } from "../lib/sparkSavings";
 
-type Draft = {
-  crystalCount: string;
-  singleTicketCount: string;
-  tenPullTicketCount: string;
-  targetName: string;
-  plannedAt: string;
-  memo: string;
-};
-
-const emptyDraft: Draft = {
-  crystalCount: "0",
-  singleTicketCount: "0",
-  tenPullTicketCount: "0",
-  targetName: "",
-  plannedAt: "",
-  memo: ""
-};
-
-const limits = {
-  crystalCount: 999_999_999,
-  singleTicketCount: 999_999,
-  tenPullTicketCount: 99_999
-} as const;
-
-function draftFromSavings(savings: SparkSavings): Draft {
-  return {
-    crystalCount: String(savings.crystalCount),
-    singleTicketCount: String(savings.singleTicketCount),
-    tenPullTicketCount: String(savings.tenPullTicketCount),
-    targetName: savings.targetName ?? "",
-    plannedAt: savings.plannedAt ?? "",
-    memo: savings.memo ?? ""
-  };
-}
-
-function countError(value: string, maximum: number) {
-  if (!/^\d+$/.test(value)) return "0以上の整数で入力してください";
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed > maximum) {
-    return `${maximum.toLocaleString("ja-JP")}以下で入力してください`;
-  }
-  return "";
-}
-
-function characterCount(value: string) {
-  return Array.from(value.trim()).length;
-}
-
-function formatNumber(value: number) {
-  return value.toLocaleString("ja-JP");
-}
+type Tab = "savings" | "targets" | "rewards" | "history";
+const tabs: { id: Tab; label: string }[] = [{ id: "savings", label: "貯金" }, { id: "targets", label: "狙い目" }, { id: "rewards", label: "獲得目安" }, { id: "history", label: "履歴" }];
+const emptyBalance = { crystalCount: "0", singleTicketCount: "0", tenPullTicketCount: "0" };
+const fmt = (value: number) => value.toLocaleString("ja-JP");
+const balance = (savings: SparkSavings | null): SparkSavingsInput => savings ? { crystalCount: String(savings.crystalCount), singleTicketCount: String(savings.singleTicketCount), tenPullTicketCount: String(savings.tenPullTicketCount) } : emptyBalance;
 
 export function SparkSavingsPage() {
-  const [savings, setSavings] = useState<SparkSavings | null>(null);
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-
-  const savedDraft = useMemo(() => savings ? draftFromSavings(savings) : emptyDraft, [savings]);
-  const isDirty = isEditing && JSON.stringify(draft) !== JSON.stringify(savedDraft);
-
-  const errors = useMemo(() => ({
-    crystalCount: countError(draft.crystalCount, limits.crystalCount),
-    singleTicketCount: countError(draft.singleTicketCount, limits.singleTicketCount),
-    tenPullTicketCount: countError(draft.tenPullTicketCount, limits.tenPullTicketCount),
-    targetName: characterCount(draft.targetName) > 100 ? "100文字以内で入力してください" : "",
-    memo: characterCount(draft.memo) > 2_000 ? "2,000文字以内で入力してください" : ""
-  }), [draft]);
-  const isValid = Object.values(errors).every((value) => !value);
-  const calculation = useMemo(() => {
-    if (!isValid) return null;
-    return calculateSparkSavings({
-      crystalCount: Number(draft.crystalCount),
-      singleTicketCount: Number(draft.singleTicketCount),
-      tenPullTicketCount: Number(draft.tenPullTicketCount)
-    });
-  }, [draft, isValid]);
-
-  async function loadSavings() {
-    setIsLoading(true);
-    setError("");
-    try {
-      const result = await api.sparkSavings();
-      setSavings(result.sparkSavings);
-      setDraft(result.sparkSavings ? draftFromSavings(result.sparkSavings) : emptyDraft);
-      setIsEditing(false);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "天井貯金の取得に失敗しました");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadSavings();
-  }, []);
-
-  useEffect(() => {
-    function warnBeforeUnload(event: BeforeUnloadEvent) {
-      if (!isDirty) return;
-      event.preventDefault();
-      event.returnValue = "";
-    }
-    window.addEventListener("beforeunload", warnBeforeUnload);
-    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
-  }, [isDirty]);
-
-  useEffect(() => {
-    function confirmLinkNavigation(event: MouseEvent) {
-      if (!isDirty || event.defaultPrevented || event.button !== 0) return;
-      const target = event.target instanceof Element ? event.target.closest("a[href]") : null;
-      if (!target || window.confirm("入力内容が保存されていません。変更を破棄しますか？")) return;
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    document.addEventListener("click", confirmLinkNavigation, true);
-    return () => document.removeEventListener("click", confirmLinkNavigation, true);
-  }, [isDirty]);
-
-  function updateDraft(field: keyof Draft, value: string) {
-    setDraft((current) => ({ ...current, [field]: value }));
-    setError("");
-    setNotice("");
-  }
-
-  function cancelEditing() {
-    if (isDirty && !window.confirm("入力内容が保存されていません。変更を破棄しますか？")) return;
-    setDraft(savedDraft);
-    setIsEditing(false);
-    setError("");
-  }
-
-  async function save(event: FormEvent) {
-    event.preventDefault();
-    if (!isValid || isSaving) return;
-    setIsSaving(true);
-    setError("");
-    setNotice("");
-    const payload: SparkSavingsInput = {
-      crystalCount: draft.crystalCount,
-      singleTicketCount: draft.singleTicketCount,
-      tenPullTicketCount: draft.tenPullTicketCount,
-      targetName: draft.targetName,
-      plannedAt: draft.plannedAt || null,
-      memo: draft.memo
-    };
-    try {
-      const result = await api.saveSparkSavings(payload);
-      setSavings(result.sparkSavings);
-      setDraft(draftFromSavings(result.sparkSavings));
-      setIsEditing(false);
-      setNotice(result.message);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "天井貯金を保存できませんでした");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function reset() {
-    if (!window.confirm("天井貯金をリセットしますか？\n\n宝晶石、チケット、目的、使用予定日、メモが初期値に戻ります。この操作は元に戻せません。")) return;
-    setIsSaving(true);
-    setError("");
-    setNotice("");
-    try {
-      const result = await api.resetSparkSavings();
-      setSavings(result.sparkSavings);
-      setDraft(result.sparkSavings ? draftFromSavings(result.sparkSavings) : emptyDraft);
-      setIsEditing(false);
-      setNotice(result.message);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "天井貯金をリセットできませんでした");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  if (isLoading) {
-    return <div className="page-stack compact-page spark-savings-page"><section className="panel empty-state"><p>天井貯金を読み込んでいます…</p></section></div>;
-  }
-
-  if (error && !savings && !isEditing) {
-    return <div className="page-stack compact-page spark-savings-page"><section className="panel empty-state"><p className="form-error" role="alert">{error}</p><button className="secondary-button" onClick={() => void loadSavings()} type="button">再読み込み</button></section></div>;
-  }
-
-  if (!savings && !isEditing) {
-    return <div className="page-stack compact-page spark-savings-page">
-      <section className="page-heading"><div><p className="eyebrow">Spark Savings</p><h1>天井貯金</h1></div></section>
-      {notice ? <p className="form-notice" role="status">{notice}</p> : null}
-      <section className="panel empty-state spark-empty-state">
-        <Gem aria-hidden="true" size={32} />
-        <h2>天井貯金はまだ登録されていません</h2>
-        <p>宝晶石とガチャチケットから、現在引ける回数と天井までの不足分を確認できます。</p>
-        <button className="primary-button" onClick={() => setIsEditing(true)} type="button">天井貯金を登録</button>
-      </section>
-    </div>;
-  }
-
+  const [params, setParams] = useSearchParams();
+  const requested = params.get("tab"); const activeTab: Tab = tabs.some((tab) => tab.id === requested) ? requested as Tab : "savings";
+  const [savings, setSavings] = useState<SparkSavings | null>(null); const [loading, setLoading] = useState(true); const [message, setMessage] = useState("");
+  useEffect(() => { api.sparkSavings().then((result) => setSavings(result.sparkSavings)).catch((error) => setMessage(error instanceof Error ? error.message : "読み込みに失敗しました")).finally(() => setLoading(false)); }, []);
+  const calc = calculateSparkSavings({ crystalCount: savings?.crystalCount ?? 0, singleTicketCount: savings?.singleTicketCount ?? 0, tenPullTicketCount: savings?.tenPullTicketCount ?? 0 });
   return <div className="page-stack compact-page spark-savings-page">
-    <section className="page-heading"><div><p className="eyebrow">Spark Savings</p><h1>天井貯金</h1></div></section>
-
-    {(error || notice) ? <section aria-live="polite">{error ? <p className="form-error" role="alert">{error}</p> : null}{notice ? <p className="form-notice" role="status">{notice}</p> : null}</section> : null}
-
-    <section className={`panel spark-summary${calculation?.isTargetReached ? " is-reached" : ""}`}>
-      <div className="spark-current"><span>現在</span><strong>{calculation ? formatNumber(calculation.currentDrawCount) : "—"}<small>連分</small></strong></div>
-      <div className="spark-needed">
-        {calculation?.isTargetReached ? <p className="spark-reached"><CheckCircle2 aria-hidden="true" size={22} />天井分を確保済み{calculation.excessDrawCount > 0 ? `（${formatNumber(calculation.excessDrawCount)}連分超過）` : ""}</p> : null}
-        <span>追加で必要な宝晶石</span>
-        <strong>{calculation ? formatNumber(calculation.additionalCrystalCount) : "—"}<small>個</small></strong>
-        {calculation && !calculation.isTargetReached ? <small>（あと{formatNumber(calculation.remainingDrawCount)}連）</small> : null}
-      </div>
-    </section>
-
-    {isEditing ? <form className="panel spark-form" onSubmit={save}>
-      <div className="section-heading"><div><p className="eyebrow">Edit</p><h2>{savings ? "天井貯金を編集" : "天井貯金を登録"}</h2></div></div>
-      <div className="spark-count-form">
-        <label>宝晶石数
-          <input aria-describedby={errors.crystalCount ? "crystal-count-error" : undefined} inputMode="numeric" onChange={(event) => updateDraft("crystalCount", event.target.value)} type="text" value={draft.crystalCount} />
-          {errors.crystalCount ? <small className="field-error" id="crystal-count-error">{errors.crystalCount}</small> : null}
-        </label>
-        <label>単発チケット数
-          <input aria-describedby={errors.singleTicketCount ? "single-ticket-error" : undefined} inputMode="numeric" onChange={(event) => updateDraft("singleTicketCount", event.target.value)} type="text" value={draft.singleTicketCount} />
-          {errors.singleTicketCount ? <small className="field-error" id="single-ticket-error">{errors.singleTicketCount}</small> : null}
-        </label>
-        <label>10連チケット数
-          <input aria-describedby={errors.tenPullTicketCount ? "ten-ticket-error" : undefined} inputMode="numeric" onChange={(event) => updateDraft("tenPullTicketCount", event.target.value)} type="text" value={draft.tenPullTicketCount} />
-          {errors.tenPullTicketCount ? <small className="field-error" id="ten-ticket-error">{errors.tenPullTicketCount}</small> : null}
-        </label>
-      </div>
-      <label>目的（任意）
-        <input aria-describedby={errors.targetName ? "target-name-error" : undefined} maxLength={101} onChange={(event) => updateDraft("targetName", event.target.value)} value={draft.targetName} />
-        {errors.targetName ? <small className="field-error" id="target-name-error">{errors.targetName}</small> : null}
-      </label>
-      <label>使用予定日（任意）<input onChange={(event) => updateDraft("plannedAt", event.target.value)} type="date" value={draft.plannedAt} /></label>
-      <label>メモ（任意）
-        <textarea aria-describedby={errors.memo ? "spark-memo-error" : undefined} maxLength={2001} onChange={(event) => updateDraft("memo", event.target.value)} rows={5} value={draft.memo} />
-        {errors.memo ? <small className="field-error" id="spark-memo-error">{errors.memo}</small> : null}
-      </label>
-      <div className="button-row spark-form-actions">
-        <button className="primary-button" disabled={!isValid || isSaving} type="submit"><Save aria-hidden="true" size={18} />{isSaving ? "保存中…" : "保存"}</button>
-        <button className="secondary-button" disabled={isSaving} onClick={cancelEditing} type="button">キャンセル</button>
-      </div>
-    </form> : <>
-      <section className="panel">
-        <div className="section-heading"><div><p className="eyebrow">Breakdown</p><h2>内訳</h2></div><Ticket aria-hidden="true" size={22} /></div>
-        <dl className="spark-breakdown">
-          <div><dt>宝晶石</dt><dd>{formatNumber(savings!.crystalCount)}個 <small>／ {formatNumber(calculation!.crystalDrawCount)}連分</small></dd></div>
-          <div><dt>単発チケット</dt><dd>{formatNumber(savings!.singleTicketCount)}枚</dd></div>
-          <div><dt>10連チケット</dt><dd>{formatNumber(savings!.tenPullTicketCount)}枚 <small>／ {formatNumber(savings!.tenPullTicketCount * 10)}連分</small></dd></div>
-          <div><dt>チケット合計</dt><dd>{formatNumber(calculation!.ticketDrawCount)}連分</dd></div>
-        </dl>
-      </section>
-      <section className="panel spark-details">
-        <div className="section-heading"><div><p className="eyebrow">Plan</p><h2>任意情報</h2></div></div>
-        <dl><div><dt>目的</dt><dd>{savings!.targetName || "未設定"}</dd></div><div><dt>使用予定日</dt><dd>{savings!.plannedAt?.replace(/-/g, "/") || "未設定"}</dd></div>{savings!.memo ? <div><dt>メモ</dt><dd>{savings!.memo}</dd></div> : null}</dl>
-      </section>
-      <section className="spark-actions">
-        <button className="primary-button" disabled={isSaving} onClick={() => { setDraft(savedDraft); setIsEditing(true); setNotice(""); }} type="button"><Pencil aria-hidden="true" size={18} />編集</button>
-        <button className="secondary-button danger-button" disabled={isSaving} onClick={() => void reset()} type="button"><RotateCcw aria-hidden="true" size={18} />{isSaving ? "リセット中…" : "リセット"}</button>
-      </section>
-    </>}
+    <section className="page-heading"><div><p className="eyebrow">Spark Savings</p><h1>天井貯金</h1></div>{activeTab === "rewards" ? <Link className="secondary-button" to="/spark-savings/reference-data">共有データを管理</Link> : null}</section>
+    {message ? <p className="form-notice" role="status">{message}</p> : null}
+    <section className={`panel spark-summary${calc.isTargetReached ? " is-reached" : ""}`}><div className="spark-current"><span>現在</span><strong>{fmt(calc.currentDrawCount)}<small>連分</small></strong></div><div className="spark-needed">{calc.isTargetReached ? <p className="spark-reached"><CheckCircle2 size={22} />天井分を確保済み{calc.excessDrawCount ? `（${fmt(calc.excessDrawCount)}連分超過）` : ""}</p> : null}<span>追加で必要な宝晶石</span><strong>{fmt(calc.additionalCrystalCount)}<small>個</small></strong></div></section>
+    <nav aria-label="天井貯金メニュー" className="spark-tabs">{tabs.map((tab) => <button aria-current={tab.id === activeTab ? "page" : undefined} className={tab.id === activeTab ? "is-active" : ""} key={tab.id} onClick={() => setParams({ tab: tab.id })} type="button">{tab.label}</button>)}</nav>
+    {loading ? <section className="panel empty-state"><p>読み込んでいます…</p></section> : null}
+    {!loading && activeTab === "savings" ? <SavingsTab savings={savings} onChange={setSavings} notify={setMessage} /> : null}
+    {!loading && activeTab === "targets" ? <TargetsTab /> : null}
+    {!loading && activeTab === "rewards" ? <RewardsTab /> : null}
+    {!loading && activeTab === "history" ? <HistoryTab savings={savings} onChange={setSavings} notify={setMessage} /> : null}
   </div>;
+}
+
+function SavingsTab({ savings, onChange, notify }: { savings: SparkSavings | null; onChange: (value: SparkSavings | null) => void; notify: (value: string) => void }) {
+  const [editing, setEditing] = useState(!savings); const [draft, setDraft] = useState(balance(savings)); const [saving, setSaving] = useState(false);
+  async function save(event: FormEvent) { event.preventDefault(); setSaving(true); try { const result = await api.saveSparkSavings(draft); onChange(result.sparkSavings); setDraft(balance(result.sparkSavings)); setEditing(false); notify(result.message); } catch (e) { notify(e instanceof Error ? e.message : "保存できませんでした"); } finally { setSaving(false); } }
+  async function reset() { if (!window.confirm("宝晶石とチケットの残高を0にリセットしますか？")) return; setSaving(true); try { const result = await api.resetSparkSavings(); onChange(result.sparkSavings); setDraft(balance(result.sparkSavings)); setEditing(false); notify(result.message); } catch (e) { notify(e instanceof Error ? e.message : "リセットできませんでした"); } finally { setSaving(false); } }
+  if (editing) return <form className="panel spark-form" onSubmit={save}><div className="section-heading"><h2>残高を編集</h2></div><div className="spark-count-form"><BalanceFields value={draft} onChange={setDraft} /></div><div className="button-row"><button className="primary-button" disabled={saving} type="submit"><Save size={18} />保存</button>{savings ? <button className="secondary-button" onClick={() => { setDraft(balance(savings)); setEditing(false); }} type="button">キャンセル</button> : null}</div></form>;
+  const crystalDraws = Math.floor((savings?.crystalCount ?? 0) / 300);
+  return <><section className="panel"><div className="section-heading"><h2>内訳</h2></div><dl className="spark-breakdown"><div><dt>宝晶石</dt><dd>{fmt(savings?.crystalCount ?? 0)}個 <small>（{fmt(crystalDraws)}連分）</small></dd></div><div><dt>単発チケット</dt><dd>{fmt(savings?.singleTicketCount ?? 0)}枚</dd></div><div><dt>10連チケット</dt><dd>{fmt(savings?.tenPullTicketCount ?? 0)}枚</dd></div></dl></section><section className="spark-actions"><button className="primary-button" onClick={() => setEditing(true)} type="button"><Pencil size={18} />編集</button><button className="secondary-button danger-button" disabled={saving} onClick={() => void reset()} type="button"><RotateCcw size={18} />リセット</button></section></>;
+}
+
+function BalanceFields({ value, onChange }: { value: SparkSavingsInput; onChange: (value: SparkSavingsInput) => void }) { return <><label>宝晶石数<input inputMode="numeric" min="0" onChange={(e) => onChange({ ...value, crystalCount: e.target.value })} required type="number" value={value.crystalCount} /></label><label>単発チケット数<input inputMode="numeric" min="0" onChange={(e) => onChange({ ...value, singleTicketCount: e.target.value })} required type="number" value={value.singleTicketCount} /></label><label>10連チケット数<input inputMode="numeric" min="0" onChange={(e) => onChange({ ...value, tenPullTicketCount: e.target.value })} required type="number" value={value.tenPullTicketCount} /></label></>; }
+
+const blankTarget: SparkTargetInput = { itemType: "character", name: "", masterItemId: null, desiredCount: 1, ownedCount: 0, availabilityPeriodId: null, note: null, sortOrder: 0, goalIds: [], buildPostIds: [] };
+function TargetsTab() {
+  const [targets, setTargets] = useState<SparkTarget[]>([]); const [showCompleted, setShowCompleted] = useState(false); const [draft, setDraft] = useState<SparkTargetInput | null>(null); const [editingId, setEditingId] = useState<string | null>(null); const [options, setOptions] = useState<{ periods: { id: string; displayLabel: string }[]; goals: { id: string; title: string }[]; builds: { id: string; title: string }[] }>({ periods: [], goals: [], builds: [] }); const [message, setMessage] = useState("");
+  const load = () => Promise.all([api.sparkTargets(showCompleted), api.sparkTargetOptions()]).then(([a, b]) => { setTargets(a.targets); setOptions(b); }).catch((e) => setMessage(e instanceof Error ? e.message : "読み込めませんでした")); useEffect(() => { void load(); }, [showCompleted]);
+  function edit(target: SparkTarget) { setEditingId(target.id); setDraft({ itemType: target.itemType, name: target.name, masterItemId: target.masterItemId, desiredCount: target.desiredCount, ownedCount: target.ownedCount, availabilityPeriodId: target.availabilityPeriodId, note: target.note, sortOrder: target.sortOrder, goalIds: target.goalLinks.map((l) => l.goal.id), buildPostIds: target.buildLinks.map((l) => l.buildPost.id) }); }
+  async function save(e: FormEvent) { e.preventDefault(); if (!draft) return; try { const result = editingId ? await api.updateSparkTarget(editingId, draft) : await api.createSparkTarget(draft); setMessage(result.message); setDraft(null); setEditingId(null); await load(); } catch (error) { setMessage(error instanceof Error ? error.message : "保存できませんでした"); } }
+  async function remove(id: string) { if (!window.confirm("この狙い目を削除しますか？")) return; try { const result = await api.deleteSparkTarget(id); setMessage(result.message); await load(); } catch (e) { setMessage(e instanceof Error ? e.message : "削除できませんでした"); } }
+  return <section className="page-stack"><div className="spark-toolbar"><label><input checked={showCompleted} onChange={(e) => setShowCompleted(e.target.checked)} type="checkbox" /> 達成済みも表示</label><button className="primary-button" onClick={() => { setEditingId(null); setDraft(blankTarget); }} type="button"><Plus size={18} />登録</button></div>{message ? <p className="form-notice">{message}</p> : null}{draft ? <form className="panel spark-target-form" onSubmit={save}><h2>{editingId ? "狙い目を編集" : "狙い目を登録"}</h2><div className="form-grid"><label>種類<select value={draft.itemType} onChange={(e) => setDraft({ ...draft, itemType: e.target.value, masterItemId: null })}><option value="character">キャラ</option><option value="summon">召喚石</option><option value="weapon">武器</option></select></label><label>名前<input maxLength={100} required value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label><label>設定数<input min={1} max={999} type="number" value={draft.desiredCount} onChange={(e) => setDraft({ ...draft, desiredCount: Number(e.target.value) })} /></label><label>所持数<input min={0} max={999} type="number" value={draft.ownedCount} onChange={(e) => setDraft({ ...draft, ownedCount: Number(e.target.value) })} /></label><label>排出時期<select value={draft.availabilityPeriodId ?? ""} onChange={(e) => setDraft({ ...draft, availabilityPeriodId: e.target.value || null })}><option value="">未設定</option>{options.periods.map((p) => <option key={p.id} value={p.id}>{p.displayLabel}</option>)}</select></label><label>並び順<input min={0} type="number" value={draft.sortOrder} onChange={(e) => setDraft({ ...draft, sortOrder: Number(e.target.value) })} /></label></div><label>メモ<textarea maxLength={500} value={draft.note ?? ""} onChange={(e) => setDraft({ ...draft, note: e.target.value || null })} /></label><LinkChecks label="目標との連携" items={options.goals} selected={draft.goalIds} change={(goalIds) => setDraft({ ...draft, goalIds })} /><LinkChecks label="編成との連携" items={options.builds} selected={draft.buildPostIds} change={(buildPostIds) => setDraft({ ...draft, buildPostIds })} /><div className="button-row"><button className="primary-button" type="submit"><Save size={18} />保存</button><button className="secondary-button" onClick={() => setDraft(null)} type="button">キャンセル</button></div></form> : null}<div className="spark-target-list">{targets.map((target) => <article className={`panel spark-target-card${target.ownedCount >= target.desiredCount ? " is-complete" : ""}`} key={target.id}><div><span className="pill">{{ character: "キャラ", summon: "召喚石", weapon: "武器" }[target.itemType]}</span><h2>{target.name}</h2><p>{target.ownedCount} / {target.desiredCount}{target.availabilityPeriod ? ` ・ ${target.availabilityPeriod.displayLabel}` : ""}</p>{target.note ? <p>{target.note}</p> : null}{target.goalLinks.length ? <p>目標: {target.goalLinks.map((l) => l.goal.title).join("、")}</p> : null}{target.buildLinks.length ? <p>編成: {target.buildLinks.map((l) => l.buildPost.title).join("、")}</p> : null}</div><div className="button-row"><button className="secondary-button" onClick={() => edit(target)} type="button">編集</button><button aria-label={`${target.name}を削除`} className="icon-button danger-button" onClick={() => void remove(target.id)} title="削除" type="button"><Trash2 size={18} /></button></div></article>)}{!targets.length ? <div className="panel empty-state">表示する狙い目はありません。</div> : null}</div></section>;
+}
+function LinkChecks({ label, items, selected, change }: { label: string; items: { id: string; title: string }[]; selected: string[]; change: (ids: string[]) => void }) { return <fieldset className="spark-link-options"><legend>{label}</legend>{items.length ? items.map((item) => <label key={item.id}><input checked={selected.includes(item.id)} onChange={(e) => change(e.target.checked ? [...selected, item.id] : selected.filter((id) => id !== item.id))} type="checkbox" />{item.title}</label>) : <small>選択できる項目はありません</small>}</fieldset>; }
+
+function RewardsTab() { const [months, setMonths] = useState<SparkRewardMonthSummary[]>([]); const [error, setError] = useState(""); useEffect(() => { api.sparkRewardSummary().then((r) => setMonths(r.months)).catch((e) => setError(e instanceof Error ? e.message : "読み込めませんでした")); }, []); if (error) return <section className="panel empty-state"><p className="form-error">{error}</p></section>; return <div className="spark-reward-months">{months.map((month, index) => <section className={`panel${index ? " is-compact" : ""}`} key={`${month.year}-${month.month}`}><p className="eyebrow">{index ? "過去3年の範囲" : "当月の内訳"}</p><h2>{month.year}年{month.month}月</h2><strong className="spark-range">{month.min == null ? "集計データなし" : `${fmt(month.min)} ～ ${fmt(month.max ?? month.min)} 個相当`}</strong>{month.schedules.length ? <ul>{month.schedules.map((s) => <li key={s.id}>{s.name}（{s.startedOn.replace(/-/g, "/")}～{s.endedOn?.replace(/-/g, "/") ?? ""}）</li>)}</ul> : <p>確定した開催予定はありません。</p>}{index === 0 && month.records.length ? <dl className="spark-reward-records">{month.records.map((r) => <div key={r.id}><dt>{r.name}</dt><dd>{r.min == null ? "実績なし" : `${fmt(r.min)} ～ ${fmt(r.max ?? r.min)}個相当`}</dd></div>)}</dl> : null}</section>)}</div>; }
+
+function HistoryTab({ savings, onChange, notify }: { savings: SparkSavings | null; onChange: (s: SparkSavings) => void; notify: (m: string) => void }) {
+  const [entries, setEntries] = useState<SparkHistoryEntry[]>([]); const [months, setMonths] = useState<{ month: string; earnedEquivalent: number; spentEquivalent: number; adjustmentEquivalent: number; entryCount: number }[]>([]); const [cursor, setCursor] = useState<string | null>(null); const [draft, setDraft] = useState({ ...emptyBalance, entryType: "earn", title: "", memo: "" });
+  const load = (next?: string) => Promise.all([api.sparkHistory(next), api.sparkHistorySummary()]).then(([r, summary]) => { setEntries((old) => next ? [...old, ...r.entries] : r.entries); setCursor(r.nextCursor); setMonths(summary.months); }); useEffect(() => { if (savings?.historyStartedAt) void load(); }, [savings?.historyStartedAt]);
+  if (!savings?.historyStartedAt) return <section className="panel empty-state"><Gem size={32} /><h2>獲得履歴は任意です</h2><p>開始すると現在の残高を起点として、獲得・使用・調整を記録できます。</p><button className="primary-button" onClick={() => void api.activateSparkHistory().then((r) => { onChange(r.sparkSavings); notify(r.message); })} type="button">履歴を開始</button></section>;
+  async function add(e: FormEvent) { e.preventDefault(); try { const result = await api.addSparkHistory({ crystalCount: draft.crystalCount, singleTicketCount: draft.singleTicketCount, tenPullTicketCount: draft.tenPullTicketCount, entryType: draft.entryType, title: draft.title, memo: draft.memo || null }); onChange(result.sparkSavings); notify(result.message); setDraft({ ...emptyBalance, entryType: "earn", title: "", memo: "" }); await load(); } catch (error) { notify(error instanceof Error ? error.message : "記録できませんでした"); } }
+  return <div className="page-stack"><form className="panel spark-form" onSubmit={add}><h2>履歴を追加</h2><label>操作<select value={draft.entryType} onChange={(e) => setDraft({ ...draft, entryType: e.target.value })}><option value="earn">獲得</option><option value="spend">使用</option><option value="adjustment">残高調整（実数）</option></select></label><div className="spark-count-form"><BalanceFields value={draft} onChange={(v) => setDraft({ ...draft, ...v })} /></div><label>タイトル<input maxLength={100} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label><label>メモ<textarea maxLength={500} value={draft.memo} onChange={(e) => setDraft({ ...draft, memo: e.target.value })} /></label><button className="primary-button" type="submit"><Save size={18} />記録</button></form><section className="panel"><div className="section-heading"><h2>月ごとの集計</h2><label>集計開始月<input min={savings.historyStartedAt.slice(0, 7)} max={new Date().toISOString().slice(0, 7)} type="month" value={savings.historySummaryStartMonth ?? savings.historyStartedAt.slice(0, 7)} onChange={(e) => void api.updateSparkHistoryStart(e.target.value).then(async (r) => { onChange(r.sparkSavings); notify(r.message); await load(); })} /></label></div><div className="spark-reward-months">{months.map((month) => <article className="panel" key={month.month}><h3>{month.month.replace("-", "年")}月</h3><p>獲得 {fmt(month.earnedEquivalent)}個相当 / 使用 {fmt(month.spentEquivalent)}個相当</p>{month.adjustmentEquivalent ? <p>調整 {month.adjustmentEquivalent >= 0 ? "+" : ""}{fmt(month.adjustmentEquivalent)}個相当</p> : null}</article>)}{!months.length ? <p className="empty-state">入力のある月はまだありません。</p> : null}</div></section><section className="panel"><h2>記録</h2><div className="spark-history-list">{entries.map((entry) => <article key={entry.id}><div><strong>{entry.title}</strong><small>{new Date(entry.createdAt).toLocaleString("ja-JP")}</small></div><p>宝晶石 {entry.crystalDelta >= 0 ? "+" : ""}{fmt(entry.crystalDelta)} / 単発 {entry.singleTicketDelta >= 0 ? "+" : ""}{entry.singleTicketDelta} / 10連 {entry.tenPullTicketDelta >= 0 ? "+" : ""}{entry.tenPullTicketDelta}</p>{entry.memo ? <p>{entry.memo}</p> : null}</article>)}</div>{cursor ? <button className="secondary-button" onClick={() => void load(cursor)} type="button">さらに表示</button> : null}</section><button className="secondary-button danger-button" onClick={() => { if (window.confirm("履歴をすべて削除しますか？ 残高は維持されます。")) void api.deleteSparkHistory().then((r) => { onChange(r.sparkSavings); notify(r.message); }); }} type="button">履歴をすべて削除</button></div>;
 }

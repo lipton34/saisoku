@@ -6206,6 +6206,120 @@ fieldset.goal-subtask-editor {
   overflow-wrap: anywhere;
 }
 
+.spark-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow-x: auto;
+  border-bottom: 1px solid #ccd9e0;
+}
+
+.spark-tabs button {
+  min-width: 84px;
+  min-height: 44px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #607184;
+  font-weight: 850;
+}
+
+.spark-tabs button.is-active {
+  border-bottom-color: #17647a;
+  color: #17647a;
+}
+
+.spark-toolbar,
+.spark-target-card,
+.spark-shared-list > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.spark-target-list,
+.spark-reward-months,
+.spark-history-list,
+.spark-shared-list {
+  display: grid;
+  gap: 12px;
+}
+
+.spark-target-card > div:first-child {
+  min-width: 0;
+  flex: 1 1 280px;
+}
+
+.spark-target-card h2,
+.spark-target-card p {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+.spark-target-card.is-complete {
+  opacity: 0.72;
+}
+
+.spark-target-form,
+.spark-reference-page form {
+  display: grid;
+  gap: 12px;
+}
+
+.spark-link-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.spark-link-options legend {
+  width: 100%;
+  font-weight: 850;
+}
+
+.spark-range {
+  display: block;
+  margin: 8px 0;
+  color: #183f4d;
+  font-size: clamp(1.3rem, 4vw, 2rem);
+}
+
+.spark-reward-records > div,
+.spark-history-list article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 0;
+  border-top: 1px solid #e1e8ef;
+}
+
+.spark-reward-records dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.spark-history-list article p,
+.spark-history-list article small {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.spark-inline-form,
+.spark-record-form {
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+  align-items: end;
+}
+
+.spark-shared-list > div {
+  padding: 10px 0;
+  border-top: 1px solid #e1e8ef;
+}
+
+.spark-reference-page {
+  width: min(100%, 1100px);
+}
+
 .build-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -6522,6 +6636,16 @@ fieldset.goal-subtask-editor {
   .spark-actions > button,
   .spark-form-actions > button {
     flex: 1 1 140px;
+  }
+
+  .spark-tabs {
+    grid-template-columns: repeat(4, minmax(84px, 1fr));
+  }
+
+  .spark-target-card,
+  .spark-shared-list > div {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .two-column-form {
