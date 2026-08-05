@@ -84,7 +84,24 @@ model User {
   buildDrafts          BuildDraft[]
   raidGuideStrategies  RaidGuideStrategy[]
   guildWarGoalPlans    GuildWarGoalPlan[]
+  sparkSavings         SparkSavings?
   goals                Goal[]
+}
+
+model SparkSavings {
+  id                   String   @id @default(cuid())
+  ownerId              String   @unique @map("owner_id")
+  owner                User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  crystalCount         Int      @default(0) @map("crystal_count")
+  singleTicketCount    Int      @default(0) @map("single_ticket_count")
+  tenPullTicketCount   Int      @default(0) @map("ten_pull_ticket_count")
+  targetName           String?  @map("target_name")
+  plannedAt            DateTime? @db.Date @map("planned_at")
+  memo                 String?
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("spark_savings")
 }
 
 model RoundGoal {

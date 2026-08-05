@@ -14,6 +14,7 @@
 - 画像・補足中心の編成投稿と非公開下書き
 - 古戦場の「目標」「討伐速度」「計算結果」タブ
 - 団内共通の教科書と、利用者ごとの付箋付き対策メモからなる高難度攻略メモ
+- 本人専用の宝晶石・ガチャチケット天井貯金
 - イベント予定と公式NEWSを収める保管庫
 - 共通404
 
@@ -30,6 +31,7 @@
 - `/api/build-masters`
 - `/api/guild-war-goals`
 - `/api/raid-guides`, `/api/raid-guide-strategies`
+- `/api/spark-savings`
 - `/api/news`, `/api/news-items`, `/api/source-articles`, `/api/news-fetch-logs`
 - `/api/official-news`
 - `/api/event-series`, `/api/event-occurrences`, `/api/event-notes`
@@ -40,13 +42,13 @@
 
 攻略メモのコード構成、マスター追加、短縮表記、インラインリンク、行統合時の付箋移行、seed、本番反映は `docs/30_high_difficulty_raid_guide_implementation_guide.md` を参照する。
 
-## 天井貯金（仕様確定・実装待ち）
+## 天井貯金
 
 正本は `docs/31_spark_savings_feature.md`。宝晶石、単発チケット、10連チケットをユーザーごとに1件保存し、300連固定の天井までに追加で必要な宝晶石を端数込みで計算する。現在の合計回数は300で丸めず、301連以上の超過分も表示する。
 
 天井貯金は完全な個人データとし、本人だけが取得、upsert、初期値へのリセットを行える。リセットではレコードを削除せず、同じレコードと `createdAt` を維持する。計算はフロントエンドの純粋関数で行い、入力中のAPI通信と計算値の永続化は行わない。
 
-2026-08-05時点では仕様書だけを追加しており、Prismaモデル、migration、API、画面、テストは未実装。本番DBへのmigration適用とデプロイも未実施である。
+`SparkSavings`モデル、`20260805090000_add_spark_savings`、`/api/spark-savings`、`/spark-savings`、計算・入力検証テストをローカル実装済み。migrationは新規テーブルと制約だけを追加する非破壊変更で、本番DBへは未適用。デプロイと認証済みブラウザでの実表示確認も未実施である。
 
 ## サブタスク再設計
 

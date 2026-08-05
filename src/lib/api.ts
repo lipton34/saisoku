@@ -355,6 +355,27 @@ export type GuildWarGoalPayload = {
   }[];
 };
 
+export type SparkSavings = {
+  id: string;
+  crystalCount: number;
+  singleTicketCount: number;
+  tenPullTicketCount: number;
+  targetName: string | null;
+  plannedAt: string | null;
+  memo: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SparkSavingsInput = {
+  crystalCount: string;
+  singleTicketCount: string;
+  tenPullTicketCount: string;
+  targetName: string | null;
+  plannedAt: string | null;
+  memo: string | null;
+};
+
 export type SourceArticleType =
   | "monthly_plan"
   | "event"
@@ -846,6 +867,16 @@ export const api = {
     }),
   resetGuildWarGoalPlan: () =>
     request<{ plan: GuildWarGoalPlan; bossMasters: GuildWarBossMaster[] }>("/api/guild-war-goals/current/reset", {
+      method: "POST"
+    }),
+  sparkSavings: () => request<{ sparkSavings: SparkSavings | null }>("/api/spark-savings"),
+  saveSparkSavings: (value: SparkSavingsInput) =>
+    request<{ sparkSavings: SparkSavings; message: string }>("/api/spark-savings", {
+      method: "PUT",
+      json: value
+    }),
+  resetSparkSavings: () =>
+    request<{ sparkSavings: SparkSavings | null; message: string }>("/api/spark-savings/reset", {
       method: "POST"
     }),
   newsItems: (params?: OfficialNewsListParams) =>

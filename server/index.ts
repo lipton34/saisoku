@@ -16,6 +16,7 @@ import { goalsRouter } from "./routes/goals.js";
 import { progressGoalsRouter } from "./routes/progressGoals.js";
 import { roundGoalsRouter } from "./routes/roundGoals.js";
 import { raidGuidesRouter, raidGuideStrategiesRouter } from "./routes/raidGuides.js";
+import { sparkSavingsRouter } from "./routes/sparkSavings.js";
 import {
   newsFetchLogsRouter,
   newsItemsRouter,
@@ -61,6 +62,7 @@ app.use("/api/progress-goals", progressGoalsRouter);
 app.use("/api/round-goals", roundGoalsRouter);
 app.use("/api/raid-guides", raidGuidesRouter);
 app.use("/api/raid-guide-strategies", raidGuideStrategiesRouter);
+app.use("/api/spark-savings", sparkSavingsRouter);
 app.use("/api/news", officialNewsRouter);
 app.use("/api/news-fetch-logs", newsFetchLogsRouter);
 app.use("/api/news-items", newsItemsRouter);

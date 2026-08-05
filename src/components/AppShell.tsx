@@ -63,7 +63,7 @@ export function AppShell() {
           const Icon = item.icon;
           return (
             <NavLink
-              className={({ isActive }) => isActive || (item.to === "/utilities" && ["/guild-war-goals", "/raid-guides"].some((path) => location.pathname.startsWith(path))) ? "active" : undefined}
+              className={({ isActive }) => isActive || (item.to === "/utilities" && ["/guild-war-goals", "/raid-guides", "/spark-savings"].some((path) => location.pathname.startsWith(path))) ? "active" : undefined}
               end={item.to === "/"}
               key={item.to}
               to={item.to}

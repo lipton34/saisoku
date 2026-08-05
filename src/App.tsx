@@ -20,6 +20,7 @@ import { RaidGuidesPage } from "./pages/RaidGuidesPage";
 import { RaidGuideStrategyEditorPage } from "./pages/RaidGuideStrategyEditorPage";
 import { RoundGoalEditorPage } from "./pages/RoundGoalEditorPage";
 import { RoundGoalsPage } from "./pages/RoundGoalsPage";
+import { SparkSavingsPage } from "./pages/SparkSavingsPage";
 import { UtilitiesPage } from "./pages/UtilitiesPage";
 
 export function App() {
@@ -43,6 +44,7 @@ export function App() {
           <Route path="/builds/:buildId" element={<BuildDetailPage />} />
           <Route path="/guild-war-goals" element={<GuildWarGoalsPage />} />
           <Route path="/utilities" element={<UtilitiesPage />} />
+          <Route path="/spark-savings" element={<SparkSavingsPage />} />
           <Route path="/raid-guides" element={<RaidGuidesPage />} />
           <Route path="/raid-guides/:guideId" element={<RaidGuideDetailPage />} />
           <Route path="/raid-guides/:guideId/strategies/new" element={<RaidGuideStrategyEditorPage />} />
