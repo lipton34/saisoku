@@ -10,6 +10,8 @@
 
 共通ナビゲーションは `docs/27_mobile_first_feature_reorganization.md`、便利機能の基礎は `docs/29_high_difficulty_raid_guide_feature.md` に従う。本機能追加後の便利機能カード構成については本書を後続仕様として優先する。
 
+狙い目、排出時期、獲得目安、任意履歴による後続拡張は `docs/32_spark_savings_expansion_feature.md` を正本とする。同文書の確定事項は、本書の目的、使用予定日、メモ、履歴対象外、目標連携対象外に関する記述より優先する。
+
 ## 2. 目的
 
 - 現在所持している宝晶石、単発チケット、10連チケットを手動登録する。
