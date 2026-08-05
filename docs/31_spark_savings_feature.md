@@ -6,7 +6,7 @@
 
 本書は、利用者が宝晶石とガチャチケットの所持数を手動で管理し、300連分の天井までに追加で必要な宝晶石を確認する「天井貯金」の正本仕様である。画面、計算、データ、API、所有権、入力検証、リセット、migration、検証は本書を正本とする。
 
-本仕様は2026-08-05にローカル実装済みである。本番DBへのmigration適用とデプロイはそれぞれ別作業として扱う。
+本仕様は2026-08-05に実装し、本番DBへのmigration適用とRenderデプロイまで完了した。
 
 共通ナビゲーションは `docs/27_mobile_first_feature_reorganization.md`、便利機能の基礎は `docs/29_high_difficulty_raid_guide_feature.md` に従う。本機能追加後の便利機能カード構成については本書を後続仕様として優先する。
 
@@ -372,4 +372,6 @@ git diff --check
 - 計算境界値、入力検証、所有者条件、リセット値のテストを追加した。
 - `npm run prisma:generate`、`npm run typecheck`、`npm test`（40件）、`npm run build`、`git diff --check` は成功した。
 - `npx prisma validate` でschemaが有効であることを確認した。
-- 本番migration、デプロイ、認証済みブラウザでの360px・768px・1280px実表示確認はローカル実装に含めていない。
+- `20260805090000_add_spark_savings` を本番DBへ適用し、全27件のmigrationが適用済みであることを確認した。
+- Renderでコミット `f703cf6` のビルドが配信され、health check、画面ルート200、APIの未認証401、配信JSへの機能反映を確認した。
+- 認証済みブラウザでの保存・再取得・リセットと360px・768px・1280px実表示確認は未実施である。
