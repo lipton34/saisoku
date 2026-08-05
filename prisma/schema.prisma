@@ -139,27 +139,25 @@ model SparkSavingsHistory {
 }
 
 model SparkTarget {
-  id                   String                   @id @default(cuid())
-  ownerId              String                   @map("owner_id")
-  itemType             String                   @map("item_type")
-  name                 String
-  masterItemId         String?                  @map("master_item_id")
-  desiredCount         Int                      @default(1) @map("desired_count")
-  ownedCount           Int                      @default(0) @map("owned_count")
-  availabilityPeriodId String?                  @map("availability_period_id")
-  note                 String?
-  sortOrder            Int                      @default(0) @map("sort_order")
-  owner                User                     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  masterItem           GbfMasterItem?           @relation(fields: [masterItemId], references: [id], onDelete: SetNull)
-  availabilityPeriod   SparkAvailabilityPeriod? @relation(fields: [availabilityPeriodId], references: [id], onDelete: SetNull)
-  goalLinks            SparkTargetGoalLink[]
-  buildLinks           SparkTargetBuildLink[]
-  createdAt            DateTime                 @default(now()) @map("created_at")
-  updatedAt            DateTime                 @updatedAt @map("updated_at")
+  id                String                        @id @default(cuid())
+  ownerId           String                        @map("owner_id")
+  itemType          String                        @map("item_type")
+  name              String
+  masterItemId      String?                       @map("master_item_id")
+  desiredCount      Int                           @default(1) @map("desired_count")
+  ownedCount        Int                           @default(0) @map("owned_count")
+  note              String?
+  sortOrder         Int                           @default(0) @map("sort_order")
+  owner             User                          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  masterItem        GbfMasterItem?                @relation(fields: [masterItemId], references: [id], onDelete: SetNull)
+  availabilityLinks SparkTargetAvailabilityLink[]
+  goalLinks         SparkTargetGoalLink[]
+  buildLinks        SparkTargetBuildLink[]
+  createdAt         DateTime                      @default(now()) @map("created_at")
+  updatedAt         DateTime                      @updatedAt @map("updated_at")
 
   @@index([ownerId, sortOrder])
   @@index([masterItemId])
-  @@index([availabilityPeriodId])
   @@map("spark_targets")
 }
 
@@ -189,22 +187,35 @@ model SparkTargetBuildLink {
   @@map("spark_target_build_links")
 }
 
+model SparkTargetAvailabilityLink {
+  id                   String                  @id @default(cuid())
+  targetId             String                  @map("target_id")
+  availabilityPeriodId String                  @map("availability_period_id")
+  sortOrder            Int                     @default(0) @map("sort_order")
+  target               SparkTarget             @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  availabilityPeriod   SparkAvailabilityPeriod @relation(fields: [availabilityPeriodId], references: [id], onDelete: Restrict)
+
+  @@unique([targetId, availabilityPeriodId])
+  @@index([availabilityPeriodId])
+  @@map("spark_target_availability_links")
+}
+
 model SparkAvailabilityPeriod {
-  id           String        @id @default(cuid())
+  id           String                        @id @default(cuid())
   kind         String
-  displayLabel String        @map("display_label")
-  startMonth   Int?          @map("start_month")
-  startPart    String?       @map("start_part")
-  endMonth     Int?          @map("end_month")
-  endPart      String?       @map("end_part")
-  isActive     Boolean       @default(true) @map("is_active")
-  createdById  String        @map("created_by_id")
-  updatedById  String        @map("updated_by_id")
-  createdBy    User          @relation("SparkAvailabilityCreatedBy", fields: [createdById], references: [id])
-  updatedBy    User          @relation("SparkAvailabilityUpdatedBy", fields: [updatedById], references: [id])
-  targets      SparkTarget[]
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  displayLabel String                        @map("display_label")
+  startMonth   Int?                          @map("start_month")
+  startPart    String?                       @map("start_part")
+  endMonth     Int?                          @map("end_month")
+  endPart      String?                       @map("end_part")
+  isActive     Boolean                       @default(true) @map("is_active")
+  createdById  String                        @map("created_by_id")
+  updatedById  String                        @map("updated_by_id")
+  createdBy    User                          @relation("SparkAvailabilityCreatedBy", fields: [createdById], references: [id])
+  updatedBy    User                          @relation("SparkAvailabilityUpdatedBy", fields: [updatedById], references: [id])
+  targetLinks  SparkTargetAvailabilityLink[]
+  createdAt    DateTime                      @default(now()) @map("created_at")
+  updatedAt    DateTime                      @updatedAt @map("updated_at")
 
   @@index([isActive, displayLabel])
   @@map("spark_availability_periods")

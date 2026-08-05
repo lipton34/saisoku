@@ -6386,6 +6386,18 @@ fieldset.goal-subtask-editor {
   height: 20px;
 }
 
+.spark-availability-select {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+}
+
+.spark-availability-select legend {
+  padding: 0 4px;
+  font-weight: 850;
+}
+
 .spark-link-select {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

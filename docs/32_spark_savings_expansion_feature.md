@@ -150,7 +150,7 @@
 - 任意の `masterItemId`
 - `desiredCount`: 希望数
 - `ownedCount`: 現在数
-- 任意の `availabilityPeriodId`
+- 任意の排出時期リンク（最大2件）
 - 任意の `note`
 - `sortOrder`
 - `createdAt`
@@ -231,7 +231,7 @@ ownedCount >= desiredCount
 
 ## 9. 排出時期マスター
 
-`SparkAvailabilityPeriod` は団内共有で、狙い目1件につき最大1件を関連付ける。
+`SparkAvailabilityPeriod` は団内共有とし、`SparkTargetAvailabilityLink` を介して狙い目1件につき最大2件を関連付ける。DBは通常の多対多として保持し、APIとUIで2件上限を検証する。本来の季節枠と別月復刻を別々のマスターとして選択できるようにする。
 
 保存項目:
 
