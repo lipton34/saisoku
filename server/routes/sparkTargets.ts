@@ -19,7 +19,8 @@ async function parse(req: Request) {
   const itemType = String(body.itemType ?? "");
   if (!['character', 'summon', 'weapon'].includes(itemType)) throw new Error("種類を確認してください");
   const name = parseOptionalText(body.name, "名前", 100); if (!name) throw new Error("名前を入力してください");
-  const desiredCount = integer(body.desiredCount, 1, 999, "設定数"); const ownedCount = integer(body.ownedCount, 0, 999, "所持数");
+  const desiredCount = itemType === "character" ? 1 : integer(body.desiredCount, 1, 999, "設定数");
+  const ownedCount = integer(body.ownedCount, 0, itemType === "character" ? 1 : 999, "所持数");
   const masterItemId = typeof body.masterItemId === "string" && body.masterItemId ? body.masterItemId : null;
   if (masterItemId) { const master = await prisma.gbfMasterItem.findUnique({ where: { id: masterItemId }, select: { kind: true } }); if (!master || master.kind !== itemType) throw new Error("選択したマスターが種類と一致しません"); }
   const availabilityPeriodId = typeof body.availabilityPeriodId === "string" && body.availabilityPeriodId ? body.availabilityPeriodId : null;
@@ -32,7 +33,24 @@ async function parse(req: Request) {
 }
 
 router.get("/", async (req, res, next) => { try { const showCompleted = req.query.showCompleted === "true"; const allTargets = await prisma.sparkTarget.findMany({ where: { ownerId: userId(req) }, include, orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }] }); const targets = showCompleted ? allTargets : allTargets.filter((target) => target.ownedCount < target.desiredCount); res.json({ targets }); } catch (error) { next(error); } });
-router.get("/options", async (req, res, next) => { try { const ownerId = userId(req); const [periods, goals, builds] = await Promise.all([prisma.sparkAvailabilityPeriod.findMany({ where: { isActive: true }, orderBy: { displayLabel: "asc" } }), prisma.goal.findMany({ where: { sourceRoundGoalId: null, sourceProgressGoalId: null, OR: [{ ownerId }, { visibility: "crew" }] }, select: { id: true, title: true, visibility: true }, orderBy: { updatedAt: "desc" } }), prisma.buildPost.findMany({ select: { id: true, title: true }, orderBy: { updatedAt: "desc" } })]); res.json({ periods, goals, builds }); } catch (error) { next(error); } });
+router.get("/options", async (_req, res, next) => { try { const periods = await prisma.sparkAvailabilityPeriod.findMany({ where: { isActive: true }, orderBy: { displayLabel: "asc" } }); res.json({ periods }); } catch (error) { next(error); } });
+router.get("/link-options", async (req, res, next) => {
+  try {
+    const type = req.query.type;
+    const query = typeof req.query.query === "string" ? req.query.query.trim().slice(0, 100) : "";
+    const take = 20;
+    if (type === "goal") {
+      const ownerId = userId(req);
+      const items = await prisma.goal.findMany({ where: { sourceRoundGoalId: null, sourceProgressGoalId: null, OR: [{ ownerId }, { visibility: "crew" }], ...(query ? { title: { contains: query, mode: "insensitive" } } : {}) }, select: { id: true, title: true }, orderBy: { updatedAt: "desc" }, take });
+      res.json({ items }); return;
+    }
+    if (type === "build") {
+      const items = await prisma.buildPost.findMany({ where: query ? { title: { contains: query, mode: "insensitive" } } : {}, select: { id: true, title: true }, orderBy: { updatedAt: "desc" }, take });
+      res.json({ items }); return;
+    }
+    res.status(400).json({ message: "連携先の種類を確認してください" });
+  } catch (error) { next(error); }
+});
 router.post("/", async (req, res, next) => { try { const parsed = await parse(req); const target = await prisma.sparkTarget.create({ data: { ...parsed.data, ownerId: userId(req), goalLinks: { create: parsed.goalIds.map((goalId, sortOrder) => ({ goalId, sortOrder })) }, buildLinks: { create: parsed.buildPostIds.map((buildPostId, sortOrder) => ({ buildPostId, sortOrder })) } }, include }); res.status(201).json({ target, message: "狙い目を登録しました。" }); } catch (error) { if (error instanceof Error) { res.status(400).json({ message: error.message }); return; } next(error); } });
 router.put("/:id", async (req, res, next) => { try { const existing = await prisma.sparkTarget.findFirst({ where: { id: req.params.id, ownerId: userId(req) } }); if (!existing) { res.status(404).json({ message: "狙い目が見つかりません" }); return; } const parsed = await parse(req); const target = await prisma.$transaction(async (tx) => { await tx.sparkTargetGoalLink.deleteMany({ where: { targetId: existing.id } }); await tx.sparkTargetBuildLink.deleteMany({ where: { targetId: existing.id } }); return tx.sparkTarget.update({ where: { id: existing.id }, data: { ...parsed.data, goalLinks: { create: parsed.goalIds.map((goalId, sortOrder) => ({ goalId, sortOrder })) }, buildLinks: { create: parsed.buildPostIds.map((buildPostId, sortOrder) => ({ buildPostId, sortOrder })) } }, include }); }); res.json({ target, message: "狙い目を更新しました。" }); } catch (error) { if (error instanceof Error) { res.status(400).json({ message: error.message }); return; } next(error); } });
 router.delete("/:id", async (req, res, next) => { try { const result = await prisma.sparkTarget.deleteMany({ where: { id: req.params.id, ownerId: userId(req) } }); if (!result.count) { res.status(404).json({ message: "狙い目が見つかりません" }); return; } res.json({ message: "狙い目を削除しました。" }); } catch (error) { next(error); } });
