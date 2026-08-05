@@ -107,7 +107,7 @@ npm run migration:remove-legacy-build-images -- --confirm-delete-legacy-build-im
 
 `20260729090000_goal_subtask_rebuild`は、旧サブタスク、必要武器、討伐目標の既存データを削除し、サブタスクの3種類管理へ置き換える破壊的migrationです。先行migrationの適用状況を確認し、同じディレクトリの`preflight.sql`で対象件数を確認してから適用してください。
 
-`20260805090000_add_spark_savings`は、本人専用の天井貯金テーブル、所有者一意制約、入力範囲のCHECK制約を追加する非破壊migrationです。2026-08-05に本番DBへ適用済みです。`20260805120000_expand_spark_savings`は狙い目、履歴、共有の排出時期・獲得実績・開催予定・監査ログを追加し、旧任意情報3列を削除します。適用前に同ディレクトリの`preflight.sql`で削除対象を確認してください。この拡張migrationはまだ本番へ適用していません。
+`20260805090000_add_spark_savings`は、本人専用の天井貯金テーブル、所有者一意制約、入力範囲のCHECK制約を追加する非破壊migrationです。2026-08-05に本番DBへ適用済みです。`20260805120000_expand_spark_savings`は狙い目、履歴、共有の排出時期・獲得実績・開催予定・監査ログを追加し、旧任意情報3列を削除します。適用前に同ディレクトリの`preflight.sql`で削除対象を確認してください。拡張migrationも2026-08-05に本番へ適用済みです。
 
 ## 開発資料
 
