@@ -80,7 +80,7 @@ const summonSeries = [{ value: "optimus", label: "オプティマス" }, { value
 
 function MasterItemSelect({ kind, selectedId, selectedName, onSelect }: { kind: string; selectedId: string | null; selectedName: string; onSelect: (item: SparkTargetMasterOption | null, itemType: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [searchKind, setSearchKind] = useState(kind);
+  const [searchKind, setSearchKind] = useState("");
   const [query, setQuery] = useState("");
   const [element, setElement] = useState("");
   const [category, setCategory] = useState("");
@@ -88,20 +88,29 @@ function MasterItemSelect({ kind, selectedId, selectedName, onSelect }: { kind: 
   const [items, setItems] = useState<SparkTargetMasterOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  useEffect(() => { setSearchKind(kind); }, [kind]);
   useEffect(() => { setItems([]); setElement(""); setCategory(""); setSeries(""); setSearched(false); }, [searchKind]);
-  const hasSearchCondition = Boolean(query.trim() || element || (searchKind === "summon" ? series : category));
+  const hasSearchCondition = Boolean(searchKind && (query.trim() || element || (searchKind === "summon" ? series : category)));
+  function openDialog() {
+    setSearchKind("");
+    setQuery("");
+    setElement("");
+    setCategory("");
+    setSeries("");
+    setItems([]);
+    setSearched(false);
+    setOpen(true);
+  }
   async function search() {
     const normalizedQuery = query.trim();
-    if (!hasSearchCondition) return;
+    if (!searchKind || !hasSearchCondition) return;
     setLoading(true);
     setSearched(true);
     try { const result = await api.sparkTargetMasterOptions(searchKind, normalizedQuery, { element, category: searchKind === "summon" ? undefined : category, series: searchKind === "summon" ? series : undefined }); setItems(result.items); }
     catch { setItems([]); }
     finally { setLoading(false); }
   }
-  return <div className="spark-master-setting"><span>対象</span><button className="secondary-button" onClick={() => setOpen(true)} type="button">対象設定</button><small>{selectedId ? `選択中：${selectedName}` : "未選択（名前の直接入力も可能）"}</small>{selectedId ? <button className="spark-master-clear" onClick={() => onSelect(null, kind)} type="button">マスター選択を解除</button> : null}
-    {open ? <div className="modal-backdrop spark-master-modal-backdrop" onMouseDown={() => setOpen(false)}><section aria-labelledby="spark-master-dialog-title" aria-modal="true" className="panel spark-dialog spark-master-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog"><header className="spark-dialog-header"><h2 id="spark-master-dialog-title">狙い目の対象を選択</h2><button aria-label="閉じる" className="icon-button" onClick={() => setOpen(false)} title="閉じる" type="button"><X size={19} /></button></header><div className="spark-dialog-body"><div className="spark-master-search"><label>種類<select autoFocus onChange={(event) => { setSearchKind(event.target.value); onSelect(null, event.target.value); }} value={searchKind}><option value="character">キャラ</option><option value="summon">召喚石</option><option value="weapon">武器</option></select></label><label>テキスト検索（任意）<input maxLength={100} onChange={(event) => { setQuery(event.target.value); setSearched(false); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void search(); } }} placeholder="名前・別名を入力" type="search" value={query} /></label><label>属性<select onChange={(event) => setElement(event.target.value)} value={element}><option value="">すべて</option>{masterElements.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>{searchKind === "summon" ? <label>シリーズ<select onChange={(event) => setSeries(event.target.value)} value={series}><option value="">すべて</option>{summonSeries.map((value) => <option key={value.value} value={value.value}>{value.label}</option>)}</select></label> : <label>区分<select onChange={(event) => setCategory(event.target.value)} value={category}><option value="">すべて</option>{masterCategories.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>}<button className="primary-button" disabled={loading || !hasSearchCondition} onClick={() => void search()} type="button">{loading ? "検索中…" : "検索"}</button></div><small>テキスト、属性、区分・シリーズのいずれかを指定してください。</small><div aria-live="polite" className="spark-master-results">{items.map((item) => <button key={item.id} onClick={() => { onSelect(item, searchKind); setOpen(false); }} type="button"><strong>{item.displayName ?? item.name}</strong><span>{[item.element, item.category].filter(Boolean).join("・")}</span></button>)}{!loading && !items.length ? <p className="empty-state">{searched ? "該当する対象はありません。" : "検索条件を指定して検索してください。"}</p> : null}</div></div></section></div> : null}
+  return <div className="spark-master-setting"><span>対象</span><button className="secondary-button" onClick={openDialog} type="button">対象設定</button><small>{selectedId ? `選択中：${selectedName}` : "未選択（名前の直接入力も可能）"}</small>{selectedId ? <button className="spark-master-clear" onClick={() => onSelect(null, kind)} type="button">マスター選択を解除</button> : null}
+    {open ? <div className="modal-backdrop spark-master-modal-backdrop" onMouseDown={() => setOpen(false)}><section aria-labelledby="spark-master-dialog-title" aria-modal="true" className="panel spark-dialog spark-master-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog"><header className="spark-dialog-header"><h2 id="spark-master-dialog-title">狙い目の対象を選択</h2><button aria-label="閉じる" className="icon-button" onClick={() => setOpen(false)} title="閉じる" type="button"><X size={19} /></button></header><div className="spark-dialog-body"><div className="spark-master-search"><label>種類<select onChange={(event) => setSearchKind(event.target.value)} value={searchKind}><option value="">選択してください</option><option value="character">キャラ</option><option value="summon">召喚石</option><option value="weapon">武器</option></select></label>{searchKind ? <><label>テキスト検索（任意）<input maxLength={100} onChange={(event) => { setQuery(event.target.value); setSearched(false); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void search(); } }} placeholder="名前・別名を入力" type="search" value={query} /></label><label>属性<select onChange={(event) => setElement(event.target.value)} value={element}><option value="">すべて</option>{masterElements.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>{searchKind === "summon" ? <label>シリーズ<select onChange={(event) => setSeries(event.target.value)} value={series}><option value="">すべて</option>{summonSeries.map((value) => <option key={value.value} value={value.value}>{value.label}</option>)}</select></label> : <label>区分<select onChange={(event) => setCategory(event.target.value)} value={category}><option value="">すべて</option>{masterCategories.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>}<button className="primary-button" disabled={loading || !hasSearchCondition} onClick={() => void search()} type="button">{loading ? "検索中…" : "検索"}</button></> : null}</div>{searchKind ? <><small>テキスト、属性、区分・シリーズのいずれかを指定してください。</small><div aria-live="polite" className="spark-master-results">{items.map((item) => <button key={item.id} onClick={() => { onSelect(item, searchKind); setOpen(false); }} type="button"><strong>{item.displayName ?? item.name}</strong><span>{[item.element, item.category].filter(Boolean).join("・")}</span></button>)}{!loading && !items.length ? <p className="empty-state">{searched ? "該当する対象はありません。" : "検索条件を指定して検索してください。"}</p> : null}</div></> : <p className="empty-state">種類を選択してください。</p>}</div></section></div> : null}
   </div>;
 }
 
