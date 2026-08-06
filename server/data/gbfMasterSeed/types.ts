@@ -16,6 +16,7 @@ export type GbfMasterSeedItem = {
   metadata?: Prisma.InputJsonObject;
   note?: string;
   aliases?: string[];
+  isActive?: boolean;
 };
 
 export function normalizeMasterAlias(value: string) {

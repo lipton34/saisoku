@@ -701,12 +701,12 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "weapon-grand-aetherial-maverick",
     kind: GbfMasterKind.weapon,
-    name: "エーテリアルマーベリック",
+    name: "マーヴェリック・エーテリアル",
     element: "風",
     rarity: "SSR",
     category: "リミテッド武器",
     thumbnailPath: "weapons/grand-aetherial-maverick.webp",
-    aliases: [],
+    aliases: ["エーテリアルマーベリック"],
     tags: ["リミテッド", "Grand", "風"],
     metadata: {
       series: "Grand",
@@ -869,12 +869,12 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "weapon-grand-evanescence",
     kind: GbfMasterKind.weapon,
-    name: "エヴァネッセンス",
+    name: "泡沫夢幻",
     element: "風",
     rarity: "SSR",
     category: "リミテッド武器",
     thumbnailPath: "weapons/grand-evanescence.webp",
-    aliases: ["エターナル・ラヴ系"],
+    aliases: ["エヴァネッセンス"],
     tags: ["リミテッド", "Grand", "風"],
     metadata: {
       series: "Grand",
@@ -897,12 +897,12 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "weapon-grand-fediel-spine",
     kind: GbfMasterKind.weapon,
-    name: "フェディエル・スパイン",
+    name: "呪蝕の骸槍",
     element: "闇",
     rarity: "SSR",
     category: "リミテッド武器",
     thumbnailPath: "weapons/grand-fediel-spine.webp",
-    aliases: ["フェディ槍"],
+    aliases: ["フェディ槍", "フェディエル・スパイン"],
     tags: ["リミテッド", "Grand", "闇"],
     metadata: {
       series: "Grand",
@@ -928,12 +928,12 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
     name: "ガレヲン・ジョー",
     element: "土",
     rarity: "SSR",
-    category: "リミテッド武器",
+    category: "六竜武器",
     thumbnailPath: "weapons/grand-galleons-jaw.webp",
     aliases: ["ガレ杖"],
-    tags: ["リミテッド", "Grand", "土"],
+    tags: ["六竜", "土"],
     metadata: {
-      series: "Grand",
+      series: "Six Dragons",
     },
   },
   {
@@ -981,12 +981,12 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "weapon-grand-ivory-ark",
     kind: GbfMasterKind.weapon,
-    name: "アイボリーアーク",
+    name: "アーク",
     element: "光",
     rarity: "SSR",
     category: "リミテッド武器",
     thumbnailPath: "weapons/grand-ivory-ark.webp",
-    aliases: ["アーク"],
+    aliases: ["アイボリーアーク"],
     tags: ["リミテッド", "Grand", "光"],
     metadata: {
       series: "Grand",
@@ -1037,12 +1037,12 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "weapon-grand-landslide-scepter",
     kind: GbfMasterKind.weapon,
-    name: "ランドスライドセプター",
+    name: "巌迫の躯杖",
     element: "土",
     rarity: "SSR",
     category: "リミテッド武器",
     thumbnailPath: "weapons/grand-landslide-scepter.webp",
-    aliases: ["ウリエル杖"],
+    aliases: ["ガレヲン杖", "ランドスライドセプター"],
     tags: ["リミテッド", "Grand", "土"],
     metadata: {
       series: "Grand",
@@ -1082,12 +1082,12 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
     name: "ル・オー・ホーン",
     element: "光",
     rarity: "SSR",
-    category: "リミテッド武器",
+    category: "六竜武器",
     thumbnailPath: "weapons/grand-lu-wohs-horn.webp",
     aliases: ["ルオー拳"],
-    tags: ["リミテッド", "Grand", "光"],
+    tags: ["六竜", "光"],
     metadata: {
-      series: "Grand",
+      series: "Six Dragons",
     },
   },
   {
@@ -1121,12 +1121,12 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "weapon-grand-overrider",
     kind: GbfMasterKind.weapon,
-    name: "オーバーライダー",
+    name: "オーバーライド",
     element: "火",
     rarity: "SSR",
     category: "リミテッド武器",
     thumbnailPath: "weapons/grand-overrider.webp",
-    aliases: ["リミゼタ武器"],
+    aliases: ["リミゼタ武器", "オーバーライダー"],
     tags: ["リミテッド", "Grand", "火"],
     metadata: {
       series: "Grand",
@@ -1275,7 +1275,7 @@ export const weaponMasterSeeds: GbfMasterSeedItem[] = [
   {
     id: "weapon-grand-vortex-of-the-void",
     kind: GbfMasterKind.weapon,
-    name: "虚無ノ哭風",
+    name: "虚無の哭風",
     element: "風",
     rarity: "SSR",
     category: "リミテッド武器",

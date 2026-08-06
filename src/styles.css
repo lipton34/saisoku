@@ -6374,6 +6374,36 @@ fieldset.goal-subtask-editor {
   grid-column: span 2;
 }
 
+.spark-master-select {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.spark-master-select legend {
+  padding: 0 4px;
+  font-weight: 850;
+}
+
+.spark-master-select > small,
+.spark-master-clear {
+  grid-column: 1 / -1;
+}
+
+.spark-master-clear {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #476c79;
+  font: inherit;
+  font-weight: 750;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .spark-target-owned-check {
   display: flex;
   gap: 8px;
@@ -6870,11 +6900,14 @@ fieldset.goal-subtask-editor {
   }
 
   .spark-target-core-fields,
+  .spark-master-select,
   .spark-link-select {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .spark-target-name-field,
+  .spark-master-select > small,
+  .spark-master-clear,
   .spark-link-select > small,
   .spark-selected-links {
     grid-column: auto;

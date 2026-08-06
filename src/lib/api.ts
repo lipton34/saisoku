@@ -375,6 +375,7 @@ export type SparkSavingsInput = {
 export type SparkAvailabilityPeriod = { id: string; kind: "annual" | "permanent" | "irregular"; displayLabel: string; startMonth: number | null; startPart: string | null; endMonth: number | null; endPart: string | null; isActive: boolean; updatedAt: string };
 export type SparkTarget = { id: string; itemType: "character" | "summon" | "weapon"; name: string; masterItemId: string | null; desiredCount: number; ownedCount: number; availabilityLinks: { availabilityPeriod: SparkAvailabilityPeriod }[]; note: string | null; sortOrder: number; goalLinks: { goal: { id: string; title: string; visibility: string } }[]; buildLinks: { buildPost: { id: string; title: string } }[]; updatedAt: string };
 export type SparkTargetInput = { itemType: string; name: string; masterItemId: string | null; desiredCount: number; ownedCount: number; availabilityPeriodIds: string[]; note: string | null; sortOrder: number; goalIds: string[]; buildPostIds: string[] };
+export type SparkTargetMasterOption = { id: string; name: string; displayName: string | null; element: string | null; category: string | null };
 export type SparkHistoryEntry = { id: string; entryType: "start" | "earn" | "spend" | "adjustment"; crystalDelta: number; singleTicketDelta: number; tenPullTicketDelta: number; crystalBalance: number; singleTicketBalance: number; tenPullTicketBalance: number; title: string; memo: string | null; createdAt: string };
 export type SparkRewardEventType = { id: string; name: string; aggregationKind: "scheduled" | "monthlyBaseline"; isActive: boolean; sortOrder: number; updatedAt: string };
 export type SparkRewardMonthSummary = { year: number; month: number; min: number | null; max: number | null; records: { id: string; name: string; eventTypeName: string; min: number | null; max: number | null }[]; schedules: { id: string; name: string; eventTypeName: string; startedOn: string; endedOn: string | null }[] };
@@ -890,6 +891,7 @@ export const api = {
   deleteSparkHistory: () => request<{ sparkSavings: SparkSavings; message: string }>("/api/spark-savings/history", { method: "DELETE" }),
   sparkTargets: (showCompleted = false) => request<{ targets: SparkTarget[] }>(`/api/spark-targets?showCompleted=${showCompleted}`),
   sparkTargetOptions: () => request<{ periods: SparkAvailabilityPeriod[] }>("/api/spark-targets/options"),
+  sparkTargetMasterOptions: (kind: string, query: string) => request<{ items: SparkTargetMasterOption[] }>(`/api/spark-targets/master-options?kind=${encodeURIComponent(kind)}&query=${encodeURIComponent(query)}`),
   sparkTargetLinkOptions: (type: "goal" | "build", query: string) => request<{ items: { id: string; title: string }[] }>(`/api/spark-targets/link-options?type=${type}&query=${encodeURIComponent(query)}`),
   createSparkTarget: (value: SparkTargetInput) => request<{ target: SparkTarget; message: string }>("/api/spark-targets", { method: "POST", json: value }),
   updateSparkTarget: (id: string, value: SparkTargetInput) => request<{ target: SparkTarget; message: string }>(`/api/spark-targets/${id}`, { method: "PUT", json: value }),

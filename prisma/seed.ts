@@ -22,7 +22,7 @@ async function seedGbfMasters() {
         tags: item.tags ?? [],
         metadata: item.metadata ?? {},
         sortOrder: index,
-        isActive: true
+        isActive: item.isActive ?? true
       },
       create: {
         id: item.id,
@@ -37,7 +37,7 @@ async function seedGbfMasters() {
         tags: item.tags ?? [],
         metadata: item.metadata ?? {},
         sortOrder: index,
-        isActive: true
+        isActive: item.isActive ?? true
       }
     });
 

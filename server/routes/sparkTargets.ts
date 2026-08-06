@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { GbfMasterKind } from "@prisma/client";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
 import { parseOptionalText } from "../lib/sparkSavings.js";
@@ -38,6 +39,34 @@ async function parse(req: Request) {
 
 router.get("/", async (req, res, next) => { try { const showCompleted = req.query.showCompleted === "true"; const allTargets = await prisma.sparkTarget.findMany({ where: { ownerId: userId(req) }, include, orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }] }); const targets = showCompleted ? allTargets : allTargets.filter((target) => target.ownedCount < target.desiredCount); res.json({ targets }); } catch (error) { next(error); } });
 router.get("/options", async (_req, res, next) => { try { const periods = await prisma.sparkAvailabilityPeriod.findMany({ where: { isActive: true }, orderBy: { displayLabel: "asc" } }); res.json({ periods }); } catch (error) { next(error); } });
+router.get("/master-options", async (req, res, next) => {
+  try {
+    const requestedKind = typeof req.query.kind === "string" ? req.query.kind : "";
+    if (!['character', 'summon', 'weapon'].includes(requestedKind)) { res.status(400).json({ message: "種類を確認してください" }); return; }
+    const kind = requestedKind as GbfMasterKind;
+    const query = typeof req.query.query === "string" ? req.query.query.trim().slice(0, 100) : "";
+    const items = await prisma.gbfMasterItem.findMany({
+      where: {
+        kind,
+        isActive: true,
+        ...(query ? { OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { displayName: { contains: query, mode: "insensitive" } },
+          { category: { contains: query, mode: "insensitive" } },
+          { tags: { has: query } },
+          { aliases: { some: { OR: [
+            { alias: { contains: query, mode: "insensitive" } },
+            { normalizedAlias: { contains: query.toLocaleLowerCase("ja-JP"), mode: "insensitive" } },
+          ] } } },
+        ] } : {}),
+      },
+      select: { id: true, name: true, displayName: true, element: true, category: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      take: 20,
+    });
+    res.json({ items });
+  } catch (error) { next(error); }
+});
 router.get("/link-options", async (req, res, next) => {
   try {
     const type = req.query.type;
