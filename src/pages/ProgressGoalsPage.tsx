@@ -1,6 +1,7 @@
 import { FormEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Check, ChevronDown, CircleAlert, ListChecks, PackageOpen, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { DeferredNumberInput } from "../components/DeferredNumberInput";
 import { api, type ProgressGoal, type ProgressPreset } from "../lib/api";
 
 function dependencyClosure(preset: ProgressPreset, stageId: string, found = new Set<string>()) {
@@ -715,7 +716,7 @@ export function ProgressGoalsPage() {
           {selectedPreset.selectionLabel && <label>{selectedPreset.selectionLabel}<select required value={selectionValue} onChange={(event) => setSelectionValue(event.target.value)}>{selectedPreset.selectionOptions?.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>}
           {selectedPreset.fields?.map((field) => <label key={field.id}>{field.label}{field.type === "select"
             ? <select required value={String(selectionValues[field.id] ?? field.defaultValue)} onChange={(event) => setSelectionValues((current) => ({ ...current, [field.id]: event.target.value }))}>{field.options.map((option) => <option key={option} value={option}>{option}</option>)}</select>
-            : <input inputMode="numeric" max={field.max} min={field.min} onChange={(event) => setSelectionValues((current) => ({ ...current, [field.id]: Number(event.target.value) }))} required type="number" value={Number(selectionValues[field.id] ?? field.defaultValue)} />}</label>)}
+            : <DeferredNumberInput max={field.max} min={field.min} onCommit={(value) => setSelectionValues((current) => ({ ...current, [field.id]: value }))} value={Number(selectionValues[field.id] ?? field.defaultValue)} />}</label>)}
         </div>}
         {createStep === 2 && <section className="progress-initial-summary">
           <div className="progress-initial-summary-heading">
