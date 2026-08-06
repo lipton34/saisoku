@@ -891,7 +891,13 @@ export const api = {
   deleteSparkHistory: () => request<{ sparkSavings: SparkSavings; message: string }>("/api/spark-savings/history", { method: "DELETE" }),
   sparkTargets: (showCompleted = false) => request<{ targets: SparkTarget[] }>(`/api/spark-targets?showCompleted=${showCompleted}`),
   sparkTargetOptions: () => request<{ periods: SparkAvailabilityPeriod[] }>("/api/spark-targets/options"),
-  sparkTargetMasterOptions: (kind: string, query: string) => request<{ items: SparkTargetMasterOption[] }>(`/api/spark-targets/master-options?kind=${encodeURIComponent(kind)}&query=${encodeURIComponent(query)}`),
+  sparkTargetMasterOptions: (kind: string, query: string, filters: { element?: string; category?: string; series?: string }) => {
+    const params = new URLSearchParams({ kind, query });
+    if (filters.element) params.set("element", filters.element);
+    if (filters.category) params.set("category", filters.category);
+    if (filters.series) params.set("series", filters.series);
+    return request<{ items: SparkTargetMasterOption[] }>(`/api/spark-targets/master-options?${params.toString()}`);
+  },
   sparkTargetLinkOptions: (type: "goal" | "build", query: string) => request<{ items: { id: string; title: string }[] }>(`/api/spark-targets/link-options?type=${type}&query=${encodeURIComponent(query)}`),
   createSparkTarget: (value: SparkTargetInput) => request<{ target: SparkTarget; message: string }>("/api/spark-targets", { method: "POST", json: value }),
   updateSparkTarget: (id: string, value: SparkTargetInput) => request<{ target: SparkTarget; message: string }>(`/api/spark-targets/${id}`, { method: "PUT", json: value }),

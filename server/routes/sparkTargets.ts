@@ -45,11 +45,18 @@ router.get("/master-options", async (req, res, next) => {
     if (!['character', 'summon', 'weapon'].includes(requestedKind)) { res.status(400).json({ message: "種類を確認してください" }); return; }
     const kind = requestedKind as GbfMasterKind;
     const query = typeof req.query.query === "string" ? req.query.query.trim().slice(0, 100) : "";
+    if (!query) { res.status(400).json({ message: "検索語を入力してください" }); return; }
+    const element = typeof req.query.element === "string" ? req.query.element.trim().slice(0, 10) : "";
+    const category = typeof req.query.category === "string" ? req.query.category.trim().slice(0, 50) : "";
+    const series = typeof req.query.series === "string" ? req.query.series.trim().slice(0, 50) : "";
     const items = await prisma.gbfMasterItem.findMany({
       where: {
         kind,
         isActive: true,
-        ...(query ? { OR: [
+        ...(element ? { element } : {}),
+        ...(category && kind !== GbfMasterKind.summon ? { category: { contains: category, mode: "insensitive" } } : {}),
+        ...(series && kind === GbfMasterKind.summon ? { metadata: { path: ["series"], equals: series } } : {}),
+        OR: [
           { name: { contains: query, mode: "insensitive" } },
           { displayName: { contains: query, mode: "insensitive" } },
           { category: { contains: query, mode: "insensitive" } },
@@ -57,8 +64,8 @@ router.get("/master-options", async (req, res, next) => {
           { aliases: { some: { OR: [
             { alias: { contains: query, mode: "insensitive" } },
             { normalizedAlias: { contains: query.toLocaleLowerCase("ja-JP"), mode: "insensitive" } },
-          ] } } },
-        ] } : {}),
+            ] } } },
+        ],
       },
       select: { id: true, name: true, displayName: true, element: true, category: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],

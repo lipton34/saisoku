@@ -6374,22 +6374,23 @@ fieldset.goal-subtask-editor {
   grid-column: span 2;
 }
 
-.spark-master-select {
+.spark-master-setting {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 8px;
+  align-items: center;
   min-width: 0;
 }
 
-.spark-master-select legend {
-  padding: 0 4px;
+.spark-master-setting > span {
+  grid-column: 1 / -1;
   font-weight: 850;
 }
 
-.spark-master-select > small,
-.spark-master-clear {
-  grid-column: 1 / -1;
+.spark-master-setting > small {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .spark-master-clear {
@@ -6402,6 +6403,55 @@ fieldset.goal-subtask-editor {
   font-weight: 750;
   text-decoration: underline;
   cursor: pointer;
+}
+
+.spark-master-modal-backdrop {
+  z-index: 160;
+}
+
+.spark-master-dialog {
+  width: min(760px, calc(100vw - 24px));
+}
+
+.spark-master-search {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(120px, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  min-width: 0;
+}
+
+.spark-master-results {
+  display: grid;
+  gap: 8px;
+}
+
+.spark-master-results > button {
+  display: flex;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid #d8e2e8;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spark-master-results > button:hover,
+.spark-master-results > button:focus-visible {
+  border-color: #17647a;
+  background: #f2f8fa;
+}
+
+.spark-master-results > button span {
+  color: #60717b;
+  font-size: 0.85rem;
+  text-align: right;
 }
 
 .spark-target-owned-check {
@@ -6900,17 +6950,32 @@ fieldset.goal-subtask-editor {
   }
 
   .spark-target-core-fields,
-  .spark-master-select,
   .spark-link-select {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .spark-target-name-field,
-  .spark-master-select > small,
-  .spark-master-clear,
   .spark-link-select > small,
   .spark-selected-links {
     grid-column: auto;
+  }
+
+  .spark-master-setting,
+  .spark-master-search {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .spark-master-setting > span {
+    grid-column: auto;
+  }
+
+  .spark-master-results > button {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .spark-master-results > button span {
+    text-align: left;
   }
 
   .spark-monthly-header {
