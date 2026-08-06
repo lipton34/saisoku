@@ -217,20 +217,33 @@ const grandPairs = [
   ["char-katalina-grand", "weapon-grand-murgleis"],
 ] as const;
 
+const legendFestivalCharacterIds = new Set([
+  "char-katalina-grand", "char-rackam-grand", "char-io-grand", "char-rosetta-grand",
+  "char-eugen-grand", "char-lecia-grand", "char-cain-grand", "char-pholia",
+  "char-ferry-grand", "char-monika-grand", "char-noa-grand", "char-rei",
+  "char-reinhardtzar-grand", "char-leona-grand", "char-cagliostro-grand",
+  "char-narmaya-grand", "char-poseidon", "char-fediel", "char-wilnas",
+  "char-percival", "char-michael", "char-lu-woh", "char-uriel",
+  "char-sandalphon-light-grand", "char-medusa-grand", "char-vane-grand",
+  "char-raphael", "char-yuel-grand", "char-siegfried-grand", "char-sariel",
+  "char-metera-grand", "char-caesar", "char-walfrid", "char-mikaboshi-grand",
+]);
+
 for (const [characterId, weaponId] of grandPairs) {
+  const acquisitionFestival = legendFestivalCharacterIds.has(characterId) ? "legend" : "grand";
   const current = enrichmentById.get(characterId) ?? {};
   enrichmentById.set(characterId, {
     ...current,
     category: "リミテッド",
     tags: [...new Set([...(current.tags ?? []), "限定", "リミテッド"])],
-    metadata: { ...(current.metadata ?? {}), acquisitionGroup: "limited", unlockWeaponId: weaponId },
+    metadata: { ...(current.metadata ?? {}), acquisitionGroup: "limited", acquisitionFestival, unlockWeaponId: weaponId },
   });
   const weaponCurrent = enrichmentById.get(weaponId) ?? {};
   enrichmentById.set(weaponId, {
     ...weaponCurrent,
     category: "リミテッド解放武器",
     tags: [...new Set([...(weaponCurrent.tags ?? []), "限定", "リミテッド"])],
-    metadata: { ...(weaponCurrent.metadata ?? {}), acquisitionGroup: "limited", unlockCharacterId: characterId },
+    metadata: { ...(weaponCurrent.metadata ?? {}), acquisitionGroup: "limited", acquisitionFestival, unlockCharacterId: characterId },
   });
 }
 

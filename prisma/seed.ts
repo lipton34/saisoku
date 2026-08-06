@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { gbfMasterSeedItems, normalizeMasterAlias } from "../server/data/gbfMasterSeed/index.js";
 import { raidGuideMasterDefinitions, validateRaidGuideMasterDefinitions } from "../server/data/raidGuideMasters.js";
+import { availabilityPeriodIdsForMaster, sparkAvailabilityPeriodDefinitions } from "../server/data/sparkAvailabilityPeriods.js";
 
 const prisma = new PrismaClient();
 
@@ -63,6 +64,33 @@ async function seedGbfMasters() {
       });
     }
   }
+}
+
+async function seedSparkAvailabilityPeriods() {
+  const seedUser = await prisma.user.findFirst({ orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true } });
+  if (!seedUser) {
+    console.warn("Skipped spark availability periods because no user exists yet.");
+    return;
+  }
+  for (const definition of sparkAvailabilityPeriodDefinitions) {
+    await prisma.sparkAvailabilityPeriod.upsert({
+      where: { id: definition.id },
+      // Shared masters remain user-editable; later seed runs must not overwrite edits.
+      update: {},
+      create: { ...definition, isActive: true, createdById: seedUser.id, updatedById: seedUser.id },
+    });
+  }
+  let linkedMasterCount = 0;
+  for (const item of gbfMasterSeedItems) {
+    const periodIds = availabilityPeriodIdsForMaster(item);
+    if (!periodIds.length) continue;
+    linkedMasterCount += 1;
+    await prisma.gbfMasterAvailabilityLink.deleteMany({ where: { masterItemId: item.id } });
+    await prisma.gbfMasterAvailabilityLink.createMany({
+      data: periodIds.map((availabilityPeriodId, sortOrder) => ({ masterItemId: item.id, availabilityPeriodId, sortOrder })),
+    });
+  }
+  console.log(`Seeded ${sparkAvailabilityPeriodDefinitions.length} spark availability periods and linked ${linkedMasterCount} GBF masters.`);
 }
 
 async function seedRaidGuides() {
@@ -159,6 +187,7 @@ async function seedRaidGuides() {
 }
 
 seedGbfMasters()
+  .then(seedSparkAvailabilityPeriods)
   .then(seedRaidGuides)
   .then(async () => {
     console.log(`Seeded ${gbfMasterSeedItems.length} GBF master items and ${raidGuideMasterDefinitions.length} raid guides.`);

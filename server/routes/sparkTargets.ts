@@ -4,6 +4,7 @@ import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
 import { parseOptionalText } from "../lib/sparkSavings.js";
 import { parseSparkTargetAvailabilityIds } from "../lib/sparkTargets.js";
+import { sparkTargetAcquisitionGroups } from "../data/sparkAvailabilityPeriods.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -54,10 +55,11 @@ router.get("/master-options", async (req, res, next) => {
       where: {
         kind,
         isActive: true,
+        OR: sparkTargetAcquisitionGroups.map((acquisitionGroup) => ({ metadata: { path: ["acquisitionGroup"], equals: acquisitionGroup } })),
         ...(element ? { element } : {}),
         ...(category && kind !== GbfMasterKind.summon ? { category: { contains: category, mode: "insensitive" } } : {}),
         ...(series && kind === GbfMasterKind.summon ? { metadata: { path: ["series"], equals: series } } : {}),
-        ...(query ? { OR: [
+        ...(query ? { AND: [{ OR: [
           { name: { contains: query, mode: "insensitive" } },
           { displayName: { contains: query, mode: "insensitive" } },
           { category: { contains: query, mode: "insensitive" } },
@@ -66,13 +68,21 @@ router.get("/master-options", async (req, res, next) => {
             { alias: { contains: query, mode: "insensitive" } },
             { normalizedAlias: { contains: query.toLocaleLowerCase("ja-JP"), mode: "insensitive" } },
             ] } } },
-        ] } : {}),
+        ] }] } : {}),
       },
-      select: { id: true, name: true, displayName: true, element: true, category: true },
+      select: {
+        id: true, name: true, displayName: true, element: true, category: true,
+        availabilityLinks: {
+          where: { availabilityPeriod: { isActive: true } },
+          select: { availabilityPeriod: { select: { id: true, displayLabel: true } } },
+          orderBy: { sortOrder: "asc" },
+          take: 2,
+        },
+      },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       take: 20,
     });
-    res.json({ items });
+    res.json({ items: items.map(({ availabilityLinks, ...item }) => ({ ...item, availabilityPeriods: availabilityLinks.map((link) => link.availabilityPeriod) })) });
   } catch (error) { next(error); }
 });
 router.get("/link-options", async (req, res, next) => {

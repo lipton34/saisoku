@@ -214,11 +214,25 @@ model SparkAvailabilityPeriod {
   createdBy    User                          @relation("SparkAvailabilityCreatedBy", fields: [createdById], references: [id])
   updatedBy    User                          @relation("SparkAvailabilityUpdatedBy", fields: [updatedById], references: [id])
   targetLinks  SparkTargetAvailabilityLink[]
+  masterLinks  GbfMasterAvailabilityLink[]
   createdAt    DateTime                      @default(now()) @map("created_at")
   updatedAt    DateTime                      @updatedAt @map("updated_at")
 
   @@index([isActive, displayLabel])
   @@map("spark_availability_periods")
+}
+
+model GbfMasterAvailabilityLink {
+  id                   String                  @id @default(cuid())
+  masterItemId         String                  @map("master_item_id")
+  availabilityPeriodId String                  @map("availability_period_id")
+  sortOrder            Int                     @default(0) @map("sort_order")
+  masterItem           GbfMasterItem           @relation(fields: [masterItemId], references: [id], onDelete: Cascade)
+  availabilityPeriod   SparkAvailabilityPeriod @relation(fields: [availabilityPeriodId], references: [id], onDelete: Restrict)
+
+  @@unique([masterItemId, availabilityPeriodId])
+  @@index([availabilityPeriodId])
+  @@map("gbf_master_availability_links")
 }
 
 model SparkRewardEventType {
@@ -557,9 +571,10 @@ model GbfMasterItem {
   isActive      Boolean          @default(true)
   aliases       GbfMasterAlias[]
   raidGuides    RaidGuide[]
-  sparkTargets  SparkTarget[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  sparkTargets      SparkTarget[]
+  availabilityLinks GbfMasterAvailabilityLink[]
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
 
   @@index([kind, isActive, sortOrder])
   @@index([kind, name])
