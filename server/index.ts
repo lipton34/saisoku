@@ -34,8 +34,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
 const host = "0.0.0.0";
-const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+const clientOrigin = process.env.CLIENT_ORIGIN?.trim() || "http://localhost:5173";
 const isProduction = process.env.NODE_ENV === "production";
+// In production the frontend is served by Express on the same origin. Only allow
+// cross-origin requests if an explicit CLIENT_ORIGIN has been configured.
+const allowedCorsOrigin = isProduction ? (process.env.CLIENT_ORIGIN?.trim() || false) : clientOrigin;
 
 app.get("/api/health", (_req, res) => {
   res.status(200).json({ ok: true });
@@ -43,7 +46,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use(
   cors({
-    origin: isProduction ? true : clientOrigin,
+    origin: allowedCorsOrigin,
     credentials: true
   })
 );
