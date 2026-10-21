@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
+import { parseSparkSummaryMonth, isSparkSummaryMonthInRange } from "../lib/sparkSummaryMonth.js";
 import {
   parseOptionalText,
   parseSparkSavingsInput,
@@ -173,12 +174,12 @@ router.post("/history/entries", async (req, res, next) => {
 router.patch("/history/summary-start", async (req, res, next) => {
   try {
     const value = (req.body as Record<string, unknown>).month;
-    if (typeof value !== "string" || !/^\d{4}-\d{2}$/.test(value)) { res.status(400).json({ message: "開始月を確認してください" }); return; }
-    const requested = new Date(`${value}-01T00:00:00.000Z`);
+    const requested = parseSparkSummaryMonth(value);
+    if (!requested) { res.status(400).json({ message: "開始月を確認してください" }); return; }
     const savings = await prisma.sparkSavings.findUnique({ where: sparkSavingsOwnerWhere(ownerId(req)) });
     if (!savings?.historyStartedAt) { res.status(409).json({ message: "履歴が開始されていません" }); return; }
     const earliest = jstMonthStart(savings.historyStartedAt); const latest = jstMonthStart();
-    if (requested < earliest || requested > latest) { res.status(400).json({ message: "開始月は履歴開始月から現在月の範囲で選択してください" }); return; }
+    if (!isSparkSummaryMonthInRange(requested, earliest, latest)) { res.status(400).json({ message: "開始月は履歴開始月から現在月の範囲で選択してください" }); return; }
     const updated = await prisma.sparkSavings.update({ where: { id: savings.id }, data: { historySummaryStartMonth: requested } });
     res.json({ sparkSavings: serializeSparkSavings(updated), message: "集計の開始月を変更しました。" });
   } catch (error) { next(error); }
