@@ -1,9 +1,12 @@
 import bcrypt from "bcrypt";
 import { Router } from "express";
 import { cookieOptions, sessionCookieName, signSession } from "../auth.js";
+import { createAuthRateLimiter } from "../middleware/authRateLimit.js";
 import { prisma } from "../prisma.js";
 
 const router = Router();
+const registerLimiter = createAuthRateLimiter(5, 60 * 60 * 1000);
+const loginLimiter = createAuthRateLimiter(10, 15 * 60 * 1000);
 
 function normalizeUsername(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -26,7 +29,7 @@ function publicUser(user: { id: string; username: string; displayName: string | 
   };
 }
 
-router.post("/register", async (req, res, next) => {
+router.post("/register", registerLimiter.middleware, async (req, res, next) => {
   try {
     const username = normalizeUsername(req.body.username);
     const password = typeof req.body.password === "string" ? req.body.password : "";
@@ -50,6 +53,7 @@ router.post("/register", async (req, res, next) => {
       select: { id: true, username: true, displayName: true }
     });
 
+    registerLimiter.reset(req.ip || req.socket.remoteAddress || "unknown");
     res.cookie(sessionCookieName(), signSession(user), cookieOptions());
     res.status(201).json({ user: publicUser(user) });
   } catch (error) {
@@ -61,7 +65,7 @@ router.post("/register", async (req, res, next) => {
   }
 });
 
-router.post("/login", async (req, res, next) => {
+router.post("/login", loginLimiter.middleware, async (req, res, next) => {
   try {
     const username = normalizeUsername(req.body.username);
     const password = typeof req.body.password === "string" ? req.body.password : "";
@@ -73,6 +77,7 @@ router.post("/login", async (req, res, next) => {
     }
 
     const sessionUser = publicUser(user);
+    loginLimiter.reset(req.ip || req.socket.remoteAddress || "unknown");
     res.cookie(sessionCookieName(), signSession(sessionUser), cookieOptions());
     res.json({ user: sessionUser });
   } catch (error) {

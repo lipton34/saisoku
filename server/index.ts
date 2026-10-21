@@ -32,6 +32,9 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
+// Render terminates TLS at one reverse proxy; trust only the closest hop.
+// Revisit this setting if the hosting/proxy topology changes.
+if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 const port = Number(process.env.PORT ?? 4000);
 const host = "0.0.0.0";
 const clientOrigin = process.env.CLIENT_ORIGIN?.trim() || "http://localhost:5173";
