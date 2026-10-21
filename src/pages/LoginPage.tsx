@@ -4,7 +4,7 @@ import { ShieldCheck, Swords } from "lucide-react";
 import { useAuth } from "../components/AuthContext";
 
 export function LoginPage() {
-  const { user, login, register } = useAuth();
+  const { user, login, register, authCheckError, retryAuthCheck, isLoading } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -89,6 +89,14 @@ export function LoginPage() {
             />
           </label>
 
+          {authCheckError && (
+            <div role="alert" className="form-error">
+              <p>{authCheckError}</p>
+              <button type="button" onClick={retryAuthCheck} disabled={isLoading}>
+                {isLoading ? "再確認中..." : "認証状態を再確認"}
+              </button>
+            </div>
+          )}
           {error && <p className="form-error">{error}</p>}
 
           <button className="primary-button" disabled={isSubmitting} type="submit">

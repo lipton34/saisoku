@@ -683,6 +683,13 @@ export type BuildMastersQuery = {
   offset?: number;
 };
 
+export class ApiRequestError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
+
 type RequestOptions = RequestInit & {
   json?: unknown;
 };
@@ -707,7 +714,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     } catch {
       // Keep the generic message when the response is not JSON.
     }
-    throw new Error(message);
+    throw new ApiRequestError(message, response.status);
   }
 
   if (response.status === 204) {
