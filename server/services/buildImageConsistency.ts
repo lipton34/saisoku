@@ -20,9 +20,9 @@ export async function removeWithRetry(
 }
 
 /** Upload and persist are not atomic; compensate when persistence fails. */
-export async function persistWithStorageCompensation<T>(
-  upload: () => Promise<StorageImageRef>,
-  persist: (stored: StorageImageRef) => Promise<T>,
+export async function persistWithStorageCompensation<T, U extends StorageImageRef>(
+  upload: () => Promise<U>,
+  persist: (stored: U) => Promise<T>,
   remove: (images: StorageImageRef[]) => Promise<void>,
   onCleanupFailure: (error: unknown, image: StorageImageRef) => void
 ): Promise<T> {
