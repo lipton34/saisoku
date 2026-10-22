@@ -20,3 +20,15 @@ The database contains stored `storageBucket` and `storagePath` values. Existing 
 
 ## Follow-up limitation
 Signed URLs have a one-hour lifetime. Drafts left open in the browser longer than that may need a reload to obtain fresh links. An authenticated image streaming route would avoid expiring client URLs but requires separate design and tests.
+
+
+## Auditable one-time helper
+
+From a trusted deployment environment that has the same database and service-role credentials as production:
+
+```bash
+npx tsx server/scripts/migrateDraftImagesPrivate.ts
+npx tsx server/scripts/migrateDraftImagesPrivate.ts --apply
+```
+
+The default command is read-only. `--apply` requires the destination private bucket to **already exist**, verifies the downloaded source size and copied SHA-256 bytes, then updates the row's bucket reference only when it still points to the public source. It intentionally **does not delete the old public object**. After verifying the live site and backups, separately remove the known original object paths. Re-run the dry run to verify zero public draft DB references, and separately audit the storage bucket for leftover public `drafts/` objects. Do not use `--apply` before private-bucket creation and Render readiness checks.
