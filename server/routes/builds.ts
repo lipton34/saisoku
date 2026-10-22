@@ -8,6 +8,7 @@ import { reorderOwnedBuildImages } from "../services/buildImageOrderService.js";
 import { prisma } from "../prisma.js";
 import { removeWithRetry } from "../services/buildImageConsistency.js";
 import { saveBuildImage, cleanupDeletedBuildImages } from "../services/buildImageOperations.js";
+import { BuildImageLimitError, createBuildImageWithinLimit } from "../services/buildImageLimit.js";
 import {
   copyBuildImageInStorage,
   removeBuildImagesFromStorage,
@@ -210,8 +211,10 @@ buildsRouter.post("/:id/images", singleBuildImageUpload, async (req, res, next) 
       buffer: req.file!.buffer,
       mimeType: req.file!.mimetype,
       upload: uploadBuildImageToStorage,
-      persist: (stored) => prisma.buildPostImage.create({
-        data: {
+      persist: (stored) => prisma.$transaction((tx) => createBuildImageWithinLimit(
+        () => tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`build-image:post:${post.id}`}))`,
+        () => tx.buildPostImage.count({ where: { buildPostId: post.id } }),
+        (displayOrder) => tx.buildPostImage.create({ data: {
           buildPostId: post.id,
           storageBucket: stored.storageBucket,
           storagePath: stored.storagePath,
@@ -219,15 +222,18 @@ buildsRouter.post("/:id/images", singleBuildImageUpload, async (req, res, next) 
           originalName: req.file!.originalname,
           mimeType: req.file!.mimetype,
           sizeBytes: req.file!.size,
-          displayOrder: count
-        }
-      }),
+          displayOrder
+        } }),
+        maxBuildImages
+      )),
       remove: removeBuildImagesFromStorage,
       logCleanupFailure: (error, ref) => console.error("Storage cleanup failed after image DB insert failure", { storagePath: ref.storagePath, error })
     });
     res.status(201).json({ image });
   } catch (error) {
-    if (!imageUploadError(error, res)) next(error);
+    if (error instanceof BuildImageLimitError) {
+      res.status(400).json({ message: error.message });
+    } else if (!imageUploadError(error, res)) next(error);
   }
 });
 
@@ -460,8 +466,10 @@ buildDraftsRouter.post("/:id/images", singleBuildImageUpload, async (req, res, n
       buffer: req.file!.buffer,
       mimeType: req.file!.mimetype,
       upload: uploadBuildImageToStorage,
-      persist: (stored) => prisma.buildDraftImage.create({
-        data: {
+      persist: (stored) => prisma.$transaction((tx) => createBuildImageWithinLimit(
+        () => tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`build-image:draft:${draft.id}`}))`,
+        () => tx.buildDraftImage.count({ where: { buildDraftId: draft.id } }),
+        (displayOrder) => tx.buildDraftImage.create({ data: {
           buildDraftId: draft.id,
           storageBucket: stored.storageBucket,
           storagePath: stored.storagePath,
@@ -469,15 +477,18 @@ buildDraftsRouter.post("/:id/images", singleBuildImageUpload, async (req, res, n
           originalName: req.file!.originalname,
           mimeType: req.file!.mimetype,
           sizeBytes: req.file!.size,
-          displayOrder: count
-        }
-      }),
+          displayOrder
+        } }),
+        maxBuildImages
+      )),
       remove: removeBuildImagesFromStorage,
       logCleanupFailure: (error, ref) => console.error("Storage cleanup failed after image DB insert failure", { storagePath: ref.storagePath, error })
     });
     res.status(201).json({ image });
   } catch (error) {
-    if (!imageUploadError(error, res)) next(error);
+    if (error instanceof BuildImageLimitError) {
+      res.status(400).json({ message: error.message });
+    } else if (!imageUploadError(error, res)) next(error);
   }
 });
 
