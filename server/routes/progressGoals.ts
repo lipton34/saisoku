@@ -5,6 +5,7 @@ import { calculateProgress, collectRequiredStageIds, isStageDone, validateComple
 import { pinnedMaterialKeysFromSelection, validatePinnedMaterialKeys } from "../lib/progressPinnedMaterials.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
+import { loadProgressOwnerValues, mergeGoalInventory, type ProgressOwnerValues } from "../lib/progressOwnerValues.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -86,6 +87,7 @@ async function serializeGoal(
     targetStageId?: string;
     completedStageIds?: string[];
     inventoryOverrides?: Map<string, number>;
+    ownerValues?: ProgressOwnerValues;
   } = {}
 ) {
   const preset = definitionForGoal(goal);
@@ -97,16 +99,15 @@ async function serializeGoal(
     throw new Error("目標中継点が最終ゴールの依存関係に含まれていません");
   }
 
-  const [inventories, sharedValues] = await Promise.all([
-    prisma.userItemInventory.findMany({ where: { ownerId: goal.ownerId } }),
-    prisma.userProgressSharedValue.findMany({ where: { ownerId: goal.ownerId } })
-  ]);
-  const inventory = new Map(inventories.map((item) => [item.itemKey, item.ownedCount]));
-  for (const [itemKey, ownedCount] of options.inventoryOverrides ?? []) inventory.set(itemKey, ownedCount);
+  const values = options.ownerValues ?? await loadProgressOwnerValues(goal.ownerId, {
+    inventory: (ownerId) => prisma.userItemInventory.findMany({ where: { ownerId } }),
+    shared: (ownerId) => prisma.userProgressSharedValue.findMany({ where: { ownerId } })
+  });
+  const inventory = mergeGoalInventory(values.inventory, options.inventoryOverrides);
 
   const completedIds = new Set(options.completedStageIds ?? goal.stages.filter((item) => item.isManuallyDone).map((item) => item.stageId));
   const conditionProgress = new Map(goal.conditions.map((item) => [item.conditionId, { isChecked: item.isChecked, numericValue: item.numericValue }]));
-  const shared = new Map(sharedValues.map((item) => [item.valueKey, item.value]));
+  const shared = values.shared;
   const calculation = calculateProgress(preset, targetStageId, completedIds, inventory);
 
   const stages = preset.stages.map((stage) => {
@@ -173,7 +174,12 @@ router.get("/", async (req, res, next) => {
       include: { stages: true, conditions: true, boardGoal: true },
       orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }]
     });
-    res.json({ goals: await Promise.all(goals.map((goal) => serializeGoal(goal))) });
+    if (goals.length === 0) { res.json({ goals: [] }); return; }
+    const values = await loadProgressOwnerValues(ownerId(req), {
+      inventory: (ownerId) => prisma.userItemInventory.findMany({ where: { ownerId } }),
+      shared: (ownerId) => prisma.userProgressSharedValue.findMany({ where: { ownerId } })
+    });
+    res.json({ goals: await Promise.all(goals.map((goal) => serializeGoal(goal, { ownerValues: values }))) });
   } catch (error) { next(error); }
 });
 
