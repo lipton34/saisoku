@@ -3,6 +3,7 @@ import { Router } from "express";
 import { cookieOptions, sessionCookieName, signSession } from "../auth.js";
 import { createAuthRateLimiter } from "../middleware/authRateLimit.js";
 import { prisma } from "../prisma.js";
+import { checkInviteCode } from "../lib/inviteCode.js";
 
 const router = Router();
 const registerLimiter = createAuthRateLimiter(5, 60 * 60 * 1000);
@@ -35,14 +36,18 @@ router.post("/register", registerLimiter.middleware, async (req, res, next) => {
     const password = typeof req.body.password === "string" ? req.body.password : "";
     const displayName = normalizeDisplayName(req.body.displayName);
     const inviteCode = typeof req.body.inviteCode === "string" ? req.body.inviteCode.trim() : "";
-    const requiredInviteCode = process.env.INVITE_CODE?.trim();
+    const inviteStatus = checkInviteCode(process.env.NODE_ENV, process.env.INVITE_CODE, inviteCode);
+    if (inviteStatus === "unavailable") {
+      res.status(503).json({ message: "新規登録を一時的に利用できません" });
+      return;
+    }
 
     if (username.length < 3 || password.length < 8) {
       res.status(400).json({ message: "ユーザー名は3文字以上、パスワードは8文字以上で入力してください" });
       return;
     }
 
-    if (requiredInviteCode && inviteCode !== requiredInviteCode) {
+    if (inviteStatus === "invalid") {
       res.status(403).json({ message: "招待コードが違います" });
       return;
     }
