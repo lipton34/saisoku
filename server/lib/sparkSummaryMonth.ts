@@ -9,3 +9,15 @@ export function parseSparkSummaryMonth(value: unknown): Date | null {
 export function isSparkSummaryMonthInRange(month: Date, historyStartMonth: Date, currentMonth: Date): boolean {
   return month >= historyStartMonth && month <= currentMonth;
 }
+
+/** Convert a stored UTC month identifier (YYYY-MM-01T00Z) into JST midnight at the beginning of that month. */
+export function sparkSummaryMonthStartJst(monthIdentifier: Date): Date {
+  return new Date(monthIdentifier.getTime() - 9 * 60 * 60 * 1000);
+}
+
+/** Respect the exact history start timestamp if a new history begins mid-month. */
+export function sparkHistorySummaryLowerBound(historyStartedAt: Date, selectedMonth: Date | null): Date {
+  if (!selectedMonth) return historyStartedAt;
+  const monthStart = sparkSummaryMonthStartJst(selectedMonth);
+  return monthStart > historyStartedAt ? monthStart : historyStartedAt;
+}
