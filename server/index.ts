@@ -100,4 +100,5 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
 
 app.listen(port, host, () => {
   console.log(`Saisoku API listening on http://${host}:${port}`);
+  console.log(`Node.js runtime: ${process.version}`);
 });
