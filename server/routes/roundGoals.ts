@@ -1,4 +1,6 @@
 import { Router, type Request } from "express";
+import { Prisma } from "@prisma/client";
+import { isCompleteRoundGoalOrder } from "../lib/roundGoalOrder.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
 
@@ -144,17 +146,34 @@ router.patch("/:id", async (req, res, next) => {
 
 router.put("/order", async (req, res, next) => {
   try {
-    const goalIds = Array.isArray(req.body.goalIds) ? req.body.goalIds.filter((id: unknown) => typeof id === "string") : [];
-    const ownedCount = await prisma.roundGoal.count({ where: { id: { in: goalIds }, ownerId: ownerId(req) } });
-    if (ownedCount !== goalIds.length) {
-      res.status(400).json({ message: "並び順を更新できません" });
+    const goalIds: unknown = req.body?.goalIds;
+    const owner = ownerId(req);
+    const updated = await prisma.$transaction(async (tx) => {
+      const existing = await tx.roundGoal.findMany({ where: { ownerId: owner }, select: { id: true } });
+      if (!isCompleteRoundGoalOrder(goalIds, existing.map((goal) => goal.id))) return false;
+      for (const [sortOrder, id] of goalIds.entries()) {
+        const result = await tx.roundGoal.updateMany({
+          where: { id, ownerId: owner },
+          data: { sortOrder }
+        });
+        if (result.count !== 1) throw new Error("ROUND_ORDER_CONFLICT");
+      }
+      return true;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    if (!updated) {
+      res.status(400).json({ message: "並び順を更新できません。目標一覧を更新して再試行してください" });
       return;
     }
-    await prisma.$transaction(
-      goalIds.map((id: string, sortOrder: number) => prisma.roundGoal.update({ where: { id }, data: { sortOrder } }))
-    );
     res.status(204).send();
   } catch (error) {
+    if (error instanceof Error && error.message === "ROUND_ORDER_CONFLICT") {
+      res.status(409).json({ message: "並び順の更新が競合しました。目標一覧を更新して再試行してください" });
+      return;
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+      res.status(409).json({ message: "並び順の更新が競合しました。再試行してください" });
+      return;
+    }
     next(error);
   }
 });
