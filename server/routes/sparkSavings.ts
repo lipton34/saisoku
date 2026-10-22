@@ -1,7 +1,7 @@
 import { Router, type Request } from "express";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
-import { parseSparkSummaryMonth, isSparkSummaryMonthInRange } from "../lib/sparkSummaryMonth.js";
+import { parseSparkSummaryMonth, isSparkSummaryMonthInRange, sparkHistorySummaryLowerBound } from "../lib/sparkSummaryMonth.js";
 import {
   parseOptionalText,
   parseSparkSavingsInput,
@@ -127,7 +127,7 @@ router.get("/history/summary", async (req, res, next) => {
   try {
     const savings = await prisma.sparkSavings.findUnique({ where: sparkSavingsOwnerWhere(ownerId(req)) });
     if (!savings?.historyStartedAt) { res.json({ months: [] }); return; }
-    const entries = await prisma.sparkSavingsHistory.findMany({ where: { ownerId: ownerId(req), entryType: { not: "start" }, createdAt: { gte: savings.historySummaryStartMonth ?? savings.historyStartedAt } }, orderBy: { createdAt: "asc" } });
+    const entries = await prisma.sparkSavingsHistory.findMany({ where: { ownerId: ownerId(req), entryType: { not: "start" }, createdAt: { gte: sparkHistorySummaryLowerBound(savings.historyStartedAt, savings.historySummaryStartMonth) } }, orderBy: { createdAt: "asc" } });
     const grouped = new Map<string, { month: string; earnedEquivalent: number; spentEquivalent: number; adjustmentEquivalent: number; entryCount: number }>();
     for (const entry of entries) {
       const month = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit" }).format(entry.createdAt);
