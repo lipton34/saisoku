@@ -25,6 +25,16 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }
 });
+const singleBuildImageUpload: import("express").RequestHandler = (req, res, next) => {
+  upload.single("image")(req, res, (error: unknown) => {
+    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+      res.status(400).json({ message: "画像は1ファイル5MBまでです" });
+      return;
+    }
+    if (error) { next(error); return; }
+    next();
+  });
+};
 
 function currentUserId(req: Request) {
   return req.user?.id ?? "";
@@ -175,7 +185,7 @@ buildsRouter.patch("/:id", async (req, res, next) => {
   }
 });
 
-buildsRouter.post("/:id/images", upload.single("image"), async (req, res, next) => {
+buildsRouter.post("/:id/images", singleBuildImageUpload, async (req, res, next) => {
   try {
     const post = await prisma.buildPost.findFirst({
       where: { id: text(req.params.id), ownerId: currentUserId(req) },
@@ -425,7 +435,7 @@ buildDraftsRouter.post("/:id/publish", async (req, res, next) => {
   }
 });
 
-buildDraftsRouter.post("/:id/images", upload.single("image"), async (req, res, next) => {
+buildDraftsRouter.post("/:id/images", singleBuildImageUpload, async (req, res, next) => {
   try {
     const draft = await prisma.buildDraft.findFirst({
       where: { id: text(req.params.id), ownerId: currentUserId(req) },
