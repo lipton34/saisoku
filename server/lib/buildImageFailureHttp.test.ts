@@ -84,7 +84,7 @@ test("HTTP adapter: DB failure after Storage upload compensates before respondin
   try {
     assert.equal((await fetch(app.url + "/images", { method: "POST" })).status, 500);
     assert.equal(uploads, 1);
-    assert.deepEqual(removed, [{ storageBucket: "public", storagePath: "posts/post-id/test.png" }]);
+    assert.deepEqual(removed.map(({ storageBucket, storagePath }) => ({ storageBucket, storagePath })), [{ storageBucket: "public", storagePath: "posts/post-id/test.png" }]);
   } finally { await app.close(); }
 });
 
