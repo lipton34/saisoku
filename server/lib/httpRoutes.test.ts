@@ -78,7 +78,8 @@ test("HTTP: authenticated image upload over 5MB returns 400 before any DB/Storag
       form.append("image", new Blob([new Uint8Array(5 * 1024 * 1024 + 1)], { type: "image/png" }), "large.png");
       const response = await fetch(app.url + path, { method: "POST", body: form });
       assert.equal(response.status, 400, path);
-      assert.match((await response.json()).message, /5MB/, path);
+      const body = await response.json() as { message: string };
+      assert.match(body.message, /5MB/, path);
     }
   } finally { await app.close(); }
 });
