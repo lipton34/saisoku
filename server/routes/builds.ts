@@ -5,17 +5,30 @@ import { Router, type Request } from "express";
 import multer from "multer";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { reorderOwnedBuildImages } from "../services/buildImageOrderService.js";
-import { prisma } from "../prisma.js";
+import { prisma as defaultPrisma } from "../prisma.js";
 import { removeWithRetry } from "../services/buildImageConsistency.js";
 import { saveBuildImage, cleanupDeletedBuildImages } from "../services/buildImageOperations.js";
 import { BuildImageLimitError, createBuildImageWithinLimit } from "../services/buildImageLimit.js";
 import {
-  copyBuildImageInStorage,
-  removeBuildImagesFromStorage,
-  uploadBuildImageToStorage,
-  signedDraftImageUrl
+  copyBuildImageInStorage as defaultCopyBuildImageInStorage,
+  removeBuildImagesFromStorage as defaultRemoveBuildImagesFromStorage,
+  uploadBuildImageToStorage as defaultUploadBuildImageToStorage,
+  signedDraftImageUrl as defaultSignedDraftImageUrl
 } from "../services/buildImageStorage.js";
 
+/** Injectable dependencies enable in-process HTTP tests without touching production services. */
+export function createBuildRouters(deps: {
+  prisma?: typeof defaultPrisma;
+  uploadBuildImageToStorage?: typeof defaultUploadBuildImageToStorage;
+  removeBuildImagesFromStorage?: typeof defaultRemoveBuildImagesFromStorage;
+  signedDraftImageUrl?: typeof defaultSignedDraftImageUrl;
+  copyBuildImageInStorage?: typeof defaultCopyBuildImageInStorage;
+} = {}) {
+const prisma = deps.prisma ?? defaultPrisma;
+const uploadBuildImageToStorage = deps.uploadBuildImageToStorage ?? defaultUploadBuildImageToStorage;
+const removeBuildImagesFromStorage = deps.removeBuildImagesFromStorage ?? defaultRemoveBuildImagesFromStorage;
+const signedDraftImageUrl = deps.signedDraftImageUrl ?? defaultSignedDraftImageUrl;
+const copyBuildImageInStorage = deps.copyBuildImageInStorage ?? defaultCopyBuildImageInStorage;
 const buildsRouter = Router();
 const buildDraftsRouter = Router();
 buildsRouter.use(requireAuth);
@@ -579,4 +592,7 @@ buildDraftsRouter.delete("/:id", async (req, res, next) => {
   }
 });
 
-export { buildsRouter, buildDraftsRouter };
+return { buildsRouter, buildDraftsRouter };
+}
+
+export const { buildsRouter, buildDraftsRouter } = createBuildRouters();
