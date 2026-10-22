@@ -12,7 +12,8 @@ import { BuildImageLimitError, createBuildImageWithinLimit } from "../services/b
 import {
   copyBuildImageInStorage,
   removeBuildImagesFromStorage,
-  uploadBuildImageToStorage
+  uploadBuildImageToStorage,
+  signedDraftImageUrl
 } from "../services/buildImageStorage.js";
 
 const buildsRouter = Router();
@@ -88,6 +89,16 @@ function imageUploadError(error: unknown, res: Parameters<Parameters<typeof buil
     return true;
   }
   return false;
+}
+
+async function withSignedDraftImages<T extends { images: Array<{ storageBucket: string; storagePath: string; publicUrl: string | null }> }>(draft: T): Promise<T> {
+  return {
+    ...draft,
+    images: await Promise.all(draft.images.map(async (image) => ({
+      ...image,
+      publicUrl: await signedDraftImageUrl(image.storageBucket, image.storagePath)
+    })))
+  };
 }
 
 const postInclude = {
@@ -319,7 +330,7 @@ buildDraftsRouter.get("/", async (req, res, next) => {
       include: { images: { orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }] } },
       orderBy: { updatedAt: "desc" }
     });
-    res.json({ drafts });
+    res.json({ drafts: await Promise.all(drafts.map(withSignedDraftImages)) });
   } catch (error) {
     next(error);
   }
@@ -335,7 +346,7 @@ buildDraftsRouter.get("/:id", async (req, res, next) => {
       res.status(404).json({ message: "下書きが見つかりません" });
       return;
     }
-    res.json({ draft });
+    res.json({ draft: await withSignedDraftImages(draft) });
   } catch (error) {
     next(error);
   }
@@ -348,7 +359,7 @@ buildDraftsRouter.post("/", async (req, res, next) => {
       data: { ...fields, ownerId: currentUserId(req) },
       include: { images: true }
     });
-    res.status(201).json({ draft });
+    res.status(201).json({ draft: await withSignedDraftImages(draft) });
   } catch (error) {
     next(error);
   }
@@ -405,13 +416,14 @@ buildDraftsRouter.post("/:id/publish", async (req, res, next) => {
         const copied = await copyBuildImageInStorage({
           bucket: draftImage.storageBucket,
           sourcePath: draftImage.storagePath,
-          destinationPath
+          destinationPath,
+          mimeType: draftImage.mimeType
         });
-        copiedImages.push({ storageBucket: draftImage.storageBucket, storagePath: destinationPath });
+        copiedImages.push({ storageBucket: copied.bucket, storagePath: destinationPath });
         await prisma.buildPostImage.create({
           data: {
             buildPostId: post.id,
-            storageBucket: draftImage.storageBucket,
+            storageBucket: copied.bucket,
             storagePath: destinationPath,
             publicUrl: copied.publicUrl,
             originalName: draftImage.originalName,
@@ -484,7 +496,7 @@ buildDraftsRouter.post("/:id/images", singleBuildImageUpload, async (req, res, n
       remove: removeBuildImagesFromStorage,
       logCleanupFailure: (error, ref) => console.error("Storage cleanup failed after image DB insert failure", { storagePath: ref.storagePath, error })
     });
-    res.status(201).json({ image });
+    res.status(201).json({ image: { ...image, publicUrl: await signedDraftImageUrl(image.storageBucket, image.storagePath) } });
   } catch (error) {
     if (error instanceof BuildImageLimitError) {
       res.status(400).json({ message: error.message });
