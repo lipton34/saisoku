@@ -91,7 +91,7 @@ function imageUploadError(error: unknown, res: Parameters<Parameters<typeof buil
   return false;
 }
 
-async function withSignedDraftImages<T extends { images: Array<{ storageBucket: string; storagePath: string; publicUrl: string | null }> }>(draft: T): Promise<T> {
+async function withSignedDraftImages<T extends { images: Array<{ storageBucket: string; storagePath: string; publicUrl: string | null }> }>(draft: T) {
   return {
     ...draft,
     images: await Promise.all(draft.images.map(async (image) => ({
