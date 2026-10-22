@@ -7,9 +7,13 @@ import { authRouter } from "../routes/auth.js";
 import { buildsRouter, buildDraftsRouter } from "../routes/builds.js";
 
 /** In-process HTTP requests: no production Supabase connection or Storage writes. */
-async function startApp() {
+async function startApp(authenticated = false) {
   const app = express();
   app.use(express.json());
+  if (authenticated) app.use((req, _res, next) => {
+    req.user = { id: "test-user", username: "test-user", displayName: null };
+    next();
+  });
   app.use("/api/auth", authRouter);
   app.use("/api/builds", buildsRouter);
   app.use("/api/build-drafts", buildDraftsRouter);
@@ -65,3 +69,16 @@ test("HTTP: unauthenticated image routes return 401", async () => {
   } finally { await app.close(); }
 });
 
+
+test("HTTP: authenticated image upload over 5MB returns 400 before any DB/Storage operation", async () => {
+  const app = await startApp(true);
+  try {
+    for (const path of ["/api/builds/post-id/images", "/api/build-drafts/draft-id/images"]) {
+      const form = new FormData();
+      form.append("image", new Blob([new Uint8Array(5 * 1024 * 1024 + 1)], { type: "image/png" }), "large.png");
+      const response = await fetch(app.url + path, { method: "POST", body: form });
+      assert.equal(response.status, 400, path);
+      assert.match((await response.json()).message, /5MB/, path);
+    }
+  } finally { await app.close(); }
+});
