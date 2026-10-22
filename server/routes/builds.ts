@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { Router, type Request } from "express";
 import multer from "multer";
 import { requireAuth } from "../middleware/requireAuth.js";
-import { isCompleteImageOrder } from "../lib/buildImageOrder.js";
+import { reorderOwnedBuildImages } from "../services/buildImageOrderService.js";
 import { prisma } from "../prisma.js";
 import { persistWithStorageCompensation, removeWithRetry } from "../services/buildImageConsistency.js";
 import {
@@ -235,21 +235,21 @@ buildsRouter.put("/:id/images/order", async (req, res, next) => {
       return;
     }
     const imageIds: unknown = req.body?.imageIds;
-    const updated = await prisma.$transaction(async (tx) => {
-      const stored = await tx.buildPostImage.findMany({
-        where: { buildPostId: post.id },
-        select: { id: true }
-      });
-      if (!isCompleteImageOrder(imageIds, stored.map((image) => image.id), maxBuildImages)) return false;
-      for (const [displayOrder, id] of imageIds.entries()) {
-        const result = await tx.buildPostImage.updateMany({
+    const updated = await prisma.$transaction(
+      (tx) => reorderOwnedBuildImages(
+        imageIds,
+        async () => (await tx.buildPostImage.findMany({
+          where: { buildPostId: post.id },
+          select: { id: true }
+        })).map((image) => image.id),
+        (id, displayOrder) => tx.buildPostImage.updateMany({
           where: { id, buildPostId: post.id },
           data: { displayOrder }
-        });
-        if (result.count !== 1) return false;
-      }
-      return true;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        }),
+        maxBuildImages
+      ),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
     if (!updated) {
       res.status(400).json({ message: "画像の並び順を更新できません。画像一覧を更新して再試行してください" });
       return;
@@ -493,21 +493,21 @@ buildDraftsRouter.put("/:id/images/order", async (req, res, next) => {
       return;
     }
     const imageIds: unknown = req.body?.imageIds;
-    const updated = await prisma.$transaction(async (tx) => {
-      const stored = await tx.buildDraftImage.findMany({
-        where: { buildDraftId: draft.id },
-        select: { id: true }
-      });
-      if (!isCompleteImageOrder(imageIds, stored.map((image) => image.id), maxBuildImages)) return false;
-      for (const [displayOrder, id] of imageIds.entries()) {
-        const result = await tx.buildDraftImage.updateMany({
+    const updated = await prisma.$transaction(
+      (tx) => reorderOwnedBuildImages(
+        imageIds,
+        async () => (await tx.buildDraftImage.findMany({
+          where: { buildDraftId: draft.id },
+          select: { id: true }
+        })).map((image) => image.id),
+        (id, displayOrder) => tx.buildDraftImage.updateMany({
           where: { id, buildDraftId: draft.id },
           data: { displayOrder }
-        });
-        if (result.count !== 1) return false;
-      }
-      return true;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        }),
+        maxBuildImages
+      ),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
     if (!updated) {
       res.status(400).json({ message: "画像の並び順を更新できません。画像一覧を更新して再試行してください" });
       return;
