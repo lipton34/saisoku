@@ -1,91 +1,11 @@
-import { FormEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Check, ChevronDown, CircleAlert, ListChecks, PackageOpen, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, CircleAlert, ListChecks, PackageOpen, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { DeferredNumberInput } from "../components/DeferredNumberInput";
 import { api, type ProgressGoal, type ProgressPreset } from "../lib/api";
 
-function dependencyClosure(preset: ProgressPreset, stageId: string, found = new Set<string>()) {
-  const stage = preset.stages.find((item) => item.id === stageId);
-  if (!stage || found.has(stageId)) return found;
-  found.add(stageId);
-  stage.dependsOn.forEach((id) => dependencyClosure(preset, id, found));
-  return found;
-}
-
-type MaterialRequirement = ProgressGoal["calculation"]["requirements"][number];
-type MaterialTab = "shortage" | "arcarum" | "battle" | "other" | "all";
-
-const materialTabs: Array<{ id: MaterialTab; label: string }> = [
-  { id: "shortage", label: "不足素材" },
-  { id: "arcarum", label: "アーカルム" },
-  { id: "battle", label: "属性・マルチ" },
-  { id: "other", label: "共通・その他" },
-  { id: "all", label: "すべて" }
-];
-
-const progressGroupDescriptions: Record<string, string> = {
-  "arcarum-summon": "召喚石の交換から5凸まで",
-  "foundation-weapon": "礎武器の交換から5凸まで",
-  domain: "第1解放から全解放まで"
-};
-
-function materialCategory(itemKey: string): Exclude<MaterialTab, "shortage" | "all"> {
-  if (/(sephira|astra|idea|veritas|verum|haze|bright|fragment|new-world)/.test(itemKey)) return "arcarum";
-  if (/(anima|magna|element|psyche|jewel|rubble|tragedy|insular|gale-rock|thunder-wheel|todestrieb|stone-fragment)/.test(itemKey)) return "battle";
-  return "other";
-}
-
-function ProgressModal({
-  title,
-  description,
-  size = "medium",
-  onClose,
-  children,
-  footer,
-  nested = false,
-  disableEscape = false
-}: {
-  title: string;
-  description?: string;
-  size?: "small" | "medium" | "wide";
-  onClose: () => void;
-  children: ReactNode;
-  footer?: ReactNode;
-  nested?: boolean;
-  disableEscape?: boolean;
-}) {
-  const titleId = useId();
-  const dialogRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (disableEscape) return;
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [disableEscape, onClose]);
-  useEffect(() => {
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    dialogRef.current?.focus();
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      previousFocus?.focus();
-    };
-  }, []);
-
-  return <div className={`progress-modal-backdrop${nested ? " nested" : ""}`} onMouseDown={onClose}>
-    <section className={`progress-modal progress-modal--${size}`} aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()} ref={dialogRef} role="dialog" tabIndex={-1}>
-      <header className="progress-modal-header">
-        <div><h2 id={titleId}>{title}</h2>{description && <p>{description}</p>}</div>
-        <button aria-label={`${title}を閉じる`} className="icon-button" onClick={onClose} title="閉じる" type="button"><X size={18} /></button>
-      </header>
-      <div className="progress-modal-body">{children}</div>
-      {footer && <footer className="progress-modal-footer">{footer}</footer>}
-    </section>
-  </div>;
-}
+import { ProgressModal } from "../components/ProgressModal";
+import { dependencyClosure, materialTabs, progressGroupDescriptions, materialCategory, type MaterialRequirement, type MaterialTab } from "../lib/progressGoalView";
 
 function ProgressGoalEditor({
   goal,
