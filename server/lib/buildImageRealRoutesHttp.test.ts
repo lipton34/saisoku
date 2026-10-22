@@ -110,3 +110,43 @@ test("actual draft delete: DB succeeds, Storage fails after retries, returns 204
     assert.equal(storageDeletes, 3);
   } finally { await app.close(); }
 });
+
+for (const kind of ["posts", "drafts"] as const) {
+  test(`actual ${kind} order endpoint validates complete ID set and concurrent updates`, async () => {
+    const updates: Array<{ id: string; displayOrder: number }> = [];
+    let affected = 1;
+    const table = {
+      findMany: async () => [{ id: "a" }, { id: "b" }],
+      updateMany: async ({ where, data }: { where: { id: string }; data: { displayOrder: number } }) => {
+        updates.push({ id: where.id, displayOrder: data.displayOrder });
+        return { count: affected };
+      }
+    };
+    const fake = {
+      buildPost: { findFirst: async () => ({ id: "record-id" }) },
+      buildDraft: { findFirst: async () => ({ id: "record-id" }) },
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback({
+        buildPostImage: table,
+        buildDraftImage: table
+      })
+    };
+    const app = await start({ prisma: fake as never });
+    try {
+      const path = `${app.url}/${kind}/record-id/images/order`;
+      const send = (imageIds: string[]) => fetch(path, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageIds })
+      });
+      assert.equal((await send(["b", "a"])).status, 204);
+      assert.deepEqual(updates, [{ id: "b", displayOrder: 0 }, { id: "a", displayOrder: 1 }]);
+      updates.length = 0;
+      assert.equal((await send(["a"])).status, 400);
+      assert.equal(updates.length, 0);
+      assert.equal((await send(["a", "a"])).status, 400);
+      assert.equal(updates.length, 0);
+      affected = 0; // Concurrent deletion after selection; update count no longer matches.
+      assert.equal((await send(["a", "b"])).status, 400);
+    } finally { await app.close(); }
+  });
+}
