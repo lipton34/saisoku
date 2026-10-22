@@ -6,7 +6,8 @@ import multer from "multer";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { reorderOwnedBuildImages } from "../services/buildImageOrderService.js";
 import { prisma } from "../prisma.js";
-import { persistWithStorageCompensation, removeWithRetry } from "../services/buildImageConsistency.js";
+import { removeWithRetry } from "../services/buildImageConsistency.js";
+import { saveBuildImage, cleanupDeletedBuildImages } from "../services/buildImageOperations.js";
 import {
   copyBuildImageInStorage,
   removeBuildImagesFromStorage,
@@ -194,16 +195,12 @@ buildsRouter.post("/:id/images", upload.single("image"), async (req, res, next) 
       return;
     }
     const storagePath = `posts/${post.id}/${Date.now()}-${crypto.randomUUID()}${extensionFor(req.file)}`;
-    const image = await persistWithStorageCompensation(
-      async () => {
-        const stored = await uploadBuildImageToStorage({
-          path: storagePath,
-          buffer: req.file!.buffer,
-          mimeType: req.file!.mimetype
-        });
-        return { storageBucket: stored.bucket, storagePath, publicUrl: stored.publicUrl };
-      },
-      (stored) => prisma.buildPostImage.create({
+    const image = await saveBuildImage({
+      storagePath,
+      buffer: req.file!.buffer,
+      mimeType: req.file!.mimetype,
+      upload: uploadBuildImageToStorage,
+      persist: (stored) => prisma.buildPostImage.create({
         data: {
           buildPostId: post.id,
           storageBucket: stored.storageBucket,
@@ -215,9 +212,9 @@ buildsRouter.post("/:id/images", upload.single("image"), async (req, res, next) 
           displayOrder: count
         }
       }),
-      removeBuildImagesFromStorage,
-      (error, ref) => console.error("Storage cleanup failed after image DB insert failure", { storagePath: ref.storagePath, error })
-    );
+      remove: removeBuildImagesFromStorage,
+      logCleanupFailure: (error, ref) => console.error("Storage cleanup failed after image DB insert failure", { storagePath: ref.storagePath, error })
+    });
     res.status(201).json({ image });
   } catch (error) {
     if (!imageUploadError(error, res)) next(error);
@@ -270,11 +267,9 @@ buildsRouter.delete("/:id/images/:imageId", async (req, res, next) => {
       return;
     }
     await prisma.buildPostImage.delete({ where: { id: image.id } });
-    try {
-      await removeWithRetry([image], removeBuildImagesFromStorage);
-    } catch (storageError) {
+    await cleanupDeletedBuildImages([image], removeBuildImagesFromStorage, (storageError) => {
       console.warn("Failed to remove build image from storage", storageError);
-    }
+    });
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -292,11 +287,9 @@ buildsRouter.delete("/:id", async (req, res, next) => {
       return;
     }
     await prisma.buildPost.delete({ where: { id: post.id } });
-    try {
-      await removeWithRetry(post.images, removeBuildImagesFromStorage);
-    } catch (storageError) {
+    await cleanupDeletedBuildImages(post.images, removeBuildImagesFromStorage, (storageError) => {
       console.warn("Failed to remove build images from storage", storageError);
-    }
+    });
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -452,16 +445,12 @@ buildDraftsRouter.post("/:id/images", upload.single("image"), async (req, res, n
       return;
     }
     const storagePath = `drafts/${draft.id}/${Date.now()}-${crypto.randomUUID()}${extensionFor(req.file)}`;
-    const image = await persistWithStorageCompensation(
-      async () => {
-        const stored = await uploadBuildImageToStorage({
-          path: storagePath,
-          buffer: req.file!.buffer,
-          mimeType: req.file!.mimetype
-        });
-        return { storageBucket: stored.bucket, storagePath, publicUrl: stored.publicUrl };
-      },
-      (stored) => prisma.buildDraftImage.create({
+    const image = await saveBuildImage({
+      storagePath,
+      buffer: req.file!.buffer,
+      mimeType: req.file!.mimetype,
+      upload: uploadBuildImageToStorage,
+      persist: (stored) => prisma.buildDraftImage.create({
         data: {
           buildDraftId: draft.id,
           storageBucket: stored.storageBucket,
@@ -473,9 +462,9 @@ buildDraftsRouter.post("/:id/images", upload.single("image"), async (req, res, n
           displayOrder: count
         }
       }),
-      removeBuildImagesFromStorage,
-      (error, ref) => console.error("Storage cleanup failed after image DB insert failure", { storagePath: ref.storagePath, error })
-    );
+      remove: removeBuildImagesFromStorage,
+      logCleanupFailure: (error, ref) => console.error("Storage cleanup failed after image DB insert failure", { storagePath: ref.storagePath, error })
+    });
     res.status(201).json({ image });
   } catch (error) {
     if (!imageUploadError(error, res)) next(error);
@@ -528,11 +517,9 @@ buildDraftsRouter.delete("/:id/images/:imageId", async (req, res, next) => {
       return;
     }
     await prisma.buildDraftImage.delete({ where: { id: image.id } });
-    try {
-      await removeWithRetry([image], removeBuildImagesFromStorage);
-    } catch (storageError) {
+    await cleanupDeletedBuildImages([image], removeBuildImagesFromStorage, (storageError) => {
       console.warn("Failed to remove draft image from storage", storageError);
-    }
+    });
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -550,11 +537,9 @@ buildDraftsRouter.delete("/:id", async (req, res, next) => {
       return;
     }
     await prisma.buildDraft.delete({ where: { id: draft.id } });
-    try {
-      await removeWithRetry(draft.images, removeBuildImagesFromStorage);
-    } catch (storageError) {
+    await cleanupDeletedBuildImages(draft.images, removeBuildImagesFromStorage, (storageError) => {
       console.warn("Failed to remove draft images from storage", storageError);
-    }
+    });
     res.status(204).send();
   } catch (error) {
     next(error);
