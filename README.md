@@ -123,3 +123,7 @@ npm run migration:remove-legacy-build-images -- --confirm-delete-legacy-build-im
 - [天井貯金拡張](docs/32_spark_savings_expansion_feature.md)
 
 公開URLは`https://saisoku.onrender.com`です。Renderでの現在のデプロイ状態は反映作業時に確認してください。
+
+## NEWS取得・再解析の実行権限
+
+`/api/official-news-fetch/fetch/latest`、`/fetch/month`、`/reanalyze` は、サーバー環境変数 `OFFICIAL_NEWS_FETCH_OPERATOR_IDS` に指定したユーザーIDのみ実行できます。カンマ区切りで複数指定可能です。未設定の場合は全員403で拒否します。一般ユーザーのNEWS閲覧には影響しません。管理者が本番で実行を許可するユーザーIDを明示的に登録してください。実行中の二重リクエストは409となります。現在の排他制御は単一Node.jsプロセス内のみ有効です。
