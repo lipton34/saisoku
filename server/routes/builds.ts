@@ -417,7 +417,7 @@ buildDraftsRouter.post("/:id/publish", async (req, res, next) => {
           bucket: draftImage.storageBucket,
           sourcePath: draftImage.storagePath,
           destinationPath,
-          mimeType: draftImage.mimeType
+          mimeType: draftImage.mimeType ?? undefined
         });
         copiedImages.push({ storageBucket: copied.bucket, storagePath: destinationPath });
         await prisma.buildPostImage.create({
