@@ -2,10 +2,14 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const defaultBucket = "gbf-build-screenshots";
 let storageClient: SupabaseClient | null = null;
-let bucketReady = false;
+const readyBuckets = new Set<string>();
 
 export function buildScreenshotBucket() {
   return process.env.SUPABASE_BUILD_SCREENSHOT_BUCKET?.trim() || defaultBucket;
+}
+
+export function buildDraftScreenshotBucket() {
+  return process.env.SUPABASE_BUILD_DRAFT_BUCKET?.trim() || `${buildScreenshotBucket()}-drafts`;
 }
 
 function requireStorageClient() {
@@ -26,15 +30,17 @@ function requireStorageClient() {
   return storageClient;
 }
 
-async function ensureBucket(client: SupabaseClient, bucket: string) {
-  if (bucketReady) {
+async function ensureBucket(client: SupabaseClient, bucket: string, isPublic: boolean) {
+  if (readyBuckets.has(bucket)) {
     return;
   }
 
-  const { data } = await client.storage.getBucket(bucket);
+  const { data, error: lookupError } = await client.storage.getBucket(bucket);
+  if (lookupError && !/not found/i.test(lookupError.message)) throw new Error(`Storage bucketの確認に失敗しました: ${lookupError.message}`);
+  if (data && data.public !== isPublic) throw new Error(`Storage bucketの公開設定が不正です: ${bucket}`);
   if (!data) {
     const { error } = await client.storage.createBucket(bucket, {
-      public: true,
+      public: isPublic,
       fileSizeLimit: 5 * 1024 * 1024,
       allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"]
     });
@@ -43,7 +49,7 @@ async function ensureBucket(client: SupabaseClient, bucket: string) {
     }
   }
 
-  bucketReady = true;
+  readyBuckets.add(bucket);
 }
 
 export async function uploadBuildImageToStorage(params: {
@@ -52,8 +58,10 @@ export async function uploadBuildImageToStorage(params: {
   mimeType: string;
 }) {
   const client = requireStorageClient();
-  const bucket = buildScreenshotBucket();
-  await ensureBucket(client, bucket);
+  const isDraft = params.path.startsWith("drafts/");
+  const bucket = isDraft ? buildDraftScreenshotBucket() : buildScreenshotBucket();
+  if (isDraft && bucket === buildScreenshotBucket()) throw new Error("下書き用Storage bucketは公開bucketと分離してください");
+  await ensureBucket(client, bucket, !isDraft);
 
   const { error } = await client.storage.from(bucket).upload(params.path, params.buffer, {
     contentType: params.mimeType,
@@ -64,11 +72,8 @@ export async function uploadBuildImageToStorage(params: {
     throw new Error(`画像アップロードに失敗しました: ${error.message}`);
   }
 
-  const { data } = client.storage.from(bucket).getPublicUrl(params.path);
-  return {
-    bucket,
-    publicUrl: data.publicUrl
-  };
+  const publicUrl = isDraft ? "" : client.storage.from(bucket).getPublicUrl(params.path).data.publicUrl;
+  return { bucket, publicUrl };
 }
 
 export async function removeBuildImagesFromStorage(images: { storageBucket: string; storagePath: string }[]) {
@@ -94,17 +99,33 @@ export async function removeBuildImagesFromStorage(images: { storageBucket: stri
   );
 }
 
+export async function signedDraftImageUrl(bucket: string, storagePath: string) {
+  const client = requireStorageClient();
+  const { data, error } = await client.storage.from(bucket).createSignedUrl(storagePath, 60 * 60);
+  if (error || !data?.signedUrl) throw new Error(`下書き画像のURL生成に失敗しました: ${error?.message ?? "unknown"}`);
+  return data.signedUrl;
+}
+
 export async function copyBuildImageInStorage(params: {
   bucket: string;
   sourcePath: string;
   destinationPath: string;
+  mimeType?: string;
 }) {
   const client = requireStorageClient();
-  await ensureBucket(client, params.bucket);
-  const { error } = await client.storage.from(params.bucket).copy(params.sourcePath, params.destinationPath);
-  if (error) {
-    throw new Error(`画像コピーに失敗しました: ${error.message}`);
+  const destinationBucket = buildScreenshotBucket();
+  await ensureBucket(client, destinationBucket, true);
+  if (params.bucket === destinationBucket) {
+    const { error } = await client.storage.from(params.bucket).copy(params.sourcePath, params.destinationPath);
+    if (error) throw new Error(`画像コピーに失敗しました: ${error.message}`);
+  } else {
+    const { data, error: downloadError } = await client.storage.from(params.bucket).download(params.sourcePath);
+    if (downloadError || !data) throw new Error(`画像取得に失敗しました: ${downloadError?.message ?? "unknown"}`);
+    const { error: uploadError } = await client.storage.from(destinationBucket).upload(params.destinationPath, await data.arrayBuffer(), {
+      contentType: params.mimeType ?? "application/octet-stream",
+      upsert: false
+    });
+    if (uploadError) throw new Error(`画像コピーに失敗しました: ${uploadError.message}`);
   }
-  const { data } = client.storage.from(params.bucket).getPublicUrl(params.destinationPath);
-  return { publicUrl: data.publicUrl };
+  return { bucket: destinationBucket, publicUrl: client.storage.from(destinationBucket).getPublicUrl(params.destinationPath).data.publicUrl };
 }
