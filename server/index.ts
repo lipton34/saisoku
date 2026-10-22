@@ -5,6 +5,7 @@ import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { attachUser } from "./middleware/requireAuth.js";
+import { requireWriteOrigin } from "./middleware/requireWriteOrigin.js";
 import { authRouter } from "./routes/auth.js";
 import { buildMastersRouter } from "./routes/buildMasters.js";
 import { buildDraftsRouter, buildsRouter } from "./routes/builds.js";
@@ -56,6 +57,7 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 app.use(attachUser);
+app.use("/api", requireWriteOrigin);
 
 app.use("/api/auth", authRouter);
 app.use("/api/build-masters", buildMastersRouter);
