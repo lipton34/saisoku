@@ -68,7 +68,7 @@ function definitionForGoal(goal: { presetId: string; presetVersion: number; targ
 function conditionState(
   condition: ProgressCondition,
   saved: { isChecked: boolean; numericValue: number | null } | undefined,
-  sharedValues: Map<string, number>
+  sharedValues: ReadonlyMap<string, number>
 ) {
   const numericValue = condition.kind === "shared-number"
     ? sharedValues.get(condition.sharedValueKey ?? "") ?? 0
