@@ -148,7 +148,7 @@ function ProgressGoalEditor({
     onError("");
     try {
       const inventoryChanges = Object.entries(inventory).filter(([key, value]) => savedInventory.get(key) !== value);
-      await Promise.all(inventoryChanges.map(([itemKey, ownedCount]) => api.updateProgressInventory(goal.id, itemKey, ownedCount)));
+      if (inventoryChanges.length) await api.updateProgressInventoryBatch(goal.id, inventoryChanges.map(([itemKey, ownedCount]) => ({ itemKey, ownedCount })));
       const response = await api.saveProgressPinnedMaterials(goal.id, pinnedMaterialKeys, goal.targetStageId);
       onChange(response.goal);
       setMaterialInventorySnapshot(null);
@@ -250,7 +250,7 @@ function ProgressGoalEditor({
     onError("");
     try {
       const inventoryChanges = Object.entries(inventory).filter(([key, value]) => savedInventory.get(key) !== value);
-      await Promise.all(inventoryChanges.map(([itemKey, ownedCount]) => api.updateProgressInventory(goal.id, itemKey, ownedCount)));
+      if (inventoryChanges.length) await api.updateProgressInventoryBatch(goal.id, inventoryChanges.map(([itemKey, ownedCount]) => ({ itemKey, ownedCount })));
       const response = await api.saveProgressStages(goal.id, [...draftCompleted]);
       onChange(response.goal);
       if (closeProgressModal) {

@@ -178,6 +178,8 @@ export const api = {
   ),
   saveProgressStages: (goalId: string, completedStageIds: string[]) =>
     request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/progress`, { method: "PUT", json: { completedStageIds } }),
+  updateProgressInventoryBatch: (goalId: string, changes: { itemKey: string; ownedCount: number }[]) =>
+    request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/inventory`, { method: "PUT", json: { changes } }),
   updateProgressInventory: (goalId: string, itemKey: string, ownedCount: number) =>
     request<{ goal: ProgressGoal }>(`/api/progress-goals/${goalId}/inventory/${encodeURIComponent(itemKey)}`, { method: "PATCH", json: { ownedCount } }),
   saveProgressPinnedMaterials: (goalId: string, itemKeys: string[], targetStageId: string) =>
