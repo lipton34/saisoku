@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { requireOfficialNewsOperator } from "../middleware/requireOfficialNewsOperator.js";
 import { OfficialNewsService } from "../services/officialNews.js";
 
 const router = Router();
 
 router.use(requireAuth);
+router.use(requireOfficialNewsOperator);
 
 let isOfficialNewsFetchRunning = false;
 
@@ -81,7 +83,7 @@ router.post("/fetch/latest", async (req, res, next) => {
         message: "最新NEWSを取得しました",
       });
     });
-    res.json(result.response);
+    res.status(result.locked ? 409 : 200).json(result.response);
   } catch (error) {
     next(error);
   }
