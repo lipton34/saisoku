@@ -5,6 +5,7 @@ import { calculateProgress, collectRequiredStageIds, isStageDone, validateComple
 import { pinnedMaterialKeysFromSelection, validatePinnedMaterialKeys } from "../lib/progressPinnedMaterials.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
+import { validateInventoryBatch } from "../lib/progressInventoryBatch.js";
 import { loadProgressOwnerValues, mergeGoalInventory, type ProgressOwnerValues } from "../lib/progressOwnerValues.js";
 
 const router = Router();
@@ -370,6 +371,31 @@ router.put("/:id/progress", async (req, res, next) => {
     }
     next(error);
   }
+});
+
+router.put("/:id/inventory", async (req, res, next) => {
+  try {
+    const userId = ownerId(req);
+    const goal = await findGoal(req.params.id, userId);
+    if (!goal) return res.status(404).json({ message: "進捗目標が見つかりません" });
+    const preset = definitionForGoal(goal);
+    if (!preset) return res.status(409).json({ message: "保存時のプリセット定義が見つかりません" });
+    const changes = validateInventoryBatch(req.body?.changes, preset.stages.flatMap((stage) => stage.requirements));
+    if (!changes) return res.status(400).json({ message: "所持数の一括更新内容が不正です" });
+    if (changes.length) {
+      await prisma.$transaction(async (tx) => {
+        for (const item of changes) {
+          await tx.userItemInventory.upsert({
+            where: { ownerId_itemKey: { ownerId: userId, itemKey: item.itemKey } },
+            update: { itemName: item.itemName, ownedCount: item.ownedCount },
+            create: { ownerId: userId, itemKey: item.itemKey, itemName: item.itemName, ownedCount: item.ownedCount }
+          });
+        }
+        await tx.progressGoal.update({ where: { id: goal.id }, data: { updatedAt: new Date() } });
+      });
+    }
+    res.json({ goal: await serializeGoal((await findGoal(goal.id, userId))!) });
+  } catch (error) { next(error); }
 });
 
 router.patch("/:id/inventory/:itemKey", async (req, res, next) => {
