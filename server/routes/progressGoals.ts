@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../generated/prisma/client.js";
 import { findProgressPreset, type ProgressCondition, type ProgressPreset, resolveProgressPreset, progressPresets } from "../data/progressPresets.js";
 import { calculateProgress, collectRequiredStageIds, isStageDone, validateCompletedStageIds } from "../lib/progressEngine.js";
 import { pinnedMaterialKeysFromSelection, validatePinnedMaterialKeys } from "../lib/progressPinnedMaterials.js";
