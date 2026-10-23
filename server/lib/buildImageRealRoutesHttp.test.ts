@@ -38,6 +38,7 @@ for (const kind of ["posts", "drafts"] as const) {
     let uploads = 0;
     const removed: string[] = [];
     let inserts = 0;
+    let advisoryLocks = 0;
     const table = {
       count: async () => 0,
       create: async () => { inserts++; throw new Error("DB create failed"); }
@@ -48,7 +49,8 @@ for (const kind of ["posts", "drafts"] as const) {
       buildPostImage: table,
       buildDraftImage: table,
       $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn({
-        $queryRaw: async () => [],
+        $executeRaw: async () => { advisoryLocks++; return 1; },
+        $queryRaw: async () => { throw new Error("advisory lock must not use $queryRaw"); },
         buildPostImage: table,
         buildDraftImage: table
       })
@@ -63,6 +65,7 @@ for (const kind of ["posts", "drafts"] as const) {
       assert.equal(response.status, 500);
       assert.equal(uploads, 1);
       assert.equal(inserts, 1);
+      assert.equal(advisoryLocks, 1);
       assert.equal(removed.length, 1);
       assert.match(removed[0], new RegExp(`^${kind === "posts" ? "posts" : "drafts"}/`));
     } finally { await app.close(); }
