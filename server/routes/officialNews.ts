@@ -2,8 +2,8 @@ import {
   ExtractedNewsEventType,
   ExtractedNewsItemType,
   SourceArticleType
-} from "@prisma/client";
-import { Prisma } from "@prisma/client";
+} from "../generated/prisma/client.js";
+import { Prisma } from "../generated/prisma/client.js";
 import { Router, type RequestHandler } from "express";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
