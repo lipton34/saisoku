@@ -236,7 +236,7 @@ buildsRouter.post("/:id/images", singleBuildImageUpload, async (req, res, next) 
       mimeType: req.file!.mimetype,
       upload: uploadBuildImageToStorage,
       persist: (stored) => prisma.$transaction((tx) => createBuildImageWithinLimit(
-        () => tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`build-image:post:${post.id}`}))`,
+        () => tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`build-image:post:${post.id}`}))`,
         () => tx.buildPostImage.count({ where: { buildPostId: post.id } }),
         (displayOrder) => tx.buildPostImage.create({ data: {
           buildPostId: post.id,
@@ -492,7 +492,7 @@ buildDraftsRouter.post("/:id/images", singleBuildImageUpload, async (req, res, n
       mimeType: req.file!.mimetype,
       upload: uploadBuildImageToStorage,
       persist: (stored) => prisma.$transaction((tx) => createBuildImageWithinLimit(
-        () => tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`build-image:draft:${draft.id}`}))`,
+        () => tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`build-image:draft:${draft.id}`}))`,
         () => tx.buildDraftImage.count({ where: { buildDraftId: draft.id } }),
         (displayOrder) => tx.buildDraftImage.create({ data: {
           buildDraftId: draft.id,
