@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, ImagePlus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, type SimpleBuildFields, type SimpleBuildImage } from "../lib/api";
 
 const imageLabels = ["1 キャラ編成", "2 武器編成", "3 召喚石編成", "補足1", "補足2"];
@@ -8,6 +8,8 @@ const imageLabels = ["1 キャラ編成", "2 武器編成", "3 召喚石編成",
 export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
   const { draftId = "", buildId = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const incomingUploadError = (location.state as { uploadError?: unknown } | null)?.uploadError;
   const [title, setTitle] = useState("");
   const [questName, setQuestName] = useState("");
   const [overview, setOverview] = useState("");
@@ -17,7 +19,8 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [createdDraftId, setCreatedDraftId] = useState("");
   const [createdPostId, setCreatedPostId] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(typeof incomingUploadError === "string" ? incomingUploadError : "");
+  const [savingStatus, setSavingStatus] = useState("");
   const [saving, setSaving] = useState(false);
 
   const recordId = mode === "draft" ? draftId : buildId;
@@ -43,7 +46,8 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
 
   async function uploadFiles(kind: "posts" | "drafts", id: string) {
     const failures: string[] = [];
-    for (const file of pendingFiles) {
+    for (const [index, file] of pendingFiles.entries()) {
+      setSavingStatus(`画像をアップロード中（${index + 1}/${pendingFiles.length}）`);
       try {
         await api.uploadSimpleBuildImage(kind, id, file);
         setPendingFiles((current) => current.filter((candidate) => candidate !== file));
@@ -56,6 +60,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
 
   async function saveDraft() {
     setSaving(true);
+    setSavingStatus("保存処理を開始しています…");
     setError("");
     try {
       if (mode === "draft") {
@@ -73,6 +78,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
       setError(saveError instanceof Error ? saveError.message : "下書きを保存できませんでした");
     } finally {
       setSaving(false);
+      setSavingStatus("");
     }
   }
 
@@ -97,10 +103,28 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
           navigate(`/builds/${post.id}`);
           return;
         }
+        // Validate selected files before creating a persistent post.
+        for (const file of pendingFiles) {
+          if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+            throw new Error(`${file.name}: JPEG・PNG・WebP形式、5MB以下の画像を選択してください`);
+          }
+        }
+        setSavingStatus("投稿を作成中…");
         const postIdForPublish = createdPostId || (await api.createSimpleBuildPost(fields())).post.id;
         setCreatedPostId(postIdForPublish);
         if (createdPostId) await api.updateSimpleBuildPost(postIdForPublish, fields());
-        await uploadFiles("posts", postIdForPublish);
+        try {
+          await uploadFiles("posts", postIdForPublish);
+        } catch (uploadError) {
+          // The post already exists. Move to its editor so retries cannot create duplicates.
+          // Successfully uploaded images can be reviewed there before reselecting failed files.
+          const detail = uploadError instanceof Error ? uploadError.message : "画像をアップロードできませんでした";
+          navigate(`/builds/${postIdForPublish}/edit`, {
+            replace: true,
+            state: { uploadError: `投稿自体は作成されましたが、画像の保存に失敗しました。成功した画像を確認し、失敗した画像を再選択して保存してください。\n${detail}` }
+          });
+          return;
+        }
         navigate(`/builds/${postIdForPublish}`);
       }
     } catch (publishError) {
@@ -152,6 +176,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
           event.target.value = "";
         }} type="file" /></label>
       </section>
+      {saving && savingStatus ? <p role="status">{savingStatus}</p> : null}
       {error ? <p className="form-error preserve-lines" role="alert">{error}</p> : null}
       <div className="form-actions">
         <button className="secondary-button" onClick={() => navigate(mode === "draft" ? "/builds/drafts" : "/builds")} type="button">キャンセル</button>
