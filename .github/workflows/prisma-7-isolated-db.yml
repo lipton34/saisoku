@@ -56,7 +56,7 @@ jobs:
       - name: Verify new migration can be applied after baseline (disposable DB only)
         run: |
           mkdir -p prisma/migrations/20990101000000_ci_future_migration_smoke
-          printf 'CREATE TABLE public._ci_future_migration_smoke (id INTEGER PRIMARY KEY);\\n' > prisma/migrations/20990101000000_ci_future_migration_smoke/migration.sql
+          printf '%s\n' 'CREATE TABLE public._ci_future_migration_smoke (id INTEGER PRIMARY KEY);' > prisma/migrations/20990101000000_ci_future_migration_smoke/migration.sql
           npx prisma migrate deploy
           npx prisma migrate status
           PGPASSWORD=local-test-only psql -h localhost -U postgres -d saisoku_prisma7_test -v ON_ERROR_STOP=1 -c "SELECT id FROM public._ci_future_migration_smoke LIMIT 0;"
