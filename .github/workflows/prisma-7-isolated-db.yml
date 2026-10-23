@@ -53,7 +53,7 @@ jobs:
       # Baseline the CURRENT schema in the disposable DB instead, without
       # modifying any historical SQL or writing to production.
       - name: Create schema in disposable DB from current Prisma models
-        run: npx prisma db push --skip-generate
+        run: npx prisma db push
       - name: Baseline the 32 historical migrations in disposable DB
         run: |
           for dir in prisma/migrations/*/; do
