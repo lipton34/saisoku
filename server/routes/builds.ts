@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import path from "node:path";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../generated/prisma/client.js";
 import { Router, type Request } from "express";
 import multer from "multer";
 import { requireAuth } from "../middleware/requireAuth.js";
