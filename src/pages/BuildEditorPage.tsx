@@ -4,6 +4,10 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, type SimpleBuildFields, type SimpleBuildImage } from "../lib/api";
 
 const publishStateKey = "saisoku:build-new-publish";
+const publishFormKey = "saisoku:build-new-form";
+function readPublishForm(): Partial<SimpleBuildFields> {
+  try { return JSON.parse(sessionStorage.getItem(publishFormKey) || "{}") as Partial<SimpleBuildFields>; } catch { return {}; }
+}
 type PersistedPublish = { postId?: string; phase: "creating" | "uploading" | "checking"; imageCount: number };
 function readPublishState(): PersistedPublish | null {
   try {
@@ -22,11 +26,11 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
   const navigate = useNavigate();
   const location = useLocation();
   const incomingUploadError = (location.state as { uploadError?: unknown } | null)?.uploadError;
-  const [title, setTitle] = useState("");
-  const [questName, setQuestName] = useState("");
-  const [overview, setOverview] = useState("");
-  const [supplementalNotes, setSupplementalNotes] = useState("");
-  const [referenceUrl, setReferenceUrl] = useState("");
+  const [title, setTitle] = useState(() => mode === "post" ? readPublishForm().title ?? "" : "");
+  const [questName, setQuestName] = useState(() => mode === "post" ? readPublishForm().questName ?? "" : "");
+  const [overview, setOverview] = useState(() => mode === "post" ? readPublishForm().overview ?? "" : "");
+  const [supplementalNotes, setSupplementalNotes] = useState(() => mode === "post" ? readPublishForm().supplementalNotes ?? "" : "");
+  const [referenceUrl, setReferenceUrl] = useState(() => mode === "post" ? readPublishForm().referenceUrl ?? "" : "");
   const [images, setImages] = useState<SimpleBuildImage[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [createdDraftId, setCreatedDraftId] = useState("");
@@ -64,6 +68,11 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
       setRecoveryMessage(`前回の投稿「${post.title}」を確認しました。保存済み画像: ${post.images.length}件 / 選択した画像: ${recoveredPublish.imageCount}件。続きは編集画面から確認できます。`);
     }).catch(() => setRecoveryMessage("前回の投稿状況を取得できませんでした。再投稿せず一覧から確認してください。"));
   }, [mode, recoveredPublish]);
+
+  useEffect(() => {
+    if (mode !== "post") return;
+    try { sessionStorage.setItem(publishFormKey, JSON.stringify({ title, questName, overview, supplementalNotes, referenceUrl })); } catch { /* storage unavailable */ }
+  }, [mode, title, questName, overview, supplementalNotes, referenceUrl]);
 
   function fields(): SimpleBuildFields {
     return { title, questName, overview, supplementalNotes, referenceUrl };
@@ -155,6 +164,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
           return;
         }
         storePublishState(null);
+        try { sessionStorage.removeItem(publishFormKey); } catch { /* storage unavailable */ }
         navigate(`/builds/${postIdForPublish}`);
       }
     } catch (publishError) {
