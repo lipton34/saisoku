@@ -1,50 +1,38 @@
-# Issue #56 — Prisma 7 移行検証
+# Issue #56 — Prisma 7 本番反映前レビュー・切り戻し計画
 
-このブランチは **未検証のドラフト** です。mainへのマージ、Renderへのデプロイ、本番Supabaseへのマイグレーションを実行しないでください。
+## 検証済み（2026-10-23）
+- Prisma ORM / Client 7.10.1、PostgreSQLアダプターを導入。既存 migration.sql は無変更。
+- PR #64の最新CI 3件（認証2件＋隔離 PostgreSQL 17）成功。隔離DBでは現行schemaからのCRUD・interactive transaction、履歴ベースライン・migrate statusを確認。
+- Supabase本番 ximgzkpdvnfuiwbzdckb は **Prisma履歴32件/32件成功、未完了0件**（読み取り専用で再確認）。本番DB・接続設定への変更なし。
+- Render設定（ユーザー確認）：DATABASE_URLあり、DIRECT_DATABASE_URLなし。DATABASE_URLはSupabase **Session Pooler 5432**。Build: `npm install --include=dev && npm run prisma:generate && npm run build`、Start: `npm run start`、Pre-Deploy: なし。
+- このPRの `server/prisma.ts` は `PrismaPg({ connectionString: process.env.DATABASE_URL!, connectionTimeoutMillis: 5000 })` を使用。Session Pooler経由での本番運用は未検証。Prisma CLIはDIRECT_DATABASE_URLがあれば優先、なければDATABASE_URLを利用する設定。
+- 旧SQL全件の新規リプレイ試験は失敗：`20260522085705_align_event_occurrence_relations` が作成前の `event_notes` を参照（P3018/42P01）。**CIのベースライン成功は過去SQLリプレイ成功を意味しない**。この問題は別途対処。
 
-## 変更内容
-- Prisma ORM 7.10.1 / PostgreSQL adapter `@prisma/adapter-pg` / `pg` を指定。
-- `prisma/schema.prisma` のgeneratorを `prisma-client` に変更。生成Clientを `server/generated/prisma` へ出力。
-- `prisma.config.ts` でCLIの接続先を設定。`DIRECT_DATABASE_URL` があれば優先し、なければ `DATABASE_URL` を利用。
-- `server/prisma.ts` で `PrismaPg` adapterを使用。
-- 既存の migration.sql は変更していない。
+## 本番反映前の安全チェック
+1. Render上で稼働中の正常なデプロイIDまたはGitコミットSHAを控える（確実な切り戻し先）。現在mainはPrisma 5.22.0。
+2. Renderのデプロイ方式（mainのAuto-Deployが有効か）、手動で以前のデプロイを再デプロイできるかを確認。
+3. Supabaseのバックアップ/復旧手段を確認（既存の契約・提供機能に応じる）。本PRでDB schema変更を実行しないが、DB運用の保険として確認。
+4. Render環境変数は既存DATABASE_URLを維持。秘密値をGitHub Issue/PR/ログへ投稿しない。DIRECT_DATABASE_URLを今回必須とはしない。
+5. **Pre-Deployで `prisma migrate deploy` を追加しない。** Prisma 7の起動・ビルドに本番migrationは不要。CI隔離DBでの `db push` / `migrate resolve` は本番には実行しない。
+6. 既存のRender Build Commandは動作し得るが、再現性のため `npm ci && npm run prisma:generate && npm run build` を推奨。変更する場合はデプロイ前にRender上のコマンドだけ調整し、動作確認後に固定。
+7. 新たに生成ClientやSQL実行方法を追加していないか、PRの差分を再確認。Session Poolerを通した接続/SSL/タイムアウトは本番デプロイ後に短時間でスモーク確認。
 
-## 現時点のブロッカー
-**`package-lock.json` が未更新** のため、現時点で `npm ci` は成功しません。接続済みGitHub側のソース編集のみでは、npm registryから依存関係を取得して正しいlockfileを再生成できません。
+## デプロイ後のスモーク確認
+- Renderのbuild成功・起動ログの確認。DB資格情報や接続URLをログに出さない。
+- ログイン/ログアウト/再ログイン、目標の取得/更新、編成一覧・編成画像のアップロードと閲覧、ニュース取得機能の動作を確認。
+- Prisma初回接続、接続タイムアウト、コネクション枯渇、認証エラー、SSLエラーの有無をRenderログで確認。
+- Supabase `_prisma_migrations` の件数・成功数・未完了数が **32/32/0** のままを読み取り専用で再確認。
 
-ローカルの検証ブランチで次を行い、変更された `package-lock.json` を当該ブランチへコミットしてください。
+## 切り戻し（DB migrationなしの場合）
+1. 重大な接続/機能障害があれば、Renderで **直前の正常なデプロイをRollback/再デプロイ** する（事前に控えたデプロイID/コミットを指定）。利用可能な操作名はRender UIに従う。
+2. Renderの設定変更を行った場合は、Build Command等も事前に控えた旧値へ戻す（`npm install --include=dev && npm run prisma:generate && npm run build`）。
+3. ロールバック後にログイン・画面表示・DBアクセスを検証する。
+4. このPRでは本番DB migrationを実行しないため、**DBをロールバックしたりmigration履歴を削除したりしない**。本番DBへの書き込みを伴う復旧作業は別途判断する。
+5. PRやIssueの完了扱いは、本番スモーク確認完了後に行う。
 
-```bash
-git fetch origin
-git checkout upgrade/issue-56-prisma-7
-npm install
-npm run prisma:generate
-npm run typecheck
-npm test
-npm run build
-npm audit
-```
+## 未検証・留意点
+- PostgreSQL 17の一時CIはSupabase Session Poolerの挙動を再現しない。
+- CIは32 migrationのベースライン登録と現行スキーマの動作を確認したが、既存SQLの全件リプレイは不成功。
+- Render Auto-Deploy、バックアップ提供状況、旧デプロイへの復帰可否はまだ確認していない。
 
-本番の接続URLをログに出したり、PRへ書き込んだりしないでください。`DATABASE_URL` は検証時に隔離DBへ設定してください。
-
-## DB検証（本番への書き込み禁止）
-本番Supabaseプロジェクト `ximgzkpdvnfuiwbzdckb` では、読み取り専用で `_prisma_migrations` 32件すべて正常完了を確認済み。Supabase migration履歴は別系統であり、直接件数比較しないでください。
-
-本番接続とは切り離した隔離PostgreSQL 17 DBで、以下を確認すること：
-1. `prisma migrate status` が既存32件の履歴と整合する。
-2. CRUD、`$transaction`、`$executeRaw` による advisory lock が正しく動く。
-3. 編成画像・目標・ログイン処理の回帰テストが通る。
-4. DB接続プールと SSL 設定、タイムアウトがRender実行条件に適合する。
-
-**検証環境でも既存本番DBに`prisma migrate dev`、`prisma migrate deploy`、`prisma db push`を実行しないでください。**
-
-## 切り戻し
-mainはPrisma 5.22.0のまま維持。未検証ブランチをマージせず破棄すれば即時切り戻し可能。将来の本番反映時には、接続先・デプロイバージョン・復旧手順を別途確認します。
-
-公式移行ガイド: https://www.prisma.io/docs/guides/upgrade-prisma-orm/v7
-
-## 無料の隔離DBテスト（GitHub Actions）
-Supabaseの有料開発ブランチは使用しません。`.github/workflows/prisma-7-isolated-db.yml`がPostgreSQL 17の一時サービスを作成し、現在のPrisma schemaを反映してから32件の履歴をベースライン登録し、migration statusとCRUD/transactionを検証します。サービスコンテナはCI終了時に破棄され、本番の接続URLは使用しません。
-
-**検証上の制約:** 旧migration `20260522085705_align_event_occurrence_relations`は、後続migrationで生成される`event_notes`を先に参照します。よって既存migration SQLをゼロから全件順番に再適用するテストは`P3018 / 42P01`で失敗しました。ベースライン登録は各SQLを再実行したことを示すものではなく、現在のschemaへのDBアクセスとPrismaの履歴管理互換性を確認する目的に限定されます。過去SQLの順序不整合は別課題として残します。
-
+参照: https://www.prisma.io/docs/guides/upgrade-prisma-orm/v7
