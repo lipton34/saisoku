@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, type SimpleBuildFields, type SimpleBuildImage } from "../lib/api";
 
@@ -24,6 +24,7 @@ const imageLabels = ["1 キャラ編成", "2 武器編成", "3 召喚石編成",
 export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
   const { draftId = "", buildId = "" } = useParams();
   const navigate = useNavigate();
+  const leftWhileSavingRef = useRef(false);
   const location = useLocation();
   const incomingUploadError = (location.state as { uploadError?: unknown } | null)?.uploadError;
   const [title, setTitle] = useState(() => mode === "post" ? readPublishForm().title ?? "" : "");
@@ -117,6 +118,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
   }
 
   async function publish() {
+    leftWhileSavingRef.current = false;
     setSaving(true);
     setError("");
     try {
@@ -157,7 +159,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
           // Successfully uploaded images can be reviewed there before reselecting failed files.
           const detail = uploadError instanceof Error ? uploadError.message : "画像をアップロードできませんでした";
           storePublishState(null);
-          navigate(`/builds/${postIdForPublish}/edit`, {
+          if (!leftWhileSavingRef.current) navigate(`/builds/${postIdForPublish}/edit`, {
             replace: true,
             state: { uploadError: `投稿自体は作成されましたが、画像の保存に失敗しました。成功した画像を確認し、失敗した画像を再選択して保存してください。\n${detail}` }
           });
@@ -165,7 +167,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
         }
         storePublishState(null);
         try { sessionStorage.removeItem(publishFormKey); } catch { /* storage unavailable */ }
-        navigate(`/builds/${postIdForPublish}`);
+        if (!leftWhileSavingRef.current) navigate(`/builds/${postIdForPublish}`);
       }
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "投稿できませんでした");
@@ -220,7 +222,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
       {mode === "post" && recoveredPublish && !saving ? <div className="build-publish-recovery" role="status"><p>{recoveryMessage || "前回の投稿処理を確認しています…"}</p><button type="button" className="secondary-button" onClick={() => { if (recoveredPublish.postId) navigate(`/builds/${recoveredPublish.postId}/edit`); else navigate("/builds"); }}> {recoveredPublish.postId ? "作成済み投稿を確認" : "一覧で確認"} </button><button type="button" onClick={() => { storePublishState(null); setRecoveredPublish(null); setCreatedPostId(""); setRecoveryMessage(""); }}>確認済み</button></div> : null}
       {error ? <p className="form-error preserve-lines" role="alert">{error}</p> : null}
       <div className="form-actions">
-        <button className="secondary-button" onClick={() => navigate(mode === "draft" ? "/builds/drafts" : "/builds")} type="button">{saving ? "一覧へ戻る" : "キャンセル"}</button>
+        <button className="secondary-button" onClick={() => { if (saving) leftWhileSavingRef.current = true; navigate(mode === "draft" ? "/builds/drafts" : "/builds"); }} type="button">{saving ? "一覧へ戻る" : "キャンセル"}</button>
         {mode !== "edit" ? <button className="secondary-button" disabled={saving} onClick={() => void saveDraft()} type="button">保存</button> : null}
         <button className="primary-button" disabled={saving || (mode === "post" && Boolean(recoveredPublish))} type="submit">{mode === "edit" ? "保存" : "投稿"}</button>
       </div>
