@@ -9,6 +9,7 @@ on:
       - "prisma.config.ts"
       - "server/scripts/verifyPrismaCompatibility.ts"
       - "scripts/bootstrapPrismaIsolatedCI.sh"
+      - "docs/prisma-isolated-bootstrap.md"
       - ".github/workflows/prisma-7-isolated-db.yml"
   workflow_dispatch:
 
@@ -52,5 +53,12 @@ jobs:
       # Legacy filenames are not replay-safe; bootstrap only this ephemeral CI DB.
       - name: Bootstrap isolated database and verify migration deployment
         run: bash scripts/bootstrapPrismaIsolatedCI.sh
+      - name: Verify new migration can be applied after baseline (disposable DB only)
+        run: |
+          mkdir -p prisma/migrations/20990101000000_ci_future_migration_smoke
+          printf '%s\n' 'CREATE TABLE public._ci_future_migration_smoke (id INTEGER PRIMARY KEY);' > prisma/migrations/20990101000000_ci_future_migration_smoke/migration.sql
+          npx prisma migrate deploy
+          npx prisma migrate status
+          PGPASSWORD=local-test-only psql -h localhost -U postgres -d saisoku_prisma7_test -v ON_ERROR_STOP=1 -c "SELECT id FROM public._ci_future_migration_smoke LIMIT 0;"
       - name: Verify Prisma CRUD and transaction
         run: node --import tsx server/scripts/verifyPrismaCompatibility.ts
