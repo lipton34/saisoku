@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../generated/prisma/client.js";
 import { Router, type Request } from "express";
 import { findProgressPreset, resolveProgressPreset } from "../data/progressPresets.js";
 import { collectRequiredStageIds } from "../lib/progressEngine.js";
