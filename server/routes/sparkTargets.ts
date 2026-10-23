@@ -1,5 +1,5 @@
 import { Router, type Request } from "express";
-import { GbfMasterKind } from "@prisma/client";
+import { GbfMasterKind } from "../generated/prisma/client.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
 import { parseOptionalText } from "../lib/sparkSavings.js";
