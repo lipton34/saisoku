@@ -82,8 +82,6 @@ export function EventSchedulePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<EventOccurrenceInput>(() => emptyOccurrenceForm([]));
   const [error, setError] = useState("");
-  const [newsUpdateMessage, setNewsUpdateMessage] = useState("");
-  const [isUpdatingNews, setIsUpdatingNews] = useState(false);
 
   const eventTypes = useMemo(() => [...new Set(series.map((item) => item.eventType))], [series]);
   const visibleOccurrences = useMemo(
@@ -161,36 +159,15 @@ export function EventSchedulePage() {
     }
   }
 
-  async function updateOfficialNews() {
-    setError("");
-    setNewsUpdateMessage("");
-    setIsUpdatingNews(true);
-    try {
-      const result = await api.fetchLatestOfficialNews();
-      setNewsUpdateMessage(
-        `${result.message}。必要なNEWSは /official-news からイベント予定に登録してください。`
-      );
-      await load();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "公式NEWS更新に失敗しました");
-    } finally {
-      setIsUpdatingNews(false);
-    }
-  }
-
   return (
     <div className="page-stack">
       <section className="page-heading">
         <div>
           <p className="eyebrow">Event Schedule</p>
           <h2>イベント予定</h2>
-          <p>公式NEWSや手動登録を元に、実際の開催単位でイベントを確認します。</p>
+          <p>登録済みのイベント予定を確認・管理します。</p>
         </div>
         <div className="hero-actions">
-          <button className="secondary-button" disabled={isUpdatingNews} onClick={() => void updateOfficialNews()} type="button">
-            <RefreshCcw size={16} />
-            {isUpdatingNews ? "更新中..." : "公式NEWSを更新"}
-          </button>
           <button className="secondary-button" onClick={() => void load()} type="button">
             <RefreshCcw size={16} />
             再読込
@@ -200,7 +177,6 @@ export function EventSchedulePage() {
           </button>
         </div>
       </section>
-      {newsUpdateMessage ? <p className="form-notice">{newsUpdateMessage}</p> : null}
 
       <section className="panel official-news-panel">
         <form className="official-news-filter-grid" onSubmit={submitFilters}>
