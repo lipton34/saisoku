@@ -1,9 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../server/prisma.js";
 import { gbfMasterSeedItems, normalizeMasterAlias } from "../server/data/gbfMasterSeed/index.js";
 import { raidGuideMasterDefinitions, validateRaidGuideMasterDefinitions } from "../server/data/raidGuideMasters.js";
 import { availabilityPeriodIdsForMaster, sparkAvailabilityPeriodDefinitions } from "../server/data/sparkAvailabilityPeriods.js";
 
-const prisma = new PrismaClient();
+
 
 async function seedGbfMasters() {
   for (const [index, item] of gbfMasterSeedItems.entries()) {
