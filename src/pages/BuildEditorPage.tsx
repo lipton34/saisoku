@@ -41,6 +41,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
   const [error, setError] = useState(typeof incomingUploadError === "string" ? incomingUploadError : "");
   const [savingStatus, setSavingStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"save" | "publish" | null>(null);
 
   const recordId = mode === "draft" ? draftId : buildId;
   const imageKind = mode === "draft" ? "drafts" : "posts";
@@ -94,6 +95,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
   }
 
   async function saveDraft() {
+    setConfirmAction(null);
     setSaving(true);
     setSavingStatus("保存処理を開始しています…");
     setError("");
@@ -118,6 +120,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
   }
 
   async function publish() {
+    setConfirmAction(null);
     leftWhileSavingRef.current = false;
     setSaving(true);
     setError("");
@@ -201,7 +204,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
 
   const totalImages = images.length + pendingFiles.length;
   return <div className="page-stack compact-page"><section className="page-heading"><h1>{mode === "edit" ? "編成を編集" : mode === "draft" ? "下書きを編集" : "編成を作成"}</h1></section>
-    <form className="panel simple-form" onSubmit={(event) => { event.preventDefault(); void publish(); }}>
+    <form className="panel simple-form" onSubmit={(event) => { event.preventDefault(); if (!saving) { if (pendingFiles.length) setConfirmAction("publish"); else void publish(); } }}>
       <label>タイトル{mode === "draft" ? <small>下書きでは未入力でも保存できます</small> : null}<input onChange={(event) => setTitle(event.target.value)} required={mode !== "draft"} value={title} /></label>
       <label>クエスト名<input onChange={(event) => setQuestName(event.target.value)} value={questName} /></label>
       <label>概要<textarea onChange={(event) => setOverview(event.target.value)} rows={5} value={overview} /></label>
@@ -218,12 +221,13 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
           event.target.value = "";
         }} type="file" /></label>
       </section>
+      {confirmAction ? <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmAction(null); }}><section className="panel compact-dialog" role="dialog" aria-modal="true" aria-labelledby="build-upload-confirm-title"><h2 id="build-upload-confirm-title">画像をアップロードします</h2><p>選択した画像{pendingFiles.length}枚を保存します。処理が完了するまで、ページのリロード、タブを閉じる操作、別のページへの移動は行わないでください。</p><p>通信が中断されると、投稿データだけが保存されたり、画像が一部しか保存されなかったりする場合があります。</p><div className="form-actions"><button type="button" className="secondary-button" onClick={() => setConfirmAction(null)}>戻る</button><button type="button" className="primary-button" onClick={() => { if (confirmAction === "save") void saveDraft(); else void publish(); }}>理解して{confirmAction === "save" ? "保存" : "投稿"}する</button></div></section></div> : null}
       {saving ? <div className="build-publish-progress" role="status" aria-live="polite"><LoaderCircle className="build-publish-spinner" size={20} aria-hidden="true" /><div><strong>処理中</strong><p>{savingStatus || "処理を実行しています…"}</p><small>ページを閉じると通信が中断されることがあります。</small></div></div> : null}
       {mode === "post" && recoveredPublish && !saving ? <div className="build-publish-recovery" role="status"><p>{recoveryMessage || "前回の投稿処理を確認しています…"}</p><button type="button" className="secondary-button" onClick={() => { if (recoveredPublish.postId) navigate(`/builds/${recoveredPublish.postId}/edit`); else navigate("/builds"); }}> {recoveredPublish.postId ? "作成済み投稿を確認" : "一覧で確認"} </button><button type="button" onClick={() => { storePublishState(null); setRecoveredPublish(null); setCreatedPostId(""); setRecoveryMessage(""); }}>確認済み</button></div> : null}
       {error ? <p className="form-error preserve-lines" role="alert">{error}</p> : null}
       <div className="form-actions">
         <button className="secondary-button" onClick={() => { if (saving) leftWhileSavingRef.current = true; navigate(mode === "draft" ? "/builds/drafts" : "/builds"); }} type="button">{saving ? "一覧へ戻る" : "キャンセル"}</button>
-        {mode !== "edit" ? <button className="secondary-button" disabled={saving} onClick={() => void saveDraft()} type="button">保存</button> : null}
+        {mode !== "edit" ? <button className="secondary-button" disabled={saving} onClick={() => { if (pendingFiles.length) setConfirmAction("save"); else void saveDraft(); }} type="button">保存</button> : null}
         <button className="primary-button" disabled={saving || (mode === "post" && Boolean(recoveredPublish))} type="submit">{mode === "edit" ? "保存" : "投稿"}</button>
       </div>
     </form>
