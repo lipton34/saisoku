@@ -27,6 +27,7 @@ jobs:
       - name: Report all dependency vulnerabilities (including development tools)
         run: npm audit --audit-level=low
         continue-on-error: true
+      - run: npm run prisma:generate
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
