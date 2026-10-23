@@ -1,5 +1,5 @@
-import type { User, GoalSubTask, GoalSubTaskInput, ProgressPreset, ProgressGoalStage, ProgressGoal, GoalVisibility, GoalBoardState, Goal, RoundGoal, SimpleBuildImage, SimpleBuildFields, SimpleBuildPost, BuildDraft, RaidGuideStickyNote, RaidGuideStrategy, RaidGuideQuest, RaidGuideDetail, RaidGuideRow, RaidGuideReader, RaidGuideStrategyInput, GuildWarGoalDay, GuildWarBossSpeed, GuildWarGoalPlan, GuildWarBossMaster, GuildWarGoalPayload, SparkSavings, SparkSavingsInput, SparkAvailabilityPeriod, SparkTarget, SparkTargetInput, SparkTargetMasterOption, SparkHistoryEntry, SparkRewardEventType, SparkRewardMonthSummary, SourceArticleType, ExtractedNewsItemType, ExtractedNewsEventType, ExtractedNewsInfoStatus, ExtractedNewsItem, SourceArticle, NewsFetchLog, OfficialNewsFetchResult, EventNoteLinkInput, EventNoteLink, EventNoteInput, EventNote, EventNoteCandidate, EventSeries, EventOccurrenceInput, EventOccurrence, OfficialNewsListParams, GbfMasterKind, GbfMasterItem, GbfMasterAlias, BuildMastersResponse, BuildMastersQuery } from "./apiTypes";
-export type { User, GoalSubTask, GoalSubTaskInput, ProgressPreset, ProgressGoalStage, ProgressGoal, GoalVisibility, GoalBoardState, Goal, RoundGoal, SimpleBuildImage, SimpleBuildFields, SimpleBuildPost, BuildDraft, RaidGuideStickyNote, RaidGuideStrategy, RaidGuideQuest, RaidGuideDetail, RaidGuideRow, RaidGuideReader, RaidGuideStrategyInput, GuildWarGoalDay, GuildWarBossSpeed, GuildWarGoalPlan, GuildWarBossMaster, GuildWarGoalPayload, SparkSavings, SparkSavingsInput, SparkAvailabilityPeriod, SparkTarget, SparkTargetInput, SparkTargetMasterOption, SparkHistoryEntry, SparkRewardEventType, SparkRewardMonthSummary, SourceArticleType, ExtractedNewsItemType, ExtractedNewsEventType, ExtractedNewsInfoStatus, ExtractedNewsItem, SourceArticle, NewsFetchLog, OfficialNewsFetchResult, EventNoteLinkInput, EventNoteLink, EventNoteInput, EventNote, EventNoteCandidate, EventSeries, EventOccurrenceInput, EventOccurrence, OfficialNewsListParams, GbfMasterKind, GbfMasterItem, GbfMasterAlias, BuildMastersResponse, BuildMastersQuery } from "./apiTypes";
+import type { User, GoalSubTask, GoalSubTaskInput, ProgressPreset, ProgressGoalStage, ProgressGoal, GoalVisibility, GoalBoardState, Goal, RoundGoal, SimpleBuildImage, SimpleBuildFields, SimpleBuildPost, BuildDraft, RaidGuideStickyNote, RaidGuideStrategy, RaidGuideQuest, RaidGuideDetail, RaidGuideRow, RaidGuideReader, RaidGuideStrategyInput, GuildWarGoalDay, GuildWarBossSpeed, GuildWarGoalPlan, GuildWarBossMaster, GuildWarGoalPayload, SparkSavings, SparkSavingsInput, SparkAvailabilityPeriod, SparkTarget, SparkTargetInput, SparkTargetMasterOption, SparkHistoryEntry, SparkRewardEventType, SparkRewardMonthSummary, SourceArticleType, ExtractedNewsItemType, ExtractedNewsEventType, ExtractedNewsInfoStatus, ExtractedNewsItem, SourceArticle, EventNoteLinkInput, EventNoteLink, EventNoteInput, EventNote, EventNoteCandidate, EventSeries, EventOccurrenceInput, EventOccurrence, GbfMasterKind, GbfMasterItem, GbfMasterAlias, BuildMastersResponse, BuildMastersQuery } from "./apiTypes";
+export type { User, GoalSubTask, GoalSubTaskInput, ProgressPreset, ProgressGoalStage, ProgressGoal, GoalVisibility, GoalBoardState, Goal, RoundGoal, SimpleBuildImage, SimpleBuildFields, SimpleBuildPost, BuildDraft, RaidGuideStickyNote, RaidGuideStrategy, RaidGuideQuest, RaidGuideDetail, RaidGuideRow, RaidGuideReader, RaidGuideStrategyInput, GuildWarGoalDay, GuildWarBossSpeed, GuildWarGoalPlan, GuildWarBossMaster, GuildWarGoalPayload, SparkSavings, SparkSavingsInput, SparkAvailabilityPeriod, SparkTarget, SparkTargetInput, SparkTargetMasterOption, SparkHistoryEntry, SparkRewardEventType, SparkRewardMonthSummary, SourceArticleType, ExtractedNewsItemType, ExtractedNewsEventType, ExtractedNewsInfoStatus, ExtractedNewsItem, SourceArticle, EventNoteLinkInput, EventNoteLink, EventNoteInput, EventNote, EventNoteCandidate, EventSeries, EventOccurrenceInput, EventOccurrence, GbfMasterKind, GbfMasterItem, GbfMasterAlias, BuildMastersResponse, BuildMastersQuery } from "./apiTypes";
 
 export class ApiRequestError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -247,33 +247,6 @@ export const api = {
   updateSparkRewardSchedule: (id: string, value: Record<string, unknown>) => request<{ message: string }>(`/api/spark-rewards/schedules/${id}`, { method: "PUT", json: value }),
   deleteSparkRewardSchedule: (id: string) => request<{ message: string }>(`/api/spark-rewards/schedules/${id}`, { method: "DELETE" }),
   updateSparkRewardMonthStatus: (year: number, month: number, isComplete: boolean) => request<{ message: string }>(`/api/spark-rewards/month-statuses/${year}/${month}`, { method: "PUT", json: { isComplete } }),
-  newsItems: (params?: OfficialNewsListParams) =>
-    request<{ items: ExtractedNewsItem[]; total: number; limit: number; offset: number }>(
-      `/api/news-items${toQuery(params)}`
-    ),
-  sourceArticles: (params?: OfficialNewsListParams) =>
-    request<{ articles: SourceArticle[]; total: number; limit: number; offset: number }>(
-      `/api/source-articles${toQuery(params)}`
-    ),
-  newsFetchLogs: (params?: OfficialNewsListParams) =>
-    request<{ logs: NewsFetchLog[]; total: number; limit: number; offset: number }>(
-      `/api/news-fetch-logs${toQuery(params)}`
-    ),
-  fetchLatestOfficialNews: (payload?: { maxPages?: number }) =>
-    request<OfficialNewsFetchResult>("/api/official-news/fetch/latest", {
-      method: "POST",
-      json: payload ?? {}
-    }),
-  fetchMonthlyOfficialNews: (payload: { targetMonth: string; maxPages?: number }) =>
-    request<OfficialNewsFetchResult>("/api/official-news/fetch/month", {
-      method: "POST",
-      json: payload
-    }),
-  reanalyzeOfficialNews: (payload: { sourceArticleId: string }) =>
-    request<OfficialNewsFetchResult>("/api/official-news/reanalyze", {
-      method: "POST",
-      json: payload
-    }),
   eventSeries: () => request<{ series: EventSeries[] }>("/api/event-series"),
   createEventSeries: (series: {
     eventKey: string;
