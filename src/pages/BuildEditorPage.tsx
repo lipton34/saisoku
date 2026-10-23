@@ -1,24 +1,43 @@
-import { ArrowDown, ArrowUp, ImagePlus, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowDown, ArrowUp, ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, type SimpleBuildFields, type SimpleBuildImage } from "../lib/api";
+
+const publishStateKey = "saisoku:build-new-publish";
+const publishFormKey = "saisoku:build-new-form";
+function readPublishForm(): Partial<SimpleBuildFields> {
+  try { return JSON.parse(sessionStorage.getItem(publishFormKey) || "{}") as Partial<SimpleBuildFields>; } catch { return {}; }
+}
+type PersistedPublish = { postId?: string; phase: "creating" | "uploading" | "checking"; imageCount: number };
+function readPublishState(): PersistedPublish | null {
+  try {
+    const raw = sessionStorage.getItem(publishStateKey);
+    return raw ? JSON.parse(raw) as PersistedPublish : null;
+  } catch { return null; }
+}
+function storePublishState(state: PersistedPublish | null) {
+  try { if (state) sessionStorage.setItem(publishStateKey, JSON.stringify(state)); else sessionStorage.removeItem(publishStateKey); } catch { /* storage unavailable */ }
+}
 
 const imageLabels = ["1 キャラ編成", "2 武器編成", "3 召喚石編成", "補足1", "補足2"];
 
 export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
   const { draftId = "", buildId = "" } = useParams();
   const navigate = useNavigate();
+  const leftWhileSavingRef = useRef(false);
   const location = useLocation();
   const incomingUploadError = (location.state as { uploadError?: unknown } | null)?.uploadError;
-  const [title, setTitle] = useState("");
-  const [questName, setQuestName] = useState("");
-  const [overview, setOverview] = useState("");
-  const [supplementalNotes, setSupplementalNotes] = useState("");
-  const [referenceUrl, setReferenceUrl] = useState("");
+  const [title, setTitle] = useState(() => mode === "post" ? readPublishForm().title ?? "" : "");
+  const [questName, setQuestName] = useState(() => mode === "post" ? readPublishForm().questName ?? "" : "");
+  const [overview, setOverview] = useState(() => mode === "post" ? readPublishForm().overview ?? "" : "");
+  const [supplementalNotes, setSupplementalNotes] = useState(() => mode === "post" ? readPublishForm().supplementalNotes ?? "" : "");
+  const [referenceUrl, setReferenceUrl] = useState(() => mode === "post" ? readPublishForm().referenceUrl ?? "" : "");
   const [images, setImages] = useState<SimpleBuildImage[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [createdDraftId, setCreatedDraftId] = useState("");
-  const [createdPostId, setCreatedPostId] = useState("");
+  const [recoveredPublish, setRecoveredPublish] = useState<PersistedPublish | null>(() => mode === "post" ? readPublishState() : null);
+  const [createdPostId, setCreatedPostId] = useState(() => mode === "post" ? readPublishState()?.postId ?? "" : "");
+  const [recoveryMessage, setRecoveryMessage] = useState("");
   const [error, setError] = useState(typeof incomingUploadError === "string" ? incomingUploadError : "");
   const [savingStatus, setSavingStatus] = useState("");
   const [saving, setSaving] = useState(false);
@@ -39,6 +58,22 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
       setImages(record.images);
     }).catch((loadError) => setError(loadError instanceof Error ? loadError.message : "編成を読み込めませんでした"));
   }, [buildId, draftId, mode]);
+
+  useEffect(() => {
+    if (mode !== "post" || !recoveredPublish) return;
+    if (!recoveredPublish.postId) {
+      setRecoveryMessage("前回の投稿作成中に再読み込みされました。作成結果が不明のため、一覧で重複がないか確認してください。");
+      return;
+    }
+    api.simpleBuildPost(recoveredPublish.postId).then(({ post }) => {
+      setRecoveryMessage(`前回の投稿「${post.title}」を確認しました。保存済み画像: ${post.images.length}件 / 選択した画像: ${recoveredPublish.imageCount}件。続きは編集画面から確認できます。`);
+    }).catch(() => setRecoveryMessage("前回の投稿状況を取得できませんでした。再投稿せず一覧から確認してください。"));
+  }, [mode, recoveredPublish]);
+
+  useEffect(() => {
+    if (mode !== "post") return;
+    try { sessionStorage.setItem(publishFormKey, JSON.stringify({ title, questName, overview, supplementalNotes, referenceUrl })); } catch { /* storage unavailable */ }
+  }, [mode, title, questName, overview, supplementalNotes, referenceUrl]);
 
   function fields(): SimpleBuildFields {
     return { title, questName, overview, supplementalNotes, referenceUrl };
@@ -83,6 +118,7 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
   }
 
   async function publish() {
+    leftWhileSavingRef.current = false;
     setSaving(true);
     setError("");
     try {
@@ -110,8 +146,11 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
           }
         }
         setSavingStatus("投稿を作成中…");
+        const snapshot: PersistedPublish = { postId: createdPostId || undefined, phase: "creating", imageCount: pendingFiles.length };
+        storePublishState(snapshot);
         const postIdForPublish = createdPostId || (await api.createSimpleBuildPost(fields())).post.id;
         setCreatedPostId(postIdForPublish);
+        storePublishState({ ...snapshot, postId: postIdForPublish, phase: "uploading" });
         if (createdPostId) await api.updateSimpleBuildPost(postIdForPublish, fields());
         try {
           await uploadFiles("posts", postIdForPublish);
@@ -119,13 +158,16 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
           // The post already exists. Move to its editor so retries cannot create duplicates.
           // Successfully uploaded images can be reviewed there before reselecting failed files.
           const detail = uploadError instanceof Error ? uploadError.message : "画像をアップロードできませんでした";
-          navigate(`/builds/${postIdForPublish}/edit`, {
+          storePublishState(null);
+          if (!leftWhileSavingRef.current) navigate(`/builds/${postIdForPublish}/edit`, {
             replace: true,
             state: { uploadError: `投稿自体は作成されましたが、画像の保存に失敗しました。成功した画像を確認し、失敗した画像を再選択して保存してください。\n${detail}` }
           });
           return;
         }
-        navigate(`/builds/${postIdForPublish}`);
+        storePublishState(null);
+        try { sessionStorage.removeItem(publishFormKey); } catch { /* storage unavailable */ }
+        if (!leftWhileSavingRef.current) navigate(`/builds/${postIdForPublish}`);
       }
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "投稿できませんでした");
@@ -176,12 +218,13 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
           event.target.value = "";
         }} type="file" /></label>
       </section>
-      {saving && savingStatus ? <p role="status">{savingStatus}</p> : null}
+      {saving ? <div className="build-publish-progress" role="status" aria-live="polite"><LoaderCircle className="build-publish-spinner" size={20} aria-hidden="true" /><div><strong>処理中</strong><p>{savingStatus || "処理を実行しています…"}</p><small>ページを閉じると通信が中断されることがあります。</small></div></div> : null}
+      {mode === "post" && recoveredPublish && !saving ? <div className="build-publish-recovery" role="status"><p>{recoveryMessage || "前回の投稿処理を確認しています…"}</p><button type="button" className="secondary-button" onClick={() => { if (recoveredPublish.postId) navigate(`/builds/${recoveredPublish.postId}/edit`); else navigate("/builds"); }}> {recoveredPublish.postId ? "作成済み投稿を確認" : "一覧で確認"} </button><button type="button" onClick={() => { storePublishState(null); setRecoveredPublish(null); setCreatedPostId(""); setRecoveryMessage(""); }}>確認済み</button></div> : null}
       {error ? <p className="form-error preserve-lines" role="alert">{error}</p> : null}
       <div className="form-actions">
-        <button className="secondary-button" onClick={() => navigate(mode === "draft" ? "/builds/drafts" : "/builds")} type="button">キャンセル</button>
+        <button className="secondary-button" onClick={() => { if (saving) leftWhileSavingRef.current = true; navigate(mode === "draft" ? "/builds/drafts" : "/builds"); }} type="button">{saving ? "一覧へ戻る" : "キャンセル"}</button>
         {mode !== "edit" ? <button className="secondary-button" disabled={saving} onClick={() => void saveDraft()} type="button">保存</button> : null}
-        <button className="primary-button" disabled={saving} type="submit">{mode === "edit" ? "保存" : "投稿"}</button>
+        <button className="primary-button" disabled={saving || (mode === "post" && Boolean(recoveredPublish))} type="submit">{mode === "edit" ? "保存" : "投稿"}</button>
       </div>
     </form>
   </div>;
