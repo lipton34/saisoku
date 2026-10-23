@@ -1,5 +1,5 @@
 import { Router, type Request } from "express";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../generated/prisma/client.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
 import { parseOptionalText } from "../lib/sparkSavings.js";

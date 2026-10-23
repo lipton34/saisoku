@@ -1,9 +1,9 @@
+import { prisma } from "../prisma.js";
 import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
 
 dotenv.config();
 
-const prisma = new PrismaClient();
+
 
 try {
   const [subTaskCount, requiredItemTable, raidTargetTable] = await Promise.all([

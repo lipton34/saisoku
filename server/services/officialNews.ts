@@ -5,7 +5,7 @@ import type {
   ExtractedNewsItemType,
   PrismaClient,
   SourceArticleType,
-} from "@prisma/client";
+} from "../generated/prisma/client.js";
 import { prisma } from "../prisma.js";
 
 const SOURCE = "granbluefantasy_official_news";

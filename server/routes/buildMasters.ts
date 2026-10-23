@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { GbfMasterKind, Prisma } from "@prisma/client";
+import { GbfMasterKind, Prisma } from "../generated/prisma/client.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { prisma } from "../prisma.js";
 

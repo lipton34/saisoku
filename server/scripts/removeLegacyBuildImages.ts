@@ -1,9 +1,9 @@
 import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../prisma.js";
 import { removeBuildImagesFromStorage } from "../services/buildImageStorage.js";
 
 const confirmationFlag = "--confirm-delete-legacy-build-images";
-const prisma = new PrismaClient();
+
 
 type LegacyBuildImage = {
   storageBucket: string;

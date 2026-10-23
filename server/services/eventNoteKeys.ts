@@ -1,4 +1,4 @@
-import type { ExtractedNewsItem, SourceArticle } from "@prisma/client";
+import type { ExtractedNewsItem, SourceArticle } from "../generated/prisma/client.js";
 
 type EventKeyInput = Pick<ExtractedNewsItem, "title" | "relatedKey" | "eventType" | "itemType"> & {
   sourceArticle?: Pick<SourceArticle, "title"> | null;

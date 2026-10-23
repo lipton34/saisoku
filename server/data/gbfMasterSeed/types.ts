@@ -1,5 +1,5 @@
-import type { Prisma } from "@prisma/client";
-import { GbfMasterKind } from "@prisma/client";
+import type { Prisma } from "../../generated/prisma/client.js";
+import { GbfMasterKind } from "../../generated/prisma/client.js";
 
 export { GbfMasterKind };
 
