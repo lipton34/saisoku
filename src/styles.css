@@ -7340,3 +7340,12 @@ html,
     display: none;
   }
 }
+
+
+/* Build publishing progress and reload recovery (#59) */
+.build-publish-progress, .build-publish-recovery { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--border-color, #9995); border-radius: 10px; }
+.build-publish-progress p, .build-publish-recovery p { margin: 4px 0; }
+.build-publish-spinner { flex: none; animation: build-publish-spin 1s linear infinite; }
+@keyframes build-publish-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .build-publish-spinner { animation: none; } }
+.build-publish-recovery { flex-wrap: wrap; align-items: center; }
