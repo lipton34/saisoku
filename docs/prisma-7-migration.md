@@ -42,3 +42,9 @@ npm audit
 mainはPrisma 5.22.0のまま維持。未検証ブランチをマージせず破棄すれば即時切り戻し可能。将来の本番反映時には、接続先・デプロイバージョン・復旧手順を別途確認します。
 
 公式移行ガイド: https://www.prisma.io/docs/guides/upgrade-prisma-orm/v7
+
+## 無料の隔離DBテスト（GitHub Actions）
+Supabaseの有料開発ブランチは使用しません。`.github/workflows/prisma-7-isolated-db.yml`がPostgreSQL 17の一時サービスを作成し、現在のPrisma schemaを反映してから32件の履歴をベースライン登録し、migration statusとCRUD/transactionを検証します。サービスコンテナはCI終了時に破棄され、本番の接続URLは使用しません。
+
+**検証上の制約:** 旧migration `20260522085705_align_event_occurrence_relations`は、後続migrationで生成される`event_notes`を先に参照します。よって既存migration SQLをゼロから全件順番に再適用するテストは`P3018 / 42P01`で失敗しました。ベースライン登録は各SQLを再実行したことを示すものではなく、現在のschemaへのDBアクセスとPrismaの履歴管理互換性を確認する目的に限定されます。過去SQLの順序不整合は別課題として残します。
+
