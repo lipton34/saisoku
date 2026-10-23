@@ -6,6 +6,7 @@ on:
       - "prisma/migrations/**"
       - "prisma/schema.prisma"
       - "prisma.config.ts"
+      - "scripts/replayHistoricalMigrationsIsolatedCI.sh"
   workflow_dispatch:
 
 permissions:
@@ -54,18 +55,7 @@ jobs:
         run: |
           PGPASSWORD=local-test-only psql -h localhost -U postgres -d saisoku_prisma7_test -v ON_ERROR_STOP=1 -c "CREATE ROLE anon NOLOGIN;"
           PGPASSWORD=local-test-only psql -h localhost -U postgres -d saisoku_prisma7_test -v ON_ERROR_STOP=1 -c "CREATE ROLE authenticated NOLOGIN;"
-      - name: Reorder only disposable checkout migration directory
-        run: |
-          test -f prisma/migrations/20260522085705_align_event_occurrence_relations/migration.sql
-          test -f prisma/migrations/20260522110000_add_event_occurrences/migration.sql
-          # The historically-applied order was event_notes, event_occurrences, align.
-          # Keep SQL bytes intact; NEVER rename tracked migrations in the actual repository.
-          mv prisma/migrations/20260522085705_align_event_occurrence_relations \
-            prisma/migrations/20260522120000_ci_only_align_event_occurrence_relations
-          git diff --exit-code -- prisma/migrations || true
-      - name: Replay all 32 historical SQL migrations on empty PostgreSQL
-        run: npx prisma migrate deploy
-      - name: Verify replay migration status
-        run: npx prisma migrate status
+      - name: Replay SQL with original migration identities in disposable DB
+        run: bash scripts/replayHistoricalMigrationsIsolatedCI.sh
       - name: Run Prisma CRUD and transaction smoke test
         run: node --import tsx server/scripts/verifyPrismaCompatibility.ts
