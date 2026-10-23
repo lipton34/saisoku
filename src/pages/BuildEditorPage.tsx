@@ -217,12 +217,12 @@ export function BuildEditorPage({ mode }: { mode: "post" | "draft" | "edit" }) {
         }} type="file" /></label>
       </section>
       {saving ? <div className="build-publish-progress" role="status" aria-live="polite"><LoaderCircle className="build-publish-spinner" size={20} aria-hidden="true" /><div><strong>処理中</strong><p>{savingStatus || "処理を実行しています…"}</p><small>ページを閉じると通信が中断されることがあります。</small></div></div> : null}
-      {mode === "post" && recoveredPublish && !saving ? <div className="build-publish-recovery" role="status"><p>{recoveryMessage || "前回の投稿処理を確認しています…"}</p><button type="button" className="secondary-button" onClick={() => { if (recoveredPublish.postId) navigate(`/builds/${recoveredPublish.postId}/edit`); else navigate("/builds"); }}> {recoveredPublish.postId ? "作成済み投稿を確認" : "一覧で確認"} </button><button type="button" onClick={() => { storePublishState(null); setRecoveredPublish(null); setRecoveryMessage(""); }}>確認済み</button></div> : null}
+      {mode === "post" && recoveredPublish && !saving ? <div className="build-publish-recovery" role="status"><p>{recoveryMessage || "前回の投稿処理を確認しています…"}</p><button type="button" className="secondary-button" onClick={() => { if (recoveredPublish.postId) navigate(`/builds/${recoveredPublish.postId}/edit`); else navigate("/builds"); }}> {recoveredPublish.postId ? "作成済み投稿を確認" : "一覧で確認"} </button><button type="button" onClick={() => { storePublishState(null); setRecoveredPublish(null); setCreatedPostId(""); setRecoveryMessage(""); }}>確認済み</button></div> : null}
       {error ? <p className="form-error preserve-lines" role="alert">{error}</p> : null}
       <div className="form-actions">
         <button className="secondary-button" onClick={() => navigate(mode === "draft" ? "/builds/drafts" : "/builds")} type="button">{saving ? "一覧へ戻る" : "キャンセル"}</button>
         {mode !== "edit" ? <button className="secondary-button" disabled={saving} onClick={() => void saveDraft()} type="button">保存</button> : null}
-        <button className="primary-button" disabled={saving} type="submit">{mode === "edit" ? "保存" : "投稿"}</button>
+        <button className="primary-button" disabled={saving || (mode === "post" && Boolean(recoveredPublish))} type="submit">{mode === "edit" ? "保存" : "投稿"}</button>
       </div>
     </form>
   </div>;
