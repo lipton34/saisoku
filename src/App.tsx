@@ -12,7 +12,6 @@ import { GoalEditorPage } from "./pages/GoalEditorPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
-import { OfficialNewsPage } from "./pages/OfficialNewsPage";
 import { ProgressGoalsPage } from "./pages/ProgressGoalsPage";
 import { RaidGuideDetailPage } from "./pages/RaidGuideDetailPage";
 import { RaidGuideReaderPage } from "./pages/RaidGuideReaderPage";
@@ -53,7 +52,6 @@ export function App() {
           <Route path="/raid-guides/:guideId/strategies/:strategyId/edit" element={<RaidGuideStrategyEditorPage />} />
           <Route path="/archive" element={<ArchivePage />} />
           <Route path="/event-schedule" element={<EventSchedulePage />} />
-          <Route path="/official-news" element={<OfficialNewsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

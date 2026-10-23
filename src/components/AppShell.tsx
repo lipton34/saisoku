@@ -42,7 +42,7 @@ export function AppShell() {
         </NavLink>
         <NavLink
           aria-label="保管庫"
-          className={`icon-button app-header-archive${["/archive", "/event-schedule", "/official-news"].some((path) => location.pathname.startsWith(path)) ? " active" : ""}`}
+          className={`icon-button app-header-archive${["/archive", "/event-schedule"].some((path) => location.pathname.startsWith(path)) ? " active" : ""}`}
           title="保管庫"
           to="/archive"
         >

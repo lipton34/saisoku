@@ -20,13 +20,6 @@ import { raidGuidesRouter, raidGuideStrategiesRouter } from "./routes/raidGuides
 import { sparkSavingsRouter } from "./routes/sparkSavings.js";
 import { sparkTargetsRouter } from "./routes/sparkTargets.js";
 import { sparkRewardsRouter } from "./routes/sparkRewards.js";
-import {
-  newsFetchLogsRouter,
-  newsItemsRouter,
-  officialNewsRouter,
-  sourceArticlesRouter
-} from "./routes/officialNews.js";
-import { officialNewsFetchRouter } from "./routes/officialNewsFetch.js";
 
 dotenv.config();
 
@@ -75,11 +68,6 @@ app.use("/api/raid-guide-strategies", raidGuideStrategiesRouter);
 app.use("/api/spark-savings", sparkSavingsRouter);
 app.use("/api/spark-targets", sparkTargetsRouter);
 app.use("/api/spark-rewards", sparkRewardsRouter);
-app.use("/api/news", officialNewsRouter);
-app.use("/api/news-fetch-logs", newsFetchLogsRouter);
-app.use("/api/news-items", newsItemsRouter);
-app.use("/api/official-news", officialNewsFetchRouter);
-app.use("/api/source-articles", sourceArticlesRouter);
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ message: "API route not found" });
