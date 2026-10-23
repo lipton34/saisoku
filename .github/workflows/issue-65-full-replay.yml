@@ -1,0 +1,71 @@
+name: Issue 65 full historical migration replay (isolated)
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/issue-65-full-replay.yml"
+      - "prisma/migrations/**"
+      - "prisma/schema.prisma"
+      - "prisma.config.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  historical-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: local-test-only
+          POSTGRES_DB: saisoku_prisma7_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d saisoku_prisma7_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: "true"
+      DATABASE_URL: postgresql://postgres:local-test-only@localhost:5432/saisoku_prisma7_test?schema=public
+      DIRECT_DATABASE_URL: postgresql://postgres:local-test-only@localhost:5432/saisoku_prisma7_test?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate
+      - name: Validate isolated target
+        run: |
+          node --input-type=module <<'JS'
+          for (const key of ["DATABASE_URL", "DIRECT_DATABASE_URL"]) {
+            const u = new URL(process.env[key]);
+            if (u.hostname !== "localhost" || u.port !== "5432" || u.pathname !== "/saisoku_prisma7_test")
+              throw new Error("Refusing nonisolated database connection");
+          }
+          JS
+      - name: Create Supabase API role placeholders
+        run: |
+          PGPASSWORD=local-test-only psql -h localhost -U postgres -d saisoku_prisma7_test -v ON_ERROR_STOP=1 -c "CREATE ROLE anon NOLOGIN;"
+          PGPASSWORD=local-test-only psql -h localhost -U postgres -d saisoku_prisma7_test -v ON_ERROR_STOP=1 -c "CREATE ROLE authenticated NOLOGIN;"
+      - name: Reorder only disposable checkout migration directory
+        run: |
+          test -f prisma/migrations/20260522085705_align_event_occurrence_relations/migration.sql
+          test -f prisma/migrations/20260522110000_add_event_occurrences/migration.sql
+          # The historically-applied order was event_notes, event_occurrences, align.
+          # Keep SQL bytes intact; NEVER rename tracked migrations in the actual repository.
+          mv prisma/migrations/20260522085705_align_event_occurrence_relations \
+            prisma/migrations/20260522120000_ci_only_align_event_occurrence_relations
+          git diff --exit-code -- prisma/migrations || true
+      - name: Replay all 32 historical SQL migrations on empty PostgreSQL
+        run: npx prisma migrate deploy
+      - name: Verify replay migration status
+        run: npx prisma migrate status
+      - name: Run Prisma CRUD and transaction smoke test
+        run: node --import tsx server/scripts/verifyPrismaCompatibility.ts
